@@ -83,7 +83,10 @@ def cross_evaluation(model, skill_mgr, professions, n_eval_episodes=5):
                     # 模型選擇動作
                     action, _ = model.predict(obs, deterministic=True)
                     # 隨機敵方動作
-                    enemy_skill_ids = p2.get_available_skill_ids()
+                    # get cool down dict
+                    p2c = env.enemy_team[0]
+                    cooldown = p2c["cooldowns"]
+                    enemy_skill_ids = p2.get_available_skill_ids(cooldown)
                     enemy_action = np.random.choice(enemy_skill_ids) - 3 * p2.profession_id
                     enemy_action = enemy_action if enemy_action in [0, 1, 2] else 0
                     # 環境執行步驟
@@ -175,7 +178,7 @@ def train_iteratively(num_iterations, max_episodes, skill_mgr, professions, save
     for player_prof in professions:
         for enemy_prof in professions:
             if player_prof.profession_id != enemy_prof.profession_id:
-                for _ in range(1):  # 每對職業對戰1次
+                for _ in range(10):  # 每對職業對戰1次
                     envs.append(lambda p=player_prof, e=enemy_prof: BattleEnv(
                         team_size=1,
                         enemy_team_size=1,

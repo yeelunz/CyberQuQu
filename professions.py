@@ -21,8 +21,18 @@ class BattleProfession:
         self.baseDef = baseDef
         self.default_passive_id = (profession_id *-1 )-1
 
-    def get_available_skill_ids(self):
-        return []
+    def get_available_skill_ids(self,cooldowns:dict):
+        # get cooldowns
+        ok_skills = []
+        if cooldowns[0] == 0:
+            ok_skills.append(self.profession_id* 3)
+        if cooldowns[1] == 0:
+            ok_skills.append(self.profession_id*3 +1)
+        if cooldowns[2] == 0:
+            ok_skills.append(self.profession_id*3 +2)
+        # return is real skill id
+        return ok_skills
+        
     def passive(self, user, targets, env):
         pass
 
@@ -31,12 +41,18 @@ class BattleProfession:
             f"{self.name} 使用了技能 {sm.get_skill_name(skill_id)}。"
         )
         # check cooldown
+        # get skill id's cooldown
         cooldowns_skill_id = skill_id - self.profession_id * 3
-        if user["cooldowns"].get(cooldowns_skill_id, 0) > 0:
+        
+        if skill_id in self.get_available_skill_ids(user["cooldowns"]):
+            # set cooldown
+            local_skill_id = skill_id - self.profession_id * 3
+            user["cooldowns"][local_skill_id] = sm.get_skill_cooldown(skill_id)
+        else:
             env.battle_log.append(
-                f"{self.name} 的技能 {sm.get_skill_name(skill_id)} 正在冷卻中。"
+                f"{self.name} 的技能「{sm.get_skill_name(skill_id)}」還在冷卻中。"
             )
-            return
+            return -1
 
 
 class Paladin(BattleProfession):
@@ -51,9 +67,6 @@ class Paladin(BattleProfession):
         )
         self.heal_counts = {}
 
-    def get_available_skill_ids(self):
-        return [0, 1, 2]
-    
     def passive(self, user, targets, env):
         # 被動技能：15%機率回復最大血量的15%，超出部分造成50%回復傷害
         if random.random() < 0.15:
@@ -77,7 +90,6 @@ class Paladin(BattleProfession):
             heal_amount = 10 
             env.deal_healing(user, heal_amount,rate= 0.5,heal_damage = True,target = targets[0])
             # 設置技能冷卻
-            user["cooldowns"][1] = 3
             env.battle_log.append(
                 f"{self.name} 的技能「堅守防禦」進入冷卻 3 回合。"
             )
@@ -104,9 +116,6 @@ class Mage(BattleProfession):
             baseDef=0.9
         )
 
-    def get_available_skill_ids(self):
-        return [3, 4, 5]
-    
     def passive(self, user, targets, env):
         # 被動技能：攻擊造成異常狀態時，15%機率額外疊加一層異常狀態(燃燒或凍結)
         target = targets[0]
@@ -168,9 +177,6 @@ class Assassin(BattleProfession):
             baseDef=0.88
         )
 
-    def get_available_skill_ids(self):
-        return [6,7,8]
-
     def apply_skill(self, skill_id, user, targets, env):
         super().apply_skill(skill_id, user, targets, env)
         if skill_id == 6:
@@ -223,8 +229,6 @@ class Archer(BattleProfession):
             baseDef=0.95
         )
 
-    def get_available_skill_ids(self):
-        return [9, 10, 11]
     
     def passive(self, env , dmg):
         # 被動技能：攻擊時10%機率造成2倍傷害
@@ -283,9 +287,6 @@ class Berserker(BattleProfession):
             baseDef=0.7
         )
 
-    def get_available_skill_ids(self):
-        return [12, 13, 14]
-    
     def passive(self, user, dmg, env):
         if user["hp"] < (user["max_hp"] * 0.5):
             loss_hp = user["max_hp"] * 0.5 - user["hp"]
@@ -314,8 +315,7 @@ class Berserker(BattleProfession):
                 env.deal_healing(user, 150,self_mutilation = True)
                 heal_effect = HealthPointRecover(hp_recover=40, duration=5, stackable=False,source=skill_id,env=env)
                 env.apply_status(user, heal_effect)
-                # 設置技能冷卻
-                user["cooldowns"][skill_id] = 5
+
                 # 怒吼進入五回合冷卻
                 env.battle_log.append(
                     f"「熱血」進入 5 回合的冷卻。")    
@@ -349,8 +349,6 @@ class DragonGod(BattleProfession):
         )
         self.dragon_soul_stacks = 0
 
-    def get_available_skill_ids(self):
-        return [15, 16, 17]
     def passive(self, user, targets, env):
         # 在env中的passive 實作
         pass
@@ -377,8 +375,6 @@ class DragonGod(BattleProfession):
             env.deal_healing(user, heal_amount)
             bleed_effect = HealthPointRecover(hp_recover=30, duration=3, stackable=False,source=skill_id,env=env,self_mutilation=True)
             env.apply_status(user, bleed_effect)
-            # 設置技能冷卻
-            user["cooldowns"][skill_id] = 4
         elif skill_id == 17:
             # 技能 17 => 消除一半的龍神狀態的層數，造成層數*20的傷害。
             # get name="龍血buff"的效果
@@ -391,22 +387,23 @@ class DragonGod(BattleProfession):
             if stacks > 0:
                 damage = stacks * 20
                 # 消耗了X層龍神狀態
-                env.battle_log.append(
-                    f"「神龍燎原」消耗了 {stacks} 層龍神狀態。"
-                )
                 env.deal_damage(user, targets[0], damage, can_be_blocked=True)
                 # remove half stacks
                 half_stacks = int(stacks // 2)
+                env.battle_log.append(
+                    f"「神龍燎原」消耗了 {half_stacks} 層龍神狀態。"
+                )
                 # 1 2 and 12 and 999
                 # 1: DamageMultiplier
                 # 2: DefenseMultiplier
                 # 12: Max HP Increase
                 # 999: DragonSoul Tracker
                 source = self.default_passive_id
-                env.set_status(user, 1 , half_stacks,source = source)
-                env.set_status(user, 2 , half_stacks,source = source)
-                env.set_status(user, 12 , half_stacks,source = source)
-                env.set_status(user, 999 , half_stacks,source = source)
+                resStacks = stacks - half_stacks
+                env.set_status(user, 1 , resStacks,source = source)
+                env.set_status(user, 2 , resStacks,source = source)
+                env.set_status(user, 12 , resStacks,source = source)
+                env.set_status(user, 999 , resStacks,source = source)
                 # 檢查set_status 是否正確
                 dragon_soul_effect = user["effect_manager"].get_effects("龍神buff")[0]
                 stacks = dragon_soul_effect.stacks
@@ -428,8 +425,6 @@ class BloodGod(BattleProfession):
         )
         self.bleed_stacks = 0
 
-    def get_available_skill_ids(self):
-        return [18, 19, 20]
     def passive(self, user, targets, env):
         if random.random() < 0.5:
             env.apply_status(targets[0], BleedEffect(duration=5, stacks=1))
@@ -490,8 +485,6 @@ class SteadfastWarrior(BattleProfession):
         # 已在env 中實作
         pass
     
-    def get_available_skill_ids(self):
-        return [21, 22, 23]
 
     def apply_skill(self, skill_id, user, targets, env):
         super().apply_skill(skill_id, user, targets, env)
@@ -525,9 +518,6 @@ class SunWarrior(BattleProfession):
             baseAtk=1.25,
             baseDef=1.2
         )
-
-    def get_available_skill_ids(self):
-        return [24, 25, 26]
     
     def passive(self, user,dmg, env):
         # 被動技能：自身為燃燒狀態時，攻擊力增加35%
@@ -574,7 +564,6 @@ class SunWarrior(BattleProfession):
                             env.deal_damage(user, target, extra_dmg, can_be_blocked=True)
                             env.set_status(target, 4 , original_stacks * 2)
 
-
 class Ranger(BattleProfession):
     def __init__(self):
         super().__init__(
@@ -586,8 +575,6 @@ class Ranger(BattleProfession):
             baseDef=0.9
         )
 
-    def get_available_skill_ids(self):
-        return [27, 28, 29]
     def passive(self, user, targets, env):
         # 已在env 中 deal damage 實作
         pass
@@ -629,9 +616,6 @@ class ElementalMage(BattleProfession):
             baseDef=1.0
         )
 
-    def get_available_skill_ids(self):
-        return [30, 31, 32]
-    
     def passive(self, user, targets, env):
         # 元素之力：攻擊時25%造成(麻痺、冰凍、燃燒)其中之一
         if random.random() < 0.25:
@@ -678,8 +662,7 @@ class ElementalMage(BattleProfession):
                 stun_effect = Paralysis(duration=para_duration)
                 env.apply_status(target, stun_effect)
             self.passive(user, targets, env)
- 
-            
+       
 class HuangShen(BattleProfession):
     def __init__(self):
         super().__init__(
@@ -690,8 +673,7 @@ class HuangShen(BattleProfession):
             baseDef=1.3,
             passive_desc="荒蕪：當回合共計受到血量最大值的35%以上傷害時：在回合結束時回復已損生命的5%。",
         )
-    def get_available_skill_ids(self):
-        return [33, 34, 35]
+
     def passive(self, user, targets, env):
         # 已在env 中實作
         pass
@@ -741,8 +723,7 @@ class GodOfStar(BattleProfession):
             baseAtk=1.12,
             baseDef=1.12
         )
-    def get_available_skill_ids(self):
-        return [36, 37, 38]
+
     def passive(self, user, targets, env):
         # get all status types is 'buff'
         buff_effects = []

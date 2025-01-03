@@ -125,17 +125,18 @@ class DamageMultiplier(StatusEffect):
         )
     def set_stack(self, stacks, target):
         # 先儲存原本的stack
-        now_stack = self.stacks
+        old_stack = self.stacks
         # 設定新的stack
-        super().set_stack(stacks)
+        super().set_stack(stacks,target)
+        new_stack = self.stacks
         # 判斷現在的stack是增加還是減少
-        if stacks > now_stack:
+        if new_stack > old_stack:
             # 如果是增加，則要進行乘法
-            for i in range(stacks - now_stack):
+            for i in range(new_stack - old_stack):
                 target['damage_multiplier'] *= self.multiplier
         else:
             # 如果是減少，則要進行除法
-            for i in range(now_stack - stacks):
+            for i in range(old_stack - new_stack):
                 target['damage_multiplier'] /= self.multiplier
         # battle log
         # XX效果的層數變為XX
@@ -236,17 +237,18 @@ class DefenseMultiplier(StatusEffect):
         # 
     def set_stack(self, stacks,target): 
         # 先儲存原本的stack
-        now_stack = self.stacks
+        old_stack = self.stacks
         # 設定新的stack
-        super().set_stack(stacks)
+        super().set_stack(stacks,target)
+        new_stack = self.stacks
         # 判斷現在的stack是增加還是減少
-        if stacks > now_stack:
+        if new_stack > old_stack:
             # 如果是增加，則要進行乘法
-            for i in range(stacks - now_stack):
+            for i in range(new_stack - old_stack):
                 target['defend_multiplier'] *= self.multiplier
         else:
             # 如果是減少，則要進行除法
-            for i in range(now_stack - stacks):
+            for i in range(old_stack - new_stack):
                 target['defend_multiplier'] /= self.multiplier
         # battle log
         # XX效果的層數變為XX
@@ -318,17 +320,18 @@ class HealMultiplier(StatusEffect):
         )
     def set_stack(self, stacks,target):
         # 先儲存原本的stack
-        now_stack = self.stacks
+        old_stack = self.stacks
         # 設定新的stack
-        super().set_stack(stacks)
+        super().set_stack(stacks,target)
+        new_stack = self.stacks
         # 判斷現在的stack是增加還是減少
-        if stacks > now_stack:
+        if new_stack > old_stack:
             # 如果是增加，則要進行乘法
-            for i in range(stacks - now_stack):
+            for i in range(new_stack - old_stack):
                 target['heal_multiplier'] *= self.multiplier
         else:
             # 如果是減少，則要進行除法
-            for i in range(now_stack - stacks):
+            for i in range(old_stack - new_stack):
                 target['heal_multiplier'] /= self.multiplier
         # battle log
         # XX效果的層數變為XX
@@ -453,18 +456,20 @@ class MaxHPmultiplier(StatusEffect):
         # 同時回復增加的生命值
     def set_stack(self, stacks,target):
         # 先儲存原本的stack
-        now_stack = self.stacks
+        old_stack = self.stacks
         # 設定新的stack
-        super().set_stack(stacks)
+        super().set_stack(stacks,target)
+        new_stack = self.stacks
+        
         # 判斷現在的stack是增加還是減少
-        if stacks > now_stack:
+        if new_stack > old_stack:
             # 如果是增加，則要進行乘法
-            for i in range(stacks - now_stack):
+            for i in range(new_stack - old_stack):
                 target['max_hp'] *= self.multiplier
                 target['hp'] += target['max_hp'] - target['hp']
         else:
             # 如果是減少，則要進行除法
-            for i in range(now_stack - stacks):
+            for i in range(old_stack - new_stack):
                 target['max_hp'] /= self.multiplier
                 # 如果超出生命值最大值，則變為最大值
                 target['hp'] = min(target['hp'], target['max_hp'])

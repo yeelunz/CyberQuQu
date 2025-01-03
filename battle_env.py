@@ -188,7 +188,9 @@ class BattleEnv(gym.Env):
         enemy_effect_skills = []
         enemy_heal_skills = []
         enemy_damage_skills = []
-
+        
+        penalty = 0
+        
         # 分類我方技能
         for i in range(self.team_size):
             user = self.player_team[i]
@@ -209,9 +211,10 @@ class BattleEnv(gym.Env):
             profession_id = user["profession"].profession_id
             skill_id = 3 * profession_id + skill_index
 
-            available_skills = user["profession"].get_available_skill_ids()
+            available_skills = user["profession"].get_available_skill_ids(user["cooldowns"])
             if skill_id not in available_skills:
                 # 如果選擇的技能不可用，隨機選擇可用技能
+                penalty -= 5
                 available_skill_indices = [sid - 3 * profession_id for sid in available_skills]
                 if available_skill_indices:
                     skill_index = random.choice(available_skill_indices)
@@ -261,10 +264,11 @@ class BattleEnv(gym.Env):
             profession_id = e["profession"].profession_id
             skill_id = 3 * profession_id + skill_index
 
-            available_skills = e["profession"].get_available_skill_ids()
+            available_skills = e["profession"].get_available_skill_ids(e["cooldowns"])
             if skill_id not in available_skills:
                 # 如果選擇的技能不可用，隨機選擇可用技能
                 available_skill_indices = [sid - 3 * profession_id for sid in available_skills]
+                penalty -= 5
                 if available_skill_indices:
                     skill_index = random.choice(available_skill_indices)
                     skill_id = 3 * profession_id + skill_index
@@ -354,39 +358,44 @@ class BattleEnv(gym.Env):
                 # 我方全滅，結束遊戲
                 self.done = True
 
-        #  END passives
-        player_all_skill = player_effect_skills + player_heal_skills + player_damage_skills
-        enemy_all_skill = enemy_effect_skills + enemy_heal_skills + enemy_damage_skills
-        self._process_passives_end_of_turn(player_all_skill, enemy_all_skill)
-        
-        # 如果雙方都滅亡，則結束遊戲 並判斷平手
+
+
+        # check 我方是否全滅
+        if all(m["hp"] <= 0 for m in self.player_team):
+            self.done = True
+            self.battle_log.append("我方全滅，敵方獲勝！")
+        # check 敵方是否全滅
+        if all(e["hp"] <= 0 for e in self.enemy_team):
+            self.done = True
+            self.battle_log.append("敵方全滅，我方獲勝！")
+        # check 雙方全滅?
         if self._check_both_defeated():
             self.done = True
-
-        # 回合末的狀態處理
-        self._handle_status_end_of_turn()
-
-        # 管理技能冷卻
-        self._manage_cooldowns()
-
-        # 增加戰鬥特性：超過10回合後，每過2回合，雙方的傷害係數增加5%
-        if self.round_count > 10 and (self.round_count - 10) % 2 == 0:
-            self.damage_coefficient *= 1.05
-            self.battle_log.append(
-                f"戰鬥超過10回合，雙方的傷害係數增加了5%，現在為 {self.damage_coefficient:.2f}。"
-            )
-
-        # 如果遊戲已結束，不增加 round_count
+            self.battle_log.append("雙方全滅，平手！")
+        
+        #  最後階段的處理(冷卻，回合狀態，回合末端技能)
         if not self.done:
-            self.round_count += 1
-
-        reward = self._get_reward()
-        done = self.done
-
-        # 最後檢查是否超過最大回合數
+            player_all_skill = player_effect_skills + player_heal_skills + player_damage_skills
+            enemy_all_skill = enemy_effect_skills + enemy_heal_skills + enemy_damage_skills
+            self._process_passives_end_of_turn(player_all_skill, enemy_all_skill)
+            self._handle_status_end_of_turn()
+            self._manage_cooldowns()
+        # 增加戰鬥特性：超過10回合後，每過2回合，雙方的傷害係數增加5%
+            if self.round_count > 10 and (self.round_count - 10) % 2 == 0:
+                self.damage_coefficient *= 1.05
+                self.battle_log.append(
+                f"戰鬥超過10回合，雙方的傷害係數增加了5%，現在為 {self.damage_coefficient:.2f}。")
+        # 強制停止
+        self.round_count += 1
         if self.round_count > self.max_rounds:
             done = True
             reward = -10
+
+
+        reward = self._get_reward() + penalty
+        done = self.done
+
+        # 最後檢查是否超過最大回合數
 
         self._print_round_footer()
         obs = self._get_obs()
@@ -466,6 +475,9 @@ class BattleEnv(gym.Env):
         處理治療邏輯，包括超過最大生命的處理
         # heal_damage 與 self_mutilation 不能同時為True
         """
+        if user["hp"] <= 0 and not self_mutilation:
+            self.battle_log.append(f"{user['profession'].name} 已被擊敗，無法恢復生命值。")
+            return
         # 首先進行治療增減比例的應用
         if self_mutilation and heal_damage:
             raise ValueError("heal_damage 與 self_mutilation 不能同時為True")
@@ -497,7 +509,7 @@ class BattleEnv(gym.Env):
         """
         設置特定status_id 的stack
         """
-        target["effect_manager"].set_effect_stack(status_id,stacks,source,target)
+        target["effect_manager"].set_effect_stack(status_id,target,stacks,source)
         
     def apply_status(self, target, status_effect):
         """
@@ -704,19 +716,20 @@ class BattleEnv(gym.Env):
     def _get_reward(self):
         """
         計算獎勵：
-        我方獲勝 => +1
-        敵方獲勝 => -1
+        我方獲勝 => +20
+        敵方獲勝 => -20
         平手 => 0
 
         """
         if self.done:
-            if all(m["hp"] <= 0 for m in self.player_team):
-                return -1
-            elif all(e["hp"] <= 0 for e in self.enemy_team):
-                return 1
-            else:
+            if all(m["hp"] <= 0 for m in self.player_team) and all(e["hp"] <= 0 for e in self.enemy_team):
                 return 0
+            elif all(m["hp"] <= 0 for m in self.player_team):
+                return -20
+            elif all(e["hp"] <= 0 for e in self.enemy_team):
+                return 20
         return 0
+
 
     def _print_round_header(self):
         if self.show_battle_log:

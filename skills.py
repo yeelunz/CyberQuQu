@@ -8,11 +8,12 @@ class Skill:
     - desc: 技能的詳細描述 (在職業介紹、或玩家選技能時顯示)
     - type: 技能類型 ('damage', 'heal', 'effect')
     """
-    def __init__(self, skill_id: int, name: str, desc: str, type: str):
+    def __init__(self, skill_id: int, name: str, desc: str, type: str,cool_down:int = 0):
         self.skill_id = skill_id
         self.name = name
         self.desc = desc
         self.type = type
+        self.cool_down = cool_down
 
 
 class SkillManager:
@@ -43,6 +44,11 @@ class SkillManager:
         if skill:
             return skill.type
         return f"(無法找到技能類型 ID={skill_id})"
+    def get_skill_cooldown(self, skill_id: int) -> int:
+        skill = self.skills.get(skill_id, None)
+        if skill:
+            return skill.cool_down
+        return f"(無法找到技能冷卻時間 ID={skill_id})"
 
 
 # 初始化技能管理器並添加技能
@@ -53,7 +59,7 @@ sm = SkillManager()
 # PASSIVE SKILLS idx = -1 龍神被動 佔位
 # 以下是具名技能的定義，根據提供的職業表進行定義
 sm.add_skill(Skill(0, "聖光斬", "對單體造成 40 點傷害。", 'damage'))
-sm.add_skill(Skill(1, "堅守防禦", "本回合迴避所有攻擊，並恢復 10 點生命值。冷卻 3 回合。", 'effect'))
+sm.add_skill(Skill(1, "堅守防禦", "本回合迴避所有攻擊，並恢復 10 點生命值。冷卻 3 回合。", 'effect',3))
 sm.add_skill(Skill(2, "神聖治療", "恢復血量：第一次恢復 40 點，第二次恢復 20 點，第三次及以後恢復 5 點。", 'heal'))
 
 # 
@@ -73,12 +79,12 @@ sm.add_skill(Skill(11, "吸血箭", "對單體造成 30 點傷害，並為自身
 
 # 
 sm.add_skill(Skill(12, "狂暴之力", "對單體造成 30 點傷害。", 'damage'))
-sm.add_skill(Skill(13, "熱血", "消耗 150 點生命值，接下來 5 回合，每回合恢復 40 點生命值。冷卻 5 回合。", 'heal'))
+sm.add_skill(Skill(13, "熱血", "消耗 150 點生命值，接下來 5 回合，每回合恢復 40 點生命值。冷卻 5 回合。", 'heal',5))
 sm.add_skill(Skill(14, "血怒之泉", "犧牲 30 點生命值，接下來 2 回合內免疫控制，並提升自身 35% 防禦力。", 'effect'))
 
 # 
 sm.add_skill(Skill(15, "神龍之息", "對單體造成 25 點傷害，每層龍神狀態增加 3 點額外傷害。", 'damage'))
-sm.add_skill(Skill(16, "神血", "恢復 120 點生命值，接下來 3 回合，每回合扣除 30 點生命值。冷卻 4 回合。", 'heal'))
+sm.add_skill(Skill(16, "神血", "恢復 120 點生命值，接下來 3 回合，每回合扣除 30 點生命值。冷卻 4 回合。", 'heal',4))
 sm.add_skill(Skill(17, "神龍燎原", "消除一半的龍神層數，對敵方造成每層 20 點傷害。", 'damage'))
 
 # 

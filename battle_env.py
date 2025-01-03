@@ -248,11 +248,11 @@ class BattleEnv(gym.Env):
             if e["hp"] > 0 and not e["effect_manager"].has_effect('免疫控制') :
                 # 麻痺 or 暈眩
                 if e["skip_turn"] and (e["effect_manager"].has_effect('麻痺') or e["effect_manager"].has_effect('暈眩')):
-                    self.battle_log.append(f"【{user['profession'].name}】，因異常狀態跳過行動")
+                    self.battle_log.append(f"【{e['profession'].name}】，因異常狀態跳過行動")
                     continue
                 # 冰凍的跳過
                 elif e["skip_turn"]:
-                    self.battle_log.append(f"【{user['profession'].name}】，因異常狀態跳過行動")
+                    self.battle_log.append(f"【{e['profession'].name}】，因異常狀態跳過行動")
                     e["skip_turn"] = False
                     continue
 
@@ -437,12 +437,13 @@ class BattleEnv(gym.Env):
         dmg *= self.damage_coefficient  # 考慮戰鬥特性：傷害係數
         
         dmg = max(1, dmg)  # 至少造成1點傷害
+        
         dmg = int(dmg)
         # 實際減血
         target["hp"] = max(0, target["hp"] - dmg)
         target['accumulated_damage'] += dmg
         self.battle_log.append(
-            f"{user['profession'].name} 對 {target['profession'].name} 造成 {dmg} 點傷害 (剩餘HP={target['hp']})"
+            f"{user['profession'].name} 對 {target['profession'].name} 造成 {dmg} 點傷害 (剩餘HP={int(target['hp'])})"
         )
         
         # 如果職業是荒原遊俠
@@ -613,7 +614,7 @@ class BattleEnv(gym.Env):
             if m == 30:
                 player = self.player_team[i]
                 if player["last_attacker"]:
-                    if random.random() < 0.15:
+                    if random.random() < 0.3:
                         self.battle_log.append(
                             f"{player['profession'].name} 發動「雷霆護甲」麻痺了攻擊者！"
                         )
@@ -661,7 +662,7 @@ class BattleEnv(gym.Env):
             if e == 30:
                 enemy = self.enemy_team[i]
                 if enemy["last_attacker"]:
-                    if random.random() < 0.15:
+                    if random.random() < 0.3:
                         self.battle_log.append(
                             f"{enemy['profession'].name} 發動「雷霆護甲」麻痺了攻擊者！"
                         )
@@ -738,30 +739,38 @@ class BattleEnv(gym.Env):
             bar_num = int(ratio * length)
             return "[" + "#" * bar_num + " " * (length - bar_num) + f"] {int(hp)}/{int(maxhp)}"
 
+        def format_effect_details(effect_id, effs):
+            """格式化每個效果的詳細資訊，包括名稱、層數、持續時間"""
+            effect_name = EFFECT_NAME_MAPPING.get(effect_id, '未知效果')
+            stacks = len(effs)  # 堆疊層數
+            durations = ", ".join([str(eff.duration) for eff in effs])  # 剩餘回合數
+            return f"{effect_name}({stacks}層, 持續: {durations}回合)"
+
         for i, m in enumerate(self.player_team):
             maxhp = m["profession"].max_hp
             bar = hp_bar(m["hp"], maxhp)
-            # 獲取所有狀態名稱和堆疊數
-            status_names = [
-                f"{EFFECT_NAME_MAPPING.get(effect_id, '未知效果')}({len(effs)})"
+            # 獲取所有狀態名稱、層數和持續回合
+            status_details = [
+                format_effect_details(effect_id, effs)
                 for effect_id, effs in m["effect_manager"].active_effects.items()
             ]
-            status_str = " ".join([f"【{s}】" for s in status_names])
+            status_str = " | ".join([f"【{s}】" for s in status_details])
             print(f"P{i} {m['profession'].name} HP {bar} {status_str}")
 
         # 敵方隊伍
         for j, e in enumerate(self.enemy_team):
             maxhp = e["profession"].max_hp
             bar = hp_bar(e["hp"], maxhp)
-            # 獲取所有狀態名稱和堆疊數
-            status_names = [
-                f"{EFFECT_NAME_MAPPING.get(effect_id, '未知效果')}({len(effs)})"
+            # 獲取所有狀態名稱、層數和持續回合
+            status_details = [
+                format_effect_details(effect_id, effs)
                 for effect_id, effs in e["effect_manager"].active_effects.items()
             ]
-            status_str = " ".join([f"【{s}】" for s in status_names])
+            status_str = " | ".join([f"【{s}】" for s in status_details])
             print(f"E{j} {e['profession'].name} HP {bar} {status_str}")
 
         print()
+
 
     def _manage_cooldowns(self):
         """

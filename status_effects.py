@@ -165,6 +165,7 @@ class DamageMultiplier(StatusEffect):
     def update(self, target,now_stack,add_stack):
         # 只能在buff類的stackable效果中使用，用來更新效果
         # 根據stack來更新新的層數，addstack 幾次，就要乘幾次
+        self.stacks = now_stack+add_stack
         for i in range(add_stack):
             target['damage_multiplier'] *= self.multiplier
         target['battle_log'].append(
@@ -225,12 +226,14 @@ class DefenseMultiplier(StatusEffect):
     def update(self, target,now_stack,add_stack):
         # 只能在buff類的stackable效果中使用，用來更新效果
         # 根據 addstack
+        self.stacks = now_stack+add_stack
         for i in range(add_stack):
             target['defend_multiplier'] *= self.multiplier
         
         target['battle_log'].append(
             f"{target['profession'].name} 的防禦增減比例變為 {target['defend_multiplier']}。"
         )
+        # 
     def set_stack(self, stacks,target): 
         # 先儲存原本的stack
         now_stack = self.stacks
@@ -307,6 +310,7 @@ class HealMultiplier(StatusEffect):
     def update(self, target,now_stack,add_stack):
         # 只能在buff類的stackable效果中使用，用來更新效果
         # 根據 addstack
+        self.stacks = now_stack+add_stack
         for i in range(add_stack):
             target['heal_multiplier'] *= self.multiplier
         target['battle_log'].append(
@@ -419,7 +423,7 @@ class MaxHPmultiplier(StatusEffect):
         super().on_apply(target)
         target['max_hp'] *= self.multiplier  # 直接設置倍率
         target['battle_log'].append(
-            f"{target['profession'].name} 的最大生命值變為 {target['max_hp']}。"
+            f"{target['profession'].name} 的最大生命值變為 {int(target['max_hp'])}。"
         )
         # 同時回復增加的生命值
         target['hp'] += target['max_hp'] - target['hp']
@@ -791,9 +795,9 @@ class Track(StatusEffect):
 
 
 EFFECT_NAME_MAPPING = {
-    1: "攻擊力增益",
-    2: "防禦力增益",
-    3: "治癒力增益",
+    1: "攻擊力變更",
+    2: "防禦力變更",
+    3: "治癒力變更",
     4: "燃燒",
     5: "中毒",
     6: "凍結",
@@ -802,7 +806,7 @@ EFFECT_NAME_MAPPING = {
     9: "流血",
     10: "眩暈",
     11: "回血",
-    12: "最大生命值增益",
+    12: "最大生命值變更",
     98: "自定義傷害效果",
     999: "追蹤"
 }

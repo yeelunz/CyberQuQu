@@ -629,9 +629,11 @@ def main():
             print("無效選項，請重新輸入。")
 
 
+# ... (其他匯入與函數定義)
+
 def professions_fight_each_other(skill_mgr, professions, num_battles=100):
     """
-    每個職業相互對戰100場（使用隨機選擇技能），並計算勝率
+    每個職業相互對戰100場（使用隨機選擇技能），並計算勝率（不計入平局）
     """
     print("\n開始進行每個職業相互對戰100場的測試...")
 
@@ -715,24 +717,47 @@ def professions_fight_each_other(skill_mgr, professions, num_battles=100):
         for op in professions:
             if p == op:
                 continue
-            total = results[p.name][op.name]['win'] + results[p.name][op.name]['loss'] + results[p.name][op.name]['draw']
-            win_rate = (results[p.name][op.name]['win'] / total) * 100 if total > 0 else 0
-            win_rate_table[p.name][op.name] = f"{win_rate:.2f}%"
+            wins = results[p.name][op.name]['win']
+            losses = results[p.name][op.name]['loss']
+            draws = results[p.name][op.name]['draw']
+            total = wins + losses  # 排除平局
+            win_rate = (wins / total) * 100 if total > 0 else 0
+            win_rate_table[p.name][op.name] = {
+                'win': wins,
+                'loss': losses,
+                'draw': draws,
+                'win_rate': win_rate
+            }
 
-    # 顯示結果表
+    # 顯示結果
     print("\n=== 每個職業相互對戰100場的勝率 ===")
-    headers = ["職業"] + [op.name for op in professions]
-    table = []
-    for p in professions:
-        row = [p.name]
-        for op in professions:
-            if p == op:
-                row.append("-")
-            else:
-                row.append(win_rate_table[p.name][op.name])
-        table.append(row)
+    for player_prof, stats in win_rate_table.items():
+        opponents = list(stats.keys())
+        print(f"\n職業 {player_prof}")
+        print(" | ".join(opponents) + " |")
 
-    print(tabulate(table, headers=headers, tablefmt="grid"))
+        # 準備 '勝' 行
+        win_values = [str(stats[op]['win']) for op in opponents]
+        total_wins = sum([stats[op]['win'] for op in opponents])
+        print("勝 | " + " | ".join(win_values) + f" | {total_wins}")
+
+        # 準備 '負' 行
+        loss_values = [str(stats[op]['loss']) for op in opponents]
+        total_losses = sum([stats[op]['loss'] for op in opponents])
+        print("負 | " + " | ".join(loss_values) + f" | {total_losses}")
+
+        # 準備 '平' 行
+        draw_values = [str(stats[op]['draw']) for op in opponents]
+        total_draws = sum([stats[op]['draw'] for op in opponents])
+        print("平 | " + " | ".join(draw_values) + f" | {total_draws}")
+
+        # 準備 '勝率' 行（不計入平局）
+        win_rate_values = [f"{stats[op]['win_rate']:.2f}%" for op in opponents]
+        # 計算總勝率：所有勝利場次除以所有勝利和失敗場次
+        total_wins_all = sum([stats[op]['win'] for op in opponents])
+        total_losses_all = sum([stats[op]['loss'] for op in opponents])
+        total_win_rate = (total_wins_all / (total_wins_all + total_losses_all)) * 100 if (total_wins_all + total_losses_all) > 0 else 0
+        print("勝率 | " + " | ".join(win_rate_values) + f" | {total_win_rate:.2f}%")
 
     input("對戰完成。按Enter返回主選單...")
 

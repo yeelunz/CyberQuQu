@@ -48,6 +48,9 @@ class EffectManager:
                     self.target['battle_log'].append(
                         f"{self.target['profession'].name} 的 {effect.name} 效果已存在，持續回合更新為 {existing.duration}。"
                     )
+                else:
+                    self.active_effects[effect_id].append(effect)
+                    effect.on_apply(self.target)
             else:
                 # 不可堆疊，檢查是否已存在
                 if existing_effects:
@@ -124,10 +127,10 @@ class EffectManager:
                         for e in existing_effects:
                             # add stacks and stack check
                             added_stacks = min(effect.stacks, e.max_stack - e.stacks)
-                            e.stacks += added_stacks
-                         
+                            e.update(self.target,e.stacks,added_stacks)
+
                             self.target['battle_log'].append(
-                                f"{self.target['profession'].name} 的 {effect.name} 效果已存在。"
+                                f"{self.target['profession'].name} 的 {effect.name} 效果已存在，堆疊數增加 {added_stacks}。"
                             )
                     else:
                         self.active_effects[effect_id].append(effect)
@@ -220,20 +223,20 @@ class EffectManager:
             if not sources:
                 raise ValueError(f"Effect ID {effect_id} 必須指定source。")
          
-        for effect_id, effects in self.active_effects.items():
+        for eid, effects in self.active_effects.items():
             for effect in effects:
-                if effect_id == effect_id:
-                    # 如果有source，則只更新指定source+effect id的效果   
-                    # 否則就更新所有effect id的效果
+                if eid == effect_id:
+                    # 如果指定了 source，僅更新匹配 source 的效果
                     if sources:
                         if effect.source == sources:
-                            effect.set_stacks(stacks,tar)
+                            effect.set_stack(stacks, tar)
                     else:
-                        effect.set_stacks(stacks,tar)
+                        effect.set_stack(stacks, tar)
+                
                 # 檢查是否需要移除效果
                 if effect.stacks <= 0:
                     effect.on_remove(self.target)
-                    self.active_effects[effect_id].remove(effect)
+                    self.active_effects[eid].remove(effect)
                
     def export_obs(self):
         """

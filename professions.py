@@ -61,7 +61,7 @@ class Paladin(BattleProfession):
             env.battle_log.append(
                 f"{self.name} 聖光觸發，恢復了血量。"
             )
-            env.deal_healing(user, heal_amount,rate = 0.5,heal_damage = True,targets = targets[0]) 
+            env.deal_healing(user, heal_amount,rate = 0.5,heal_damage = True,target = targets[0]) 
 
     def apply_skill(self, skill_id, user, targets, env):
         super().apply_skill(skill_id, user, targets, env)
@@ -90,7 +90,7 @@ class Paladin(BattleProfession):
                 heal_amount = 20
             else:
                 heal_amount = 5
-            env.deal_healing(user, heal_amount,rate=0.5,heal_damage = True,targets = targets[0])
+            env.deal_healing(user, heal_amount,rate=0.5,heal_damage = True,target = targets[0])
             user["times_healed"] = times_healed + 1
 
 class Mage(BattleProfession):
@@ -203,12 +203,12 @@ class Assassin(BattleProfession):
                         f"毒爆引爆對敵人造成傷害！"
                         )
                     env.deal_damage(user, target, dmg, can_be_blocked=True)
-                heal_amount = 5 * total_layers
-                env.battle_log.append(
-                    f"毒爆引爆回復自身血量！"
-                    )
-                env.deal_healing(user, heal_amount)
-                env.set_status(target, 5 , 0)
+                    heal_amount = 5 * total_layers
+                    env.battle_log.append(
+                        f"毒爆引爆回復自身血量！"
+                        )
+                    env.deal_healing(user, heal_amount)
+                    env.set_status(target, 5 , 0)
         elif skill_id == 8:
             # 對單體造成10點傷害並疊加中毒1~3層（最多5層），每層中毒造成3點傷害
             # 70% 1層 25% 2層 5% 3層
@@ -366,7 +366,7 @@ class DragonGod(BattleProfession):
             # 技能 15 => 對單體造成25點傷害，每層龍血狀態增加3點傷害。
             base_dmg = 25 * self.baseAtk 
             # get name="龍血buff"的效果
-            dragon_soul_effect = user["effect_manager"].get_effect("龍血buff")[0]
+            dragon_soul_effect = user["effect_manager"].get_effects("龍血buff")
             # get stacks
             if dragon_soul_effect:
                 stacks = dragon_soul_effect.stacks
@@ -379,14 +379,14 @@ class DragonGod(BattleProfession):
             # 技能 16 => 回復120點血量，接下來3回合每回合扣除30點血量，冷卻4回合。
             heal_amount = 120
             env.deal_healing(user, heal_amount)
-            bleed_effect = HealthPointRecover(multiplier=30, duration=3, stackable=False,source=skill_id,env=env,self_mutilation=True)
+            bleed_effect = HealthPointRecover(hp_recover=30, duration=3, stackable=False,source=skill_id,env=env,self_mutilation=True)
             env.apply_status(user, bleed_effect)
             # 設置技能冷卻
             user["cooldowns"][skill_id] = 4
         elif skill_id == 17:
             # 技能 17 => 消除一半的龍神狀態的層數，造成層數*20的傷害。
             # get name="龍血buff"的效果
-            dragon_soul_effect = user["effect_manager"].get_effect("龍神buff")[0]
+            dragon_soul_effect = user["effect_manager"].get_effects("龍神buff")[0]
             # get stacks
             if dragon_soul_effect:
                 stacks = dragon_soul_effect.stacks
@@ -407,10 +407,10 @@ class DragonGod(BattleProfession):
                 # 12: Max HP Increase
                 # 999: DragonSoul Tracker
                 source = self.default_passive_id
-                env.set_status(user, 1 , half_stacks,sources = source)
-                env.set_status(user, 2 , half_stacks,sources = source)
-                env.set_status(user, 12 , half_stacks,sources = source)
-                env.set_status(user, 999 , half_stacks,sources = source)
+                env.set_status(user, 1 , half_stacks,source = source)
+                env.set_status(user, 2 , half_stacks,source = source)
+                env.set_status(user, 12 , half_stacks,source = source)
+                env.set_status(user, 999 , half_stacks,source = source)
             else:
                 env.battle_log.append(
                     f"{self.name} 嘗試使用「荒龍燎原」，但沒有龍神狀態。"
@@ -670,11 +670,11 @@ class ElementalMage(BattleProfession):
 
         elif skill_id == 32:
             # 技能 32 => 雷擊術：50%機率使敵方暈眩1~3回合
-            target = random.choice([e for e in env.enemy_team if e["hp"] > 0])
+            target = targets[0]
             # 70% 2 25% 3 10% 4
             para_duration = random.choices([2, 3, 4], weights=[0.7, 0.25, 0.05], k=1)[0]
             if random.random() < 0.5:
-                stun_effect = Paralysis(duration=para_duration, stackable=False)
+                stun_effect = Paralysis(duration=para_duration)
                 env.apply_status(target, stun_effect)
  
             

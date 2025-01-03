@@ -617,7 +617,7 @@ class BattleEnv(gym.Env):
                         self.battle_log.append(
                             f"{player['profession'].name} 發動「雷霆護甲」麻痺了攻擊者！"
                         )
-                        self.apply_status(player["last_attacker"], Paralysis(duration=2, stacks=1))
+                        self.apply_status(player["last_attacker"], Paralysis(duration=2))
             
             # 絕地反擊 23 => 對攻擊者立即造成其本次攻擊傷害的200%，此技能需冷卻3回合
             if m == 23:
@@ -665,7 +665,7 @@ class BattleEnv(gym.Env):
                         self.battle_log.append(
                             f"{enemy['profession'].name} 發動「雷霆護甲」麻痺了攻擊者！"
                         )
-                        self.apply_status(enemy["last_attacker"], Paralysis(duration=2, stacks=1))
+                        self.apply_status(enemy["last_attacker"], Paralysis(duration=2))
             
             # 絕地反擊 23 => 對攻擊者立即造成其本次攻擊傷害的200%，此技能需冷卻3回合
             if e == 23:

@@ -380,18 +380,28 @@ def computer_vs_computer(skill_mgr, professions):
         # 我方電腦選擇技能 (0-2)
         player = env.player_team[0]
         if player["hp"] > 0:
-            action_player = np.array([random.randint(0, 2)], dtype=np.int32)
-            skill_name_p = skill_mgr.get_skill_name(action_player[0]) if action_player[0] in skill_mgr.skills else "未知技能"
-            # print(f"我方電腦選擇了技能ID {action_player[0]} ({skill_name_p})")
+            available_skills_p = player["profession"].get_available_skill_ids()
+            if available_skills_p:
+                action_player = np.array([random.choice(available_skills_p)], dtype=np.int32)
+                skill_name_p = skill_mgr.get_skill_name(action_player[0]) if action_player[0] in skill_mgr.skills else "未知技能"
+                print(f"我方電腦選擇了技能ID {action_player[0]} ({skill_name_p})")
+            else:
+                action_player = np.array([0], dtype=np.int32)  # 隨便一個數值，因為沒有可用技能
+                print(f"我方電腦沒有可用技能，跳過行動。")
         else:
             action_player = np.array([0], dtype=np.int32)  # 任意數值，因為已經死亡
 
         # 敵方電腦選擇技能 (0-2)
         enemy = env.enemy_team[0]
         if enemy["hp"] > 0:
-            action_enemy = np.array([random.randint(0, 2)], dtype=np.int32)
-            skill_name_e = skill_mgr.get_skill_name(action_enemy[0]) if action_enemy[0] in skill_mgr.skills else "未知技能"
-            # print(f"敵方電腦選擇了技能ID {action_enemy[0]} ({skill_name_e})")
+            available_skills_e = enemy["profession"].get_available_skill_ids()
+            if available_skills_e:
+                action_enemy = np.array([random.choice(available_skills_e)], dtype=np.int32)
+                skill_name_e = skill_mgr.get_skill_name(action_enemy[0]) if action_enemy[0] in skill_mgr.skills else "未知技能"
+                print(f"敵方電腦選擇了技能ID {action_enemy[0]} ({skill_name_e})")
+            else:
+                action_enemy = np.array([0], dtype=np.int32)  # 隨便一個數值，因為沒有可用技能
+                print(f"敵方電腦沒有可用技能，跳過行動。")
         else:
             action_enemy = np.array([0], dtype=np.int32)  # 任意數值，因為已經死亡
 
@@ -412,7 +422,115 @@ def computer_vs_computer(skill_mgr, professions):
         print("平手或回合耗盡")
 
 
-# main.py
+def professions_fight_each_other(skill_mgr, professions, num_battles=100):
+    """
+    每個職業相互對戰100場（使用隨機選擇技能），並計算勝率
+    """
+    print("\n開始進行每個職業相互對戰100場的測試...")
+
+    # 初始化結果字典
+    results = {p.name: {op.name: {'win': 0, 'loss': 0, 'draw': 0} for op in professions if op != p} for p in professions}
+
+    total_combinations = len(professions) * (len(professions) - 1)
+    current_combination = 0
+
+    for p in professions:
+        for op in professions:
+            if p == op:
+                continue
+            current_combination += 1
+            print(f"\n對戰 {current_combination}/{total_combinations}: {p.name} VS {op.name}")
+
+            for battle_num in range(1, num_battles + 1):
+                # 建立兩隊隊伍，分別是p和op
+                team_p = build_random_team(1, [p])
+                team_e = build_random_team(1, [op])
+
+                # 初始化BattleEnv，關閉battle_log以加快速度
+                env = BattleEnv(
+                    team_size=1,
+                    enemy_team_size=1,
+                    max_rounds=30,
+                    player_team=team_p,
+                    enemy_team=team_e,
+                    skill_mgr=skill_mgr,
+                    show_battle_log=False  # 不顯示戰鬥日誌
+                )
+
+                obs = env.reset()
+                done = False
+
+                while not done:
+                    # 我方隨機選擇技能
+                    player = env.player_team[0]
+                    if player["hp"] > 0:
+                        available_skills_p = player["profession"].get_available_skill_ids()
+                        if available_skills_p:
+                            chosen_p = random.choice(available_skills_p)
+                        else:
+                            chosen_p = 0  # 任意技能ID，因為沒有可用技能
+                    else:
+                        chosen_p = 0  # 任意技能ID，因為已經死亡
+
+                    # 敵方隨機選擇技能
+                    enemy = env.enemy_team[0]
+                    if enemy["hp"] > 0:
+                        available_skills_e = enemy["profession"].get_available_skill_ids()
+                        if available_skills_e:
+                            chosen_e = random.choice(available_skills_e)
+                        else:
+                            chosen_e = 0  # 任意技能ID，因為沒有可用技能
+                    else:
+                        chosen_e = 0  # 任意技能ID，因為已經死亡
+
+                    # 合併動作
+                    combined_action = np.concatenate([np.array([chosen_p]), np.array([chosen_e])])
+                    # 執行步驟
+                    obs, rew, done, _ = env.step(combined_action)
+
+                # 判斷結果
+                if rew > 0:
+                    results[p.name][op.name]['win'] += 1
+                elif rew < 0:
+                    results[p.name][op.name]['loss'] += 1
+                else:
+                    results[p.name][op.name]['draw'] += 1
+
+                # 顯示進度
+                if battle_num % 10 == 0:
+                    print(f"  完成 {battle_num}/{num_battles} 場")
+
+    # 計算勝率
+    win_rate_table = {}
+    for p in professions:
+        if p.name not in win_rate_table:
+            win_rate_table[p.name] = {}
+        for op in professions:
+            if p == op:
+                continue
+            total = results[p.name][op.name]['win'] + results[p.name][op.name]['loss'] + results[p.name][op.name]['draw']
+            win_rate = (results[p.name][op.name]['win'] / total) * 100 if total > 0 else 0
+            win_rate_table[p.name][op.name] = f"{win_rate:.2f}%"
+
+    # 顯示結果表
+    print("\n=== 每個職業相互對戰100場的勝率 ===")
+    headers = ["職業"] + [op.name for op in professions]
+    table = []
+    for p in professions:
+        row = [p.name]
+        for op in professions:
+            if p == op:
+                row.append("-")
+            else:
+                row.append(win_rate_table[p.name][op.name])
+        table.append(row)
+
+    print(tabulate(table, headers=headers, tablefmt="grid"))
+
+    input("對戰完成。按Enter返回主選單...")
+
+    return
+
 
 def main():
     skill_mgr = build_skill_manager()
@@ -430,7 +548,8 @@ def main():
         print("4) AI vs AI 對戰")
         print("5) AI vs 玩家 對戰")
         print("6) 玩家 VS 電腦 (電腦隨機選擇技能)")
-        print("7) 電腦 VS 電腦 對戰")  # 新增選項
+        print("7) 電腦 VS 電腦 對戰")  # 已有選項
+        print("8) 每個職業相互對戰100場並計算勝率")  # 新增選項
         print("0) 離開")
 
         choice = input("請輸入選項: ").strip()
@@ -503,8 +622,122 @@ def main():
         elif choice == "6":
             player_vs_random_computer(skill_mgr, professions)
         elif choice == "7":
-            computer_vs_computer(skill_mgr, professions)  # 呼叫新增的對戰模式函數
+            computer_vs_computer(skill_mgr, professions)  # 呼叫已有的對戰模式函數
+        elif choice == "8":
+            professions_fight_each_other(skill_mgr, professions, num_battles=100)  # 呼叫新增的對戰模式函數
         else:
             print("無效選項，請重新輸入。")
 
-main()
+
+def professions_fight_each_other(skill_mgr, professions, num_battles=100):
+    """
+    每個職業相互對戰100場（使用隨機選擇技能），並計算勝率
+    """
+    print("\n開始進行每個職業相互對戰100場的測試...")
+
+    # 初始化結果字典
+    results = {p.name: {op.name: {'win': 0, 'loss': 0, 'draw': 0} for op in professions if op != p} for p in professions}
+
+    total_combinations = len(professions) * (len(professions) - 1)
+    current_combination = 0
+
+    for p in professions:
+        for op in professions:
+            if p == op:
+                continue
+            current_combination += 1
+            print(f"\n對戰 {current_combination}/{total_combinations}: {p.name} VS {op.name}")
+
+            for battle_num in range(1, num_battles + 1):
+                # 建立兩隊隊伍，分別是p和op
+                team_p = build_random_team(1, [p])
+                team_e = build_random_team(1, [op])
+
+                # 初始化BattleEnv，關閉battle_log以加快速度
+                env = BattleEnv(
+                    team_size=1,
+                    enemy_team_size=1,
+                    max_rounds=30,
+                    player_team=team_p,
+                    enemy_team=team_e,
+                    skill_mgr=skill_mgr,
+                    show_battle_log=False  # 不顯示戰鬥日誌
+                )
+
+                obs = env.reset()
+                done = False
+
+                while not done:
+                    # 我方隨機選擇技能
+                    player = env.player_team[0]
+                    if player["hp"] > 0:
+                        available_skills_p = player["profession"].get_available_skill_ids()
+                        if available_skills_p:
+                            chosen_p = random.choice(available_skills_p)
+                        else:
+                            chosen_p = 0  # 任意技能ID，因為沒有可用技能
+                    else:
+                        chosen_p = 0  # 任意技能ID，因為已經死亡
+
+                    # 敵方隨機選擇技能
+                    enemy = env.enemy_team[0]
+                    if enemy["hp"] > 0:
+                        available_skills_e = enemy["profession"].get_available_skill_ids()
+                        if available_skills_e:
+                            chosen_e = random.choice(available_skills_e)
+                        else:
+                            chosen_e = 0  # 任意技能ID，因為沒有可用技能
+                    else:
+                        chosen_e = 0  # 任意技能ID，因為已經死亡
+
+                    # 合併動作
+                    combined_action = np.concatenate([np.array([chosen_p]), np.array([chosen_e])])
+                    # 執行步驟
+                    obs, rew, done, _ = env.step(combined_action)
+
+                # 判斷結果
+                if rew > 0:
+                    results[p.name][op.name]['win'] += 1
+                elif rew < 0:
+                    results[p.name][op.name]['loss'] += 1
+                else:
+                    results[p.name][op.name]['draw'] += 1
+
+                # 顯示進度
+                if battle_num % 10 == 0:
+                    print(f"  完成 {battle_num}/{num_battles} 場")
+
+    # 計算勝率
+    win_rate_table = {}
+    for p in professions:
+        if p.name not in win_rate_table:
+            win_rate_table[p.name] = {}
+        for op in professions:
+            if p == op:
+                continue
+            total = results[p.name][op.name]['win'] + results[p.name][op.name]['loss'] + results[p.name][op.name]['draw']
+            win_rate = (results[p.name][op.name]['win'] / total) * 100 if total > 0 else 0
+            win_rate_table[p.name][op.name] = f"{win_rate:.2f}%"
+
+    # 顯示結果表
+    print("\n=== 每個職業相互對戰100場的勝率 ===")
+    headers = ["職業"] + [op.name for op in professions]
+    table = []
+    for p in professions:
+        row = [p.name]
+        for op in professions:
+            if p == op:
+                row.append("-")
+            else:
+                row.append(win_rate_table[p.name][op.name])
+        table.append(row)
+
+    print(tabulate(table, headers=headers, tablefmt="grid"))
+
+    input("對戰完成。按Enter返回主選單...")
+
+    return
+
+
+if __name__ == "__main__":
+    main()

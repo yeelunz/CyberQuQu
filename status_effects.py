@@ -73,9 +73,6 @@ class StatusEffect:
             # not exceed max_stack
             fin_stack = min(stacks,self.max_stack)
             self.stacks = fin_stack
-            target['battle_log'].append(
-            f"{self.name} 的層數變為 {self.stacks}。"
-        )
         else:
             raise ValueError("不可疊加的效果無法設定層數")
         
@@ -408,7 +405,7 @@ class MaxHPmultiplier(StatusEffect):
     """
     def __init__(self, multiplier: float, duration: int, stackable: bool = False,stacks: int = 1, max_stack: int = 1,source=None):
         super().__init__(
-            name='最大生命值',
+            name='生命值',
             duration=duration,
             stackable=stackable,
             max_stack=max_stack,
@@ -797,6 +794,12 @@ class Track(StatusEffect):
     def on_tick(self, target):
         # just to check
         pass
+    def set_stack(self, stacks, target):
+        # 保存原有堆疊數
+        # raise ValueError(")
+        # TODO 有空的話修一下
+        raise ValueError("追蹤效果不支持set_stack，請直接用值設定stacks")
+        
 
 
 EFFECT_NAME_MAPPING = {

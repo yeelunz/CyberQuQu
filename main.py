@@ -130,25 +130,17 @@ def build_random_team(size, profession_list, sameProfession=False,pro = None):
     return team
 
 
-def ai_vs_ai(model_path_player, model_path_enemy, skill_mgr, professions):
+def ai_vs_ai(model_path, skill_mgr, professions):
     """
-    AI vs AI 對戰模式（更新版）
-    - 根據新的 obs 結構調整
-    - 明確標示 AI 控制和電腦控制
+    AI vs AI 對戰模式（使用相同模型）
+    - 兩個 AI 均由相同的 PPO 模型控制
+    - 適應更新後的 obs 結構
     """
     try:
-        # 載入 AI 控制的模型
-        model_player = PPO.load(model_path_player)
+        # 載入 PPO 模型
+        model = PPO.load(model_path)
     except FileNotFoundError:
-        print(f"Player 模型檔案 {model_path_player} 未找到。請先訓練模型。")
-        input("按Enter返回主選單...")
-        return
-
-    try:
-        # 載入 電腦控制的模型
-        model_enemy = PPO.load(model_path_enemy)
-    except FileNotFoundError:
-        print(f"Enemy 模型檔案 {model_path_enemy} 未找到。請先訓練模型。")
+        print(f"模型檔案 {model_path} 未找到。請先訓練模型。")
         input("按Enter返回主選單...")
         return
 
@@ -165,21 +157,21 @@ def ai_vs_ai(model_path_player, model_path_enemy, skill_mgr, professions):
 
         ts = 1  # 固定隊伍大小為1
 
-        # 選擇 AI 控制的隊伍
-        print("\n選擇 AI 控制的隊伍:")
+        # 選擇 AI 控制的隊伍（我方）
+        print("\n選擇 AI 控制的隊伍（我方）:")
         ai_team = build_team_by_user(ts, professions)
 
-        # 選擇 電腦控制的隊伍
-        print("選擇 電腦控制的隊伍:")
-        computer_team = build_team_by_user(ts, professions)
+        # 選擇 AI 控制的隊伍（敵方）
+        print("選擇 AI 控制的隊伍（敵方）:")
+        enemy_team = build_team_by_user(ts, professions)
 
         # 初始化 BattleEnv
         env = BattleEnv(
             team_size=ts,
             enemy_team_size=ts,
             max_rounds=30,
-            player_team=ai_team,         # AI 控制的隊伍
-            enemy_team=computer_team,    # 電腦控制的隊伍
+            player_team=ai_team,         # 我方 AI 控制的隊伍
+            enemy_team=enemy_team,       # 敵方 AI 控制的隊伍
             skill_mgr=skill_mgr,
             show_battle_log=True
         )
@@ -195,44 +187,27 @@ def ai_vs_ai(model_path_player, model_path_enemy, skill_mgr, professions):
                 enemy_obs = obs.get('enemy_obs')
 
                 if player_obs is None or enemy_obs is None:
+                    print(obs)
                     print("觀察值格式不正確，請檢查 BattleEnv 的 obs 輸出。")
                     break
 
-                # AI 選擇動作（AI 控制的隊伍）
-                action_player, _ = model_player.predict(player_obs, deterministic=True)
+                # 我方 AI 選擇動作
+                action_player, _ = model.predict(player_obs, deterministic=True)
 
-                # 電腦選擇動作（電腦控制的隊伍）
-                enemy = env.enemy_team[0]
-                if enemy["hp"] > 0:
-                    available_skills_e = enemy["profession"].get_available_skill_ids()
-                    if available_skills_e:
-                        chosen_enemy = random.choice(available_skills_e)
-                        action_enemy = np.array([chosen_enemy], dtype=np.int32)
-                    else:
-                        action_enemy = np.array([0], dtype=np.int32)  # 無可用技能，跳過
-                else:
-                    action_enemy = np.array([0], dtype=np.int32)  # 已死亡
+                # 敵方 AI 選擇動作
+                action_enemy, _ = model.predict(enemy_obs, deterministic=True)
 
             elif isinstance(obs, (np.ndarray, list)):
-                # 假設 obs 是一個扁平的陣列，前半部分是 AI 的觀察，後半部分是電腦的觀察
+                # 假設 obs 是一個扁平的陣列，前半部分是我方的觀察，後半部分是敵方的觀察
                 half = len(obs) // 2
-                player_obs = obs[:half]
-                enemy_obs = obs[half:]
+                player_obs = np.array(obs[:half]).reshape(1, -1)
+                enemy_obs = np.array(obs[half:]).reshape(1, -1)
 
-                # AI 選擇動作
-                action_player, _ = model_player.predict(np.array(player_obs).reshape(1, -1), deterministic=True)
+                # 我方 AI 選擇動作
+                action_player, _ = model.predict(player_obs, deterministic=True)
 
-                # 電腦選擇動作
-                enemy = env.enemy_team[0]
-                if enemy["hp"] > 0:
-                    available_skills_e = enemy["profession"].get_available_skill_ids()
-                    if available_skills_e:
-                        chosen_enemy = random.choice(available_skills_e)
-                        action_enemy = np.array([chosen_enemy], dtype=np.int32)
-                    else:
-                        action_enemy = np.array([0], dtype=np.int32)
-                else:
-                    action_enemy = np.array([0], dtype=np.int32)
+                # 敵方 AI 選擇動作
+                action_enemy, _ = model.predict(enemy_obs, deterministic=True)
 
             else:
                 print("未知的 obs 結構，請檢查 BattleEnv 的 obs 輸出。")
@@ -245,14 +220,12 @@ def ai_vs_ai(model_path_player, model_path_enemy, skill_mgr, professions):
             obs, reward, done, _ = env.step(combined_action)
 
             if done:
+                print("\n=== 對戰結果 ===")
                 if reward > 0:
-                    print("\n=== 對戰結果 ===")
-                    print("AI 控制的隊伍贏了!")
+                    print("我方 AI 控制的隊伍贏了!")
                 elif reward < 0:
-                    print("\n=== 對戰結果 ===")
-                    print("電腦控制的隊伍贏了!")
+                    print("敵方 AI 控制的隊伍贏了!")
                 else:
-                    print("\n=== 對戰結果 ===")
                     print("平手或回合耗盡")
                 break
 
@@ -924,7 +897,7 @@ def main():
     professions = build_professions()
 
     # 模型檔案路徑(統一寫在這)
-    default_model_path_player = "ppo_player_iter20.zip"
+    default_model_path_player = "ppo_player_iter50.zip"
 
     while True:
         print("\n=== 回合制戰鬥系統 ===")
@@ -1026,3 +999,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+    
+#FIXME  MAXHP 有問題(會異常補血)

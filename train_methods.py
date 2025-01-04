@@ -178,7 +178,7 @@ def train_iteratively(num_iterations, max_episodes, skill_mgr, professions, save
     for player_prof in professions:
         for enemy_prof in professions:
             if player_prof.profession_id != enemy_prof.profession_id:
-                for _ in range(10):  # 每對職業對戰1次
+                for _ in range(50):  # 每對職業對戰1次
                     envs.append(lambda p=player_prof, e=enemy_prof: BattleEnv(
                         team_size=1,
                         enemy_team_size=1,

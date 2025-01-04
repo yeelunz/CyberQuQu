@@ -211,47 +211,43 @@ class EffectManager:
             if not self.active_effects[effect_id]:
                 del self.active_effects[effect_id]
 
-    def set_effect_stack(self, effect_id: int, tar, stacks: int, sources: str = None):
+    def set_effect_stack(self, effect_name: int, tar, stacks: int, sources: str = None):
         """
         設置指定效果的堆疊數。正數增加堆疊，負數減少堆疊。
         
-        :param effect_id: 效果的唯一識別碼（整數）。
+        :param effect_name: status_effect類中的name屬性
         :param tar: 目標對象，通常是角色本身。
         :param stacks: 要設置的堆疊數（正數增加，負數減少）。
         :param sources: 效果的來源，用於區分不同來源的效果。
         """
         # 對於特定的效果ID，需要指定來源
-        if effect_id in [1, 2, 3, 12, 999]:  # 到需要source的效果ID列表
+        if effect_name in ["攻擊力","防禦力","治癒力","龍神buff"]:  # 到需要source的效果ID列表
             # 只有：同名字，但效果不同的效果才需要sourc來區分
             if not sources:
-                raise ValueError(f"Effect ID {effect_id} 必須指定 source。")
+                raise ValueError(f"Effect ID {effect_name} 必須指定 source。")
         
         # 初始化列表以存儲需要移除的效果
         effects_to_remove = []
         
         # 檢查效果是否已存在
-        if effect_id in self.active_effects:
-            for effect in self.active_effects[effect_id]:
-                if sources:
-                    # 只更新匹配來源的效果
-                    if effect.source == sources:
-                        effect.set_stack(stacks, tar)
-                else:
-                    # 如果不需要來源，則更新所有匹配的效果
-                    effect.set_stack(stacks, tar)
-                
-                # 如果堆疊數量小於或等於0，標記為需要移除
-                if effect.stacks <= 0:
-                    effect.on_remove(tar)
-                    effects_to_remove.append(effect)
+        # find effect by name and source
+        for effect_id, effects in list(self.active_effects.items()):
+            for effect in effects:
+                # 如果有source才要檢查source
+                # 如果沒有source來源的話，則設定所有的同名效果
+                if effect.name == effect_name and (not sources or effect.source == sources):
+                    # 如果堆疊數為0，則移除效果
+                    if stacks == 0:
+                        effect.on_remove(tar)
+                        effects_to_remove.append((effect_id, effect))
+                    else:
+                        # 更新堆疊數
+                        effect.stacks = stacks
+                        effect.on_apply(tar)
+                    
+                    
+                        
         
-        # 移除標記的效果（避免在迭代時直接修改列表）
-        for effect in effects_to_remove:
-            self.active_effects[effect_id].remove(effect)
-        
-        # 如果該效果ID的所有效果都被移除，則從active_effects中刪除該鍵
-        if effect_id in self.active_effects and not self.active_effects[effect_id]:
-            del self.active_effects[effect_id]
 
 
     def export_obs(self):

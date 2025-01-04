@@ -204,6 +204,8 @@ class BattleEnv(gym.Env):
                 elif user["skip_turn"]:
                     self.battle_log.append(f"【{user['profession'].name}】，因異常狀態跳過行動")
                     user["skip_turn"] = False
+                    # remove freeze effect
+                    user["effect_manager"].remove_all_effects('凍結')
                     continue
 
             skill_index = int(player_actions[i])
@@ -257,6 +259,9 @@ class BattleEnv(gym.Env):
                 elif e["skip_turn"]:
                     self.battle_log.append(f"【{e['profession'].name}】，因異常狀態跳過行動")
                     e["skip_turn"] = False
+                    # remove freeze effect
+                    e["effect_manager"].remove_all_effects('凍結')
+                    
                     continue
 
             skill_index = int(enemy_actions[j])
@@ -380,11 +385,11 @@ class BattleEnv(gym.Env):
             self._process_passives_end_of_turn(player_all_skill, enemy_all_skill)
             self._handle_status_end_of_turn()
             self._manage_cooldowns()
-        # 增加戰鬥特性：超過10回合後，每過2回合，雙方的傷害係數增加5%
+        # 增加戰鬥特性：超過10回合後，每過2回合，雙方的傷害係數增加10%
             if self.round_count > 10 and (self.round_count - 10) % 2 == 0:
-                self.damage_coefficient *= 1.05
+                self.damage_coefficient *= 1.1
                 self.battle_log.append(
-                f"戰鬥超過10回合，雙方的傷害係數增加了5%，現在為 {self.damage_coefficient:.2f}。")
+                f"戰鬥超過10回合，雙方的傷害係數增加了10%，現在為 {self.damage_coefficient:.2f}。")
         # 強制停止
         self.round_count += 1
         if self.round_count > self.max_rounds:
@@ -456,13 +461,13 @@ class BattleEnv(gym.Env):
         )
         
         # 如果職業是荒原遊俠
-        # 進行冷箭判定冷箭：受到攻擊時，30%機率反擊25點傷害。
+        # 進行冷箭判定冷箭：受到攻擊時，20%機率反擊45點傷害。
         if target["profession"].name == "荒原遊俠":
-            if random.random() < 0.15:
+            if random.random() < 0.2:
                 self.battle_log.append(
                     f"{target['profession'].name} 發動「冷箭」反擊！"
                 )
-                self.deal_damage(target, user, 25, can_be_blocked=False)
+                self.deal_damage(target, user, 45, can_be_blocked=False)
         
         
         # update last attacker and last damage
@@ -475,7 +480,7 @@ class BattleEnv(gym.Env):
         處理治療邏輯，包括超過最大生命的處理
         # heal_damage 與 self_mutilation 不能同時為True
         """
-        if user["hp"] <= 0 and not self_mutilation:
+        if user["hp"] <= 0 :
             self.battle_log.append(f"{user['profession'].name} 已被擊敗，無法恢復生命值。")
             return
         # 首先進行治療增減比例的應用
@@ -491,7 +496,7 @@ class BattleEnv(gym.Env):
                 heal_amount = user["max_hp"] - user["hp"]
             # 實際治療
             user["hp"] = min(user["hp"] + heal_amount, user["max_hp"])
-            self.battle_log.append(f"{user['profession'].name} 恢復了 {heal_amount} 點生命值 (剩餘HP={user['hp']})")
+            self.battle_log.append(f"{user['profession'].name} 恢復了 {heal_amount} 點生命值 (剩餘HP={int(user['hp'])})")
         # 接著如果 heal_damage 為 True，則對目標造成治療量的rate%傷害
         if heal_damage and target:
             dmg = int(extra_heal * rate) 
@@ -501,15 +506,15 @@ class BattleEnv(gym.Env):
         if self_mutilation:
             dmg = int(heal_amount)
             user["hp"] = max(1, user["hp"] - dmg)
-            self.battle_log.append(f"{user['profession'].name} 自傷 {dmg} 點生命值 (剩餘HP={user['hp']})")
+            self.battle_log.append(f"{user['profession'].name} 自傷 {dmg} 點生命值 (剩餘HP={int(user['hp'])})")
             # 累積傷害
             user['accumulated_damage'] += dmg
 
-    def set_status(self, target, status_id,stacks,source = None):
+    def set_status(self, target, status_name,stacks,source = None):
         """
         設置特定status_id 的stack
         """
-        target["effect_manager"].set_effect_stack(status_id,target,stacks,source)
+        target["effect_manager"].set_effect_stack(status_name,target,stacks,source)
         
     def apply_status(self, target, status_effect):
         """
@@ -561,9 +566,6 @@ class BattleEnv(gym.Env):
                     f"{profession.name} 的被動技能「堅韌壁壘」發動！"
                 )
                 heal = int((profession.max_hp - m['hp']) * 0.1)
-                m["battle_log"].append(
-                    f"{profession.name} 的被動技能「堅韌壁壘」發動！"
-                )
                 self.deal_healing(m, heal)
             elif profession.name == "烈陽勇士":
                 # 太陽庇佑被動：每當敵方單位進入異常狀態時，回復自身5點生命值。
@@ -583,11 +585,10 @@ class BattleEnv(gym.Env):
                 passive_id = profession.default_passive_id
                 deffect = DefenseMultiplier(multiplier=1.03,duration=99,stacks=1,source=passive_id,stackable=True,max_stack=99)
                 heffect = DamageMultiplier(multiplier=1.03,duration=99,stacks=1,source=passive_id,stackable=True,max_stack=99)
-                hpeffect = MaxHPmultiplier(multiplier=1.03,duration=99,stacks=1,source=passive_id,stackable=True,max_stack=99)
+                # hpeffect = MaxHPmultiplier(multiplier=1.02,duration=99,stacks=1,source=passive_id,stackable=True,max_stack=99)
                 track = Track(name="龍神buff",duration=99,stacks=1,source=passive_id,stackable=True,max_stack=99)
                 self.apply_status(m,deffect)
                 self.apply_status(m,heffect)
-                self.apply_status(m,hpeffect)
                 self.apply_status(m,track)
      
     def _process_passives_end_of_turn(self,mSkill = None,eSkill = None):
@@ -655,7 +656,7 @@ class BattleEnv(gym.Env):
                 if p['accumulated_damage'] >= p['max_hp'] * 0.35:
                     heal = int(p['accumulated_damage'] * 0.05)
                     self.battle_log.append(
-                        f"{p['profession'].name} 的被動技能「荒神之力」發動！"
+                        f"{p['profession'].name} 的被動技能「荒蕪」發動！"
                     )
                     self.deal_healing(p, heal)
                     p['accumulated_damage'] = 0
@@ -716,8 +717,8 @@ class BattleEnv(gym.Env):
     def _get_reward(self):
         """
         計算獎勵：
-        我方獲勝 => +20
-        敵方獲勝 => -20
+        我方獲勝 => +50
+        敵方獲勝 => -50
         平手 => 0
 
         """
@@ -725,9 +726,9 @@ class BattleEnv(gym.Env):
             if all(m["hp"] <= 0 for m in self.player_team) and all(e["hp"] <= 0 for e in self.enemy_team):
                 return 0
             elif all(m["hp"] <= 0 for m in self.player_team):
-                return -20
+                return -50
             elif all(e["hp"] <= 0 for e in self.enemy_team):
-                return 20
+                return 50
         return 0
 
 
@@ -754,8 +755,12 @@ class BattleEnv(gym.Env):
 
         def format_effect_details(effect_id, effs):
             """格式化每個效果的詳細資訊，包括名稱、層數、持續時間"""
+            stacks = 0
             effect_name = EFFECT_NAME_MAPPING.get(effect_id, '未知效果')
-            stacks = len(effs)  # 堆疊層數
+            if  len(effs)>0:
+                stacks = effs[0].stacks  # 當前層數
+            else:
+                stacks = 0
             durations = ", ".join([str(eff.duration) for eff in effs])  # 剩餘回合數
             return f"{effect_name}({stacks}層, 持續: {durations}回合)"
 

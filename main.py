@@ -645,7 +645,9 @@ def ai_vs_random_computer(model_path_player, skill_mgr, professions):
         done = False
         while not done:
             # AI選擇動作
-            action_player, _ = model_player.predict(obs.reshape(1, -1), deterministic=True)
+            action_player,tmp = model_player.predict(obs.reshape(1, -1), deterministic=True)
+            print("PRED1",action_player)
+            print("PRED2",tmp)
 
             # 電腦隨機選擇技能
             enemy = env.enemy_team[0]
@@ -986,7 +988,7 @@ def main():
         elif choice == "7":
             computer_vs_computer(skill_mgr, professions)  # 呼叫已有的對戰模式函數
         elif choice == "8":
-            professions_fight_each_other(skill_mgr, professions, num_battles=50)  # 呼叫新增的對戰模式函數
+            professions_fight_each_other(skill_mgr, professions, num_battles=150)  # 呼叫新增的對戰模式函數
         elif choice == "9":
             ai_vs_random_computer(default_model_path_player, skill_mgr, professions)  # 呼叫已有的對戰模式函數
         elif choice == "10":

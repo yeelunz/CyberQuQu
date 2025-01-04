@@ -16,6 +16,7 @@ from effect_manager import EffectManager
 from skills import SkillManager
 import random
 from effect_mapping import EFFECT_VECTOR_LENGTH  # 引入效果向量長度
+from gym import spaces
 
 class BattleEnv(gym.Env):
     """
@@ -45,27 +46,27 @@ class BattleEnv(gym.Env):
         self.player_team = player_team
         self.enemy_team = enemy_team
         self.skill_mgr = skill_mgr
-
         self.show_battle_log = show_battle_log
         self.battle_log = []
         self.last_attacker = None
         self.last_damage = 0
 
         # 計算觀察值的維度
-        # 對每個角色，我們有：
-        # - hp, profession_id, max_hp, base_hp, is_defending
-        # - damage_multiplier, defend_multiplier, heal_multiplier
-        # - cooldowns (3個技能)
-        # - effect_manager 輸出 (固定長度，例如24)
-        per_character_obs = 5 + 3 + 3 + EFFECT_VECTOR_LENGTH  # hp, profession_id, max_hp, base_hp, is_defending + multipliers + cooldowns + effects
-
+        per_character_obs = 5 + 3 + 3 + EFFECT_VECTOR_LENGTH  # 您的觀察維度
         obs_dim = (team_size + enemy_team_size) * per_character_obs + 1  # 加上 round_count
-        self.observation_space = gym.spaces.Box(
-            low=0, high=9999, shape=(obs_dim,), dtype=np.float32
-        )
 
-        # Action space: 每個角色有3個技能選項
-        self.action_space = gym.spaces.MultiDiscrete([3] * (team_size + enemy_team_size))
+        # 定義觀察空間
+        self.observation_space = spaces.Dict({
+            'player_obs': spaces.Box(low=0, high=9999, shape=(obs_dim,), dtype=np.float32),
+            'opponent_obs': spaces.Box(low=0, high=9999, shape=(obs_dim,), dtype=np.float32)
+        })
+
+        # 定義動作空間
+        # 每個智能體有3個動作選項
+        self.action_space = spaces.Dict({
+            'player_action': spaces.Discrete(3),
+            'opponent_action': spaces.Discrete(3)
+        })
 
         self.round_count = 1
         self.done = False
@@ -126,50 +127,34 @@ class BattleEnv(gym.Env):
 
         self.damage_coefficient_increment_rounds = []
 
-        obs = self._get_obs()
-        return obs
+        obs_player = self._get_obs(player=True)
+        obs_opponent = self._get_obs(player=False)
+        return {'player_obs': obs_player, 'opponent_obs': obs_opponent}
 
-    def _get_obs(self):
-        """
-        回傳觀察值：
-        - 對每個隊伍成員，包含 hp, profession_id, max_hp, base_hp, is_defending
-        - damage_multiplier, defend_multiplier, heal_multiplier
-        - cooldowns (3個技能)
-        - effect_manager 輸出 (固定長度，來自 effect_mapping.py)
-        - 最後加上 round_count
-        """
+    def _get_obs(self, player=True):
         obs = []
-        for m in self.player_team + self.enemy_team:
-            obs.extend([
-                m["hp"],
-                m["profession"].profession_id,
-                m["max_hp"],
-                m["profession"].base_hp,
-                float(m["is_defending"])
-            ])
-            obs.extend([
-                m.get("damage_multiplier", 1.0),
-                m.get("defend_multiplier", 1.0),
-                m.get("heal_multiplier", 1.0)
-            ])
-            # 添加技能可用性標誌
-            for skill_id in range(3):  # 假設每個職業有3個技能，ID為0,1,2
+        # ... 您現有的觀察填充
+        # 添加動作可用性標誌
+        if player:
+            team = self.player_team
+        else:
+            team = self.enemy_team
+    
+        for m in team:
+            for skill_id in range(3):
                 available = 1 if m["cooldowns"].get(skill_id, 0) == 0 else 0
                 obs.append(available)
-            # 添加效果觀察值
-            effect_obs = m["effect_manager"].export_obs()
-            obs.extend(effect_obs)
-
-        obs.append(self.round_count)
+        
+        # 返回觀察
         return np.array(obs, dtype=np.float32)
 
     def step(self, actions):
         self._print_round_header()
         self._print_teams_hp()
+        
+        player_action = actions['player_action']
+        opponent_action = actions['opponent_action']
 
-        # 分離我方和敵方的動作
-        player_actions = actions[:self.team_size]
-        enemy_actions = actions[self.team_size:]
 
         # 回合開始時處理被動技能
         self._process_passives()
@@ -396,16 +381,25 @@ class BattleEnv(gym.Env):
             done = True
             reward = -10
 
+        self._print_round_footer()
 
-        reward = self._get_reward() + penalty
+        reward_player = self._get_reward(player=True)
+        reward_opponent = self._get_reward(player=False)
+
+        # 檢查是否結束
         done = self.done
 
-        # 最後檢查是否超過最大回合數
+        # 獲取新的觀察值
+        obs_player = self._get_obs(player=True)
+        obs_opponent = self._get_obs(player=False)
 
-        self._print_round_footer()
-        obs = self._get_obs()
-
-        return obs, reward, done, {}
+        return {
+            'player_obs': obs_player,
+            'opponent_obs': obs_opponent
+        }, {
+            'player_reward': reward_player,
+            'opponent_reward':reward_opponent
+        }, done, {}
 
     def _check_both_defeated(self):
         """
@@ -463,7 +457,7 @@ class BattleEnv(gym.Env):
         # 如果職業是荒原遊俠
         # 進行冷箭判定冷箭：受到攻擊時，20%機率反擊45點傷害。
         if target["profession"].name == "荒原遊俠":
-            if random.random() < 0.2:
+            if random.random() < 0.25:
                 self.battle_log.append(
                     f"{target['profession'].name} 發動「冷箭」反擊！"
                 )
@@ -714,21 +708,40 @@ class BattleEnv(gym.Env):
         """
         return [user]
 
-    def _get_reward(self):
+    def _get_reward(self, player=True):
         """
-        計算獎勵：
-        我方獲勝 => +50
-        敵方獲勝 => -50
-        平手 => 0
-
+        計算獎勵，根據玩家或對手
         """
         if self.done:
-            if all(m["hp"] <= 0 for m in self.player_team) and all(e["hp"] <= 0 for e in self.enemy_team):
-                return 0
-            elif all(m["hp"] <= 0 for m in self.player_team):
-                return -50
-            elif all(e["hp"] <= 0 for e in self.enemy_team):
-                return 50
+            if player:
+                if all(m["hp"] <= 0 for m in self.player_team) and all(e["hp"] <= 0 for e in self.enemy_team):
+                    return 0
+                elif all(m["hp"] <= 0 for m in self.player_team):
+                    return -50
+                elif all(e["hp"] <= 0 for e in self.enemy_team):
+                    return 50
+            else:
+                if all(m["hp"] <= 0 for m in self.player_team) and all(e["hp"] <= 0 for e in self.enemy_team):
+                    return 0
+                elif all(m["hp"] <= 0 for m in self.player_team):
+                    return 50
+                elif all(e["hp"] <= 0 for e in self.enemy_team):
+                    return -50
+        else:
+            # 可以根據每回合的表現給予獎勵
+            # 例如，造成傷害給予正獎勵，受到傷害給予負獎勵
+            reward = 0
+            if player:
+                # 計算玩家的傷害和受到的傷害
+                # reward += player_damage_done * 0.1
+                # reward -= player_damage_received * 0.1
+                pass
+            else:
+                # 計算對手的傷害和受到的傷害
+                # reward += opponent_damage_done * 0.1
+                # reward -= opponent_damage_received * 0.1
+                pass
+            return reward
         return 0
 
 

@@ -473,9 +473,9 @@ class SteadfastWarrior(BattleProfession):
         super().__init__(
             profession_id=7,
             name="剛毅武士",
-            base_hp=240,
+            base_hp=260,
             passive_desc="堅韌壁壘：每回合開始時恢復已損生命值的10%。",
-            baseAtk=0.9,
+            baseAtk=0.95,
             baseDef=1.3
         )
     # 
@@ -531,7 +531,7 @@ class SunWarrior(BattleProfession):
         super().apply_skill(skill_id, user, targets, env)
         if skill_id == 24:
             # 技能 24 => 對單體造成30點傷害，並附加「燃燒」狀態
-            dmg = 30 * self.baseAtk 
+            dmg = 45 * self.baseAtk 
             dmg = self.passive(user, dmg, env)
             
             env.deal_damage(user, targets[0], dmg, can_be_blocked=True)
@@ -568,7 +568,7 @@ class Ranger(BattleProfession):
             profession_id=9,
             name="荒原遊俠",
             base_hp=210,
-            passive_desc="冷箭：受到攻擊時，20%機率反擊45點傷害。",
+            passive_desc="冷箭：受到攻擊時，25%機率反擊45點傷害。",
             baseAtk=1.3,
             baseDef=0.9
         )

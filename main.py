@@ -9,11 +9,16 @@ from battle_env import BattleEnv
 from skills import SkillManager, sm
 from professions import (
     Paladin, Mage, Assassin, Archer, Berserker, DragonGod, BloodGod,
-    SteadfastWarrior, SunWarrior, Ranger, ElementalMage, HuangShen,
+    SteadfastWarrior, Devour, Ranger, ElementalMage, HuangShen,
     GodOfStar
 )
 from status_effects import StatusEffect, DamageMultiplier
 from effect_mapping import EFFECT_MAPPING, EFFECT_VECTOR_LENGTH
+from train_methods import make_env_config
+from ray.rllib.algorithms.ppo import PPOConfig
+from ray.rllib.algorithms import ppo  # 或其他使用的算法
+import os
+from ray.rllib.utils.checkpoints import get_checkpoint_info
 
 # 本檔案最重要的是「只留以下幾個功能選單」
 # 1) 交叉疊代訓練 (多智能體)
@@ -49,7 +54,7 @@ def build_professions():
         DragonGod(),
         BloodGod(),
         SteadfastWarrior(),
-        SunWarrior(),
+        Devour(),
         Ranger(),
         ElementalMage(),
         HuangShen(),
@@ -87,75 +92,40 @@ def computer_vs_computer(skill_mgr, professions):
     電腦 VS 電腦: 雙方都隨機選擇職業(可依需求改成讓使用者選)，
     兩邊出招都是隨機 => 印 battle_log。
     """
-    p_team = [{
-        "profession": random.choice(professions),
-        "hp": 0,  # init後會重設
-        "max_hp": 0,
-        "status": {},
-        "skip_turn": False,
-        "is_defending": False,
-        "times_healed": 0,
-        "next_heal_double": False,
-        "damage_multiplier": 1.0,
-        "defend_multiplier": 1.0,
-        "heal_multiplier": 1.0,
-        "battle_log": [],
-        "cooldowns": {}
-    }]
-    e_team = [{
-        "profession": random.choice(professions),
-        "hp": 0,
-        "max_hp": 0,
-        "status": {},
-        "skip_turn": False,
-        "is_defending": False,
-        "times_healed": 0,
-        "next_heal_double": False,
-        "damage_multiplier": 1.0,
-        "defend_multiplier": 1.0,
-        "heal_multiplier": 1.0,
-        "battle_log": [],
-        "cooldowns": {}
-    }]
-
     env = BattleEnv(
-        team_size=1,
-        enemy_team_size=1,
-        max_rounds=30,
-        player_team=p_team,
-        enemy_team=e_team,
-        skill_mgr=skill_mgr,
-        show_battle_log=True
+        config=make_env_config(skill_mgr=skill_mgr, professions=professions,show_battlelog=True),
     )
 
-    obs = env.reset()
+    
+    #  ret = {
+            # "obs": ret_player_obs,
+            # "action_mask": player_mask
+            
+    #  player / enemy
     done = False
+    obs, _ = env.reset()
+    
     while not done:
         # 電腦(隨機)出招 => 取得 action_mask 來過濾
-        p_mask = obs["player_action_mask"]  # shape=(3,)
-        e_mask = obs["opponent_action_mask"]
-
-        # 從合法招式中隨機選
-        p_actions = np.where(p_mask == 1)[0]
-        e_actions = np.where(e_mask == 1)[0]
-        if len(p_actions) == 0:
-            p_act = 0
-        else:
-            p_act = random.choice(p_actions)
-
-        if len(e_actions) == 0:
-            e_act = 0
-        else:
-            e_act = random.choice(e_actions)
+        
+        pmask = obs["player"][0:3]
+        emask = obs["enemy"][0:3]
+        p_actions = np.where(pmask == 1)[0]
+        e_actions = np.where(emask == 1)[0]
+        p_act = random.choice(p_actions) if len(p_actions) > 0 else 0
+        e_act = random.choice(e_actions) if len(e_actions) > 0 else 0
 
         actions = {
-            "player_action": p_act,
-            "opponent_action": e_act
+            "player": p_act,
+            "enemy": e_act
         }
-        obs, rewards, done, info = env.step(actions)
+        # {"player": reward_player, "enemy": reward_opponent}
+        obs, rew, done, tru, info = env.step(actions)
+        done = done["__all__"]
 
     # 判斷誰贏
-    final_rew = rewards["player_reward"]
+    final_rew = rew["player"]
+    
     if final_rew > 0:
         print("電腦(左)贏了!")
     elif final_rew < 0:
@@ -273,106 +243,78 @@ def ai_vs_computer(model_path, skill_mgr, professions):
 #---------------------------------------
 def ai_vs_ai(model_path_1, model_path_2, skill_mgr, professions):
     """
-    兩個AI互打: AI1 vs AI2 (都用 PPO)
+    兩個AI互打: AI1 vs AI2 
     """
-    try:
-        model1 = PPO.load(model_path_1)
-    except:
-        print(f"模型 {model_path_1} 載入失敗，請先確保已訓練。")
-        input("按Enter返回主選單...")
-        return
-
-    try:
-        model2 = PPO.load(model_path_2)
-    except:
-        print(f"模型 {model_path_2} 載入失敗，請先確保已訓練。")
-        input("按Enter返回主選單...")
-        return
-
-    p_team = [{
-        "profession": random.choice(professions),
-        "hp": 0,
-        "max_hp": 0,
-        "status": {},
-        "skip_turn": False,
-        "is_defending": False,
-        "times_healed": 0,
-        "next_heal_double": False,
-        "damage_multiplier": 1.0,
-        "defend_multiplier": 1.0,
-        "heal_multiplier": 1.0,
-        "battle_log": [],
-        "cooldowns": {}
-    }]
-    e_team = [{
-        "profession": random.choice(professions),
-        "hp": 0,
-        "max_hp": 0,
-        "status": {},
-        "skip_turn": False,
-        "is_defending": False,
-        "times_healed": 0,
-        "next_heal_double": False,
-        "damage_multiplier": 1.0,
-        "defend_multiplier": 1.0,
-        "heal_multiplier": 1.0,
-        "battle_log": [],
-        "cooldowns": {}
-    }]
-
-    env = BattleEnv(
-        team_size=1,
-        enemy_team_size=1,
-        max_rounds=30,
-        player_team=p_team,
-        enemy_team=e_team,
-        skill_mgr=skill_mgr,
-        show_battle_log=True
+    beconfig = make_env_config(skill_mgr=skill_mgr, professions=professions,show_battlelog=True)
+    benv = BattleEnv(config=beconfig)
+    
+    config = (
+        PPOConfig()
+        .environment(
+            env=BattleEnv,            # 指定我們剛剛定義的環境 class
+            env_config=beconfig# 傳入給 env 的一些自定設定
+        )
+        .env_runners(num_env_runners=1,sample_timeout_s=120)  # 可根據你的硬體調整
+        .framework("torch")            # 或 "tf"
+        )
+    
+    config.api_stack(enable_rl_module_and_learner=False,enable_env_runner_and_connector_v2=False)
+    model_path_1 = "my_battle_ppo_checkpoints/policies/player_policy"
+    model_path_2 = "my_battle_ppo_checkpoints/policies/enemy_policy"
+    
+    config = config.multi_agent(
+        policies={
+            "player_policy": (None, benv.observation_space, benv.action_space, {}),
+            "enemy_policy": (None, benv.observation_space, benv.action_space, {}),
+        },
+        policy_mapping_fn=lambda agent_id, episode, worker=None, **kwargs: 
+            "player_policy" if agent_id == "player" else "enemy_policy"
     )
+    
+    check_point_path = "my_battle_ppo_checkpoints"
+    check_point_path = os.path.abspath("my_battle_ppo_checkpoints")
+    print(get_checkpoint_info(check_point_path))
+    print("当前工作目录:", os.getcwd())
 
-    obs = env.reset()
+# 检查文件是否存在
+    check_point_path = "my_battle_ppo_checkpoints"
+    print("文件存在:", os.path.exists(check_point_path))
+    trainer = config.build()  # 用新的 API 构建训练器
+    trainer.restore(check_point_path)
+
     done = False
+    obs, _ = benv.reset()
     while not done:
-        p_obs = obs["player_obs"]
-        p_mask = obs["player_action_mask"]
-        e_obs = obs["opponent_obs"]
-        e_mask = obs["opponent_action_mask"]
-
-        # model1 predict
-        avail_p = np.where(p_mask == 1)[0]
-        if len(avail_p) == 0:
-            act_p = 0
-        else:
-            pred_p, _ = model1.predict(p_obs, deterministic=False)
-            if pred_p not in avail_p:
-                act_p = random.choice(avail_p)
-            else:
-                act_p = pred_p
-
-        # model2 predict
-        avail_e = np.where(e_mask == 1)[0]
-        if len(avail_e) == 0:
-            act_e = 0
-        else:
-            pred_e, _ = model2.predict(e_obs, deterministic=False)
-            if pred_e not in avail_e:
-                act_e = random.choice(avail_e)
-            else:
-                act_e = pred_e
-
+        pmask = obs["player"][0:3]
+        emask = obs["enemy"][0:3]
+        p_actions = np.where(pmask == 1)[0]
+        e_actions = np.where(emask == 1)[0]
+        
+        p_act = trainer.compute_action(obs["player"], policy_id="player_policy")
+        # if p act in mask is 0, then choose random action
+        if p_act not in p_actions:
+            p_act = random.choice(p_actions)
+            print("使用到冷卻中的技能")
+            
+        e_act = trainer.compute_action(obs["enemy"], policy_id="enemy_policy")
+        
+        if e_act not in e_actions:
+            e_act = random.choice(e_actions)
+            print("使用到冷卻中的技能")
+        
         actions = {
-            "player_action": act_p,
-            "opponent_action": act_e
+            "player": p_act,
+            "enemy": e_act
         }
-        obs, rewards, done, info = env.step(actions)
-
-    final_rew = rewards["player_reward"]
+        obs, rew, done, tru, info = benv.step(actions)
+        done = done["__all__"]
+    
+    final_rew = rew["player"]
     if final_rew > 0:
         print("AI1(左)贏了!")
     elif final_rew < 0:
         print("AI2(右)贏了!")
-    else:
-        print("平手或回合耗盡")
+
     input("按Enter返回主選單...")
 
 #---------------------------------------

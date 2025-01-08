@@ -1,24 +1,26 @@
 # battle_env.py
 
-import gym
+import gymnasium
 import numpy as np
 from status_effects import (
     Burn, Poison, Freeze, DamageMultiplier, DefenseMultiplier, HealMultiplier,
     ImmuneDamage, ImmuneControl, BleedEffect, Stun, StatusEffect,HealthPointRecover,MaxHPmultiplier, Track,Paralysis
     , EFFECT_NAME_MAPPING
 )
-from professions import (
-    Paladin, Mage,Assassin,Archer, Berserker,DragonGod,BloodGod,
-    SteadfastWarrior,SunWarrior,Ranger,ElementalMage,HuangShen,
-    GodOfStar
-)
+
+
 from effect_manager import EffectManager
 from skills import SkillManager
 import random
 from effect_mapping import EFFECT_VECTOR_LENGTH  # 引入效果向量長度
-from gym import spaces
 
-class BattleEnv(gym.Env):
+
+from gymnasium import spaces
+from gymnasium.spaces import Box, Discrete,Dict
+from ray.rllib.env import MultiAgentEnv
+
+
+class BattleEnv(MultiAgentEnv):
     """
     支援 1v1 的雙方AI控制環境。
     - obs shape = (team_size + enemy_team_size) * per_character_obs + 1
@@ -35,36 +37,37 @@ class BattleEnv(gym.Env):
     """
     metadata = {"render.modes": ["human"]}
 
-    def __init__(self, team_size, enemy_team_size, max_rounds,
-                    player_team, enemy_team, skill_mgr, show_battle_log=True):
+    def __init__(self, config):
+        # self, team_size, enemy_team_size, max_rounds,
+        #             player_team, enemy_team, skill_mgr, show_battle_log=True
             super(BattleEnv, self).__init__()
-            self.team_size = team_size
-            self.enemy_team_size = enemy_team_size
-            self.max_rounds = max_rounds
-            self.player_team = player_team
-            self.enemy_team = enemy_team
-            self.skill_mgr = skill_mgr
-            self.show_battle_log = show_battle_log 
+            self.config = config
+      
+            # init from config
+            self.team_size = config["team_size"]
+            self.enemy_team_size = config["enemy_team_size"]
+            self.max_rounds = config["max_rounds"]
+            self.player_team = config["player_team"]
+            self.enemy_team = config["enemy_team"]
+            self.skill_mgr = config["skill_mgr"]
+            self.show_battle_log = config["show_battle_log"]
             self.round_count = 1
             self.done = False
             self.battle_log = []
             self.damage_coefficient = 1.0
+            
 
-            # (1) 這裡只是示範: 把 obs_space 變成 Dict，裡面含 2 個 Box(玩家、敵人) + 2 個 Box(action_mask)
-            # 你也可以用原本的 obs_space = spaces.Box(...) 方式，但要確保 step() 回傳 shape 對得上
-            self.observation_space = spaces.Dict({
-                "player_obs": spaces.Box(low=-100000, high=100000, shape=(10,), dtype=np.float32),
-                "opponent_obs": spaces.Box(low=-100000, high=100000, shape=(10,), dtype=np.float32),
-                "player_action_mask": spaces.Box(low=0, high=1, shape=(3,), dtype=np.int8),
-                "opponent_action_mask": spaces.Box(low=0, high=1, shape=(3,), dtype=np.int8),
-            })
+            self.agents = ["player", "enemy"]
 
-            # 動作空間(每個智能體可以選 [0,1,2])
-            self.action_space = spaces.Dict({
-                "player_action": spaces.Discrete(3),
-                "opponent_action": spaces.Discrete(3)
-            })
-    def reset(self):
+
+            # 為每個代理配置觀察空間和動作空間
+            self.observation_space = Box(low=-1e4, high=1e4, shape=(26,), dtype=np.float32)
+            self.action_space = Discrete(3)
+
+    def reset(self,*, seed=None, options=None):
+        if seed is not None:
+            np.random.seed(seed)
+            
         self.round_count = 1
         self.done = False
         self.battle_log.clear()
@@ -104,58 +107,19 @@ class BattleEnv(gym.Env):
             e["heal_multiplier"] = 1.0
             e["battle_log"] = []
             e["cooldowns"] = {0:0, 1:0, 2:0}
-
+            
             e["skills_used"] = {} 
             e["effect_manager"] = EffectManager(e)  # 初始化 EffectManager
             e["last_attacker"] = None
             e["last_damage"] = 0
             e['accumulated_damage'] = 0
 
-        obs = self._get_obs()
-        return obs
-
-    def _get_obs(self):
-        """
-        回傳同時給AI1、AI2的觀測。 
-        同時要加上 action_mask，表示哪些動作可用(沒進CD) => 1/0
-        """
-        # 這裡示範做得很簡單：只回傳 [ player_hp, enemy_hp, round_count ] 等資訊
-        # 你可以自行加回你原本的觀察資訊(例如各種buff等)
-        player_m = self.player_team[0]
-        enemy_m = self.enemy_team[0]
-
-        # 觀察值(可自行擴充)
-        player_obs = np.array([
-            player_m["hp"],
-            player_m["max_hp"],
-            enemy_m["hp"],
-            enemy_m["max_hp"],
-            self.round_count,
-            # ... 你想加的資訊 ...
-            0,0,0,0,0  # filler for shape=(10,) 
-        ], dtype=np.float32)
-
-        opponent_obs = np.array([
-            enemy_m["hp"],
-            enemy_m["max_hp"],
-            player_m["hp"],
-            player_m["max_hp"],
-            self.round_count,
-            # ... 你想加的資訊 ...
-            0,0,0,0,0
-        ], dtype=np.float32)
-
-        # 行動遮罩(3招)
-        player_mask = self._get_action_mask(player_m)
-        opponent_mask = self._get_action_mask(enemy_m)
-
+        infos = {agent: {} for agent in self.agents}
         return {
-            "player_obs": player_obs,
-            "opponent_obs": opponent_obs,
-            "player_action_mask": player_mask,
-            "opponent_action_mask": opponent_mask
-        }
-        
+            "player": self._get_obs("player"),
+            "enemy": self._get_obs("enemy"),
+        }, infos
+
         
     def _get_action_mask(self, member):
       """
@@ -171,11 +135,13 @@ class BattleEnv(gym.Env):
         self._print_round_header()
         self._print_teams_hp()
         
-        pa = actions['player_action']
-        ea = actions['opponent_action']
-        
-        player_actions = [pa]
-        enemy_actions = [ea]
+        # print("\n",actions,"\n")
+
+        p_action = actions.get("player", 0)
+        e_action = actions.get("enemy", 0)
+
+        player_actions = [p_action]
+        enemy_actions = [e_action]
    
 
         # 回合開始時處理被動技能
@@ -223,7 +189,6 @@ class BattleEnv(gym.Env):
             available_skills = user["profession"].get_available_skill_ids(user["cooldowns"])
             if skill_id not in available_skills:
                 # 如果選擇的技能不可用，隨機選擇可用技能
-                penalty -= 5
                 available_skill_indices = [sid - 3 * profession_id for sid in available_skills]
                 if available_skill_indices:
                     skill_index = random.choice(available_skill_indices)
@@ -280,7 +245,6 @@ class BattleEnv(gym.Env):
             if skill_id not in available_skills:
                 # 如果選擇的技能不可用，隨機選擇可用技能
                 available_skill_indices = [sid - 3 * profession_id for sid in available_skills]
-                penalty -= 5
                 if available_skill_indices:
                     skill_index = random.choice(available_skill_indices)
                     skill_id = 3 * profession_id + skill_index
@@ -400,15 +364,120 @@ class BattleEnv(gym.Env):
         # 強制停止
         self.round_count += 1
         if self.round_count > self.max_rounds:
-                done = True
+                self.done = True
                 
 
         self._print_round_footer()   
+        
+        rewards = {
+        "player":  self._get_reward(player=True),
+        "enemy": self._get_reward(player=False),
+        }
+        
+        terminateds = {
+        "player": self.done,
+        "enemy": self.done,
+        "__all__": self.done,
+        }
+        
+        truncateds = {
+            "player": False,  # 如果有截斷條件，根據情況設置
+            "enemy": False,
+            "__all__": False,
+        }
 
-        reward_player = self._get_reward(player=True)
-        reward_opponent = self._get_reward(player=False)
-        obs = self._get_obs()
-        return obs, {"player_reward": reward_player, "opponent_reward": reward_opponent}, self.done, {}
+        infos = {
+            "player": {},
+            "enemy": {},
+        }
+        
+        player_m = self.player_team[0]
+        enemy_m = self.enemy_team[0]
+
+        # 觀察值(可自行擴充)
+        player_obs = np.array([
+            player_m["hp"],
+            player_m["max_hp"],
+            enemy_m["hp"],
+            enemy_m["max_hp"],
+            self.round_count,
+            # ... 你想加的資訊 ...
+            0,0,0,0,0  # filler for shape=(10,) 
+        ], dtype=np.float32)
+
+        enemy_obs = np.array([
+            enemy_m["hp"],
+            enemy_m["max_hp"],
+            player_m["hp"],
+            player_m["max_hp"],
+            self.round_count,
+            # ... 你想加的資訊 ...
+            0,0,0,0,0
+        ], dtype=np.float32)
+
+        # 行動遮罩)
+        player_mask = self._get_action_mask(player_m)
+        enemy_mask = self._get_action_mask(enemy_m)
+        
+        # concat PLAYER_OBS + PLAYER_MASK
+        flattened_pobs = np.concatenate([player_mask, player_obs])
+        flattened_eobs = np.concatenate([enemy_mask, enemy_obs])
+        
+        
+        obs_next = {
+            "player":self._get_obs("player"),
+            "enemy":self. _get_obs("enemy"),
+        }
+        return obs_next, rewards, terminateds, truncateds, infos
+
+
+    def _get_obs(self, agent):
+            """
+            回傳同時給AI1、AI2的觀測。 
+            同時要加上 action_mask，表示哪些動作可用(沒進CD) => 1/0
+            """
+            # 這裡示範做得很簡單：只回傳 [ player_hp, enemy_hp, round_count ] 等資訊
+            # 你可以自行加回你原本的觀察資訊(例如各種buff等)
+            # TODO 待改寫
+            player_m = self.player_team[0]
+            enemy_m = self.enemy_team[0]
+
+            # 觀察值(可自行擴充)
+            player_obs = np.array([
+                player_m["hp"],
+                player_m["max_hp"],
+                enemy_m["hp"],
+                enemy_m["max_hp"],
+                self.round_count,
+                # ... 你想加的資訊 ...
+                0,0,0,0,0  # filler for shape=(10,) 
+            ], dtype=np.float32)
+
+            opponent_obs = np.array([
+                enemy_m["hp"],
+                enemy_m["max_hp"],
+                player_m["hp"],
+                player_m["max_hp"],
+                self.round_count,
+                # ... 你想加的資訊 ...
+                0,0,0,0,0
+            ], dtype=np.float32)
+
+            # 行動遮罩)
+            player_mask = self._get_action_mask(player_m)
+            enemy_mask = self._get_action_mask(enemy_m)
+            
+            # concat PLAYER_OBS + PLAYER_MASK
+            flattened_pobs = np.concatenate([player_mask, player_obs])
+            flattened_eobs = np.concatenate([enemy_mask, opponent_obs])
+            
+            pout = np.concatenate([flattened_pobs, flattened_eobs])
+            eout = np.concatenate([flattened_eobs, flattened_pobs])
+            
+            if agent == "player":
+                return pout
+            else:
+                return eout
 
     def _check_both_defeated(self):
         """
@@ -450,6 +519,8 @@ class BattleEnv(gym.Env):
 
         # 處理防禦增減
         dmg = int(dmg / target.get("defend_multiplier", 1.0))
+        
+        dmg = int(dmg/target['profession'].baseDef)
         
         dmg *= self.damage_coefficient  # 考慮戰鬥特性：傷害係數
         
@@ -502,9 +573,10 @@ class BattleEnv(gym.Env):
             self.battle_log.append(f"{user['profession'].name} 恢復了 {heal_amount} 點生命值 (剩餘HP={int(user['hp'])})")
         # 接著如果 heal_damage 為 True，則對目標造成治療量的rate%傷害
         if heal_damage and target:
-            dmg = int(extra_heal * rate) 
-            self.battle_log.append(f"{user['profession'].name} 治療溢出造成傷害！ ")
-            self.deal_damage(user, target, dmg, can_be_blocked=False)
+            dmg = int(extra_heal * rate)  
+            if extra_heal > 0:
+                self.battle_log.append(f"{user['profession'].name} 治療溢出造成傷害！ ")
+                self.deal_damage(user, target, dmg, can_be_blocked=False)
         # 最後如果 self_mutilation 為 True，則對自己造成治療量的傷害(但不會低於最低血量)
         if self_mutilation:
             dmg = int(heal_amount)
@@ -525,13 +597,6 @@ class BattleEnv(gym.Env):
         """
         target["effect_manager"].add_effect(status_effect)
 
-        # 特殊被動技能處理
-        for m in self.player_team + self.enemy_team:
-            if m["profession"].name == "烈陽勇士" and target in self.enemy_team:
-                m["hp"] = min(m["hp"] + 5, m["max_hp"])
-                self.battle_log.append(
-                    f"{m['profession'].name} 被動技能「太陽庇佑」回復5點生命值。"
-                )
 
     def _handle_status_end_of_turn(self):
         """
@@ -565,15 +630,11 @@ class BattleEnv(gym.Env):
             profession = m["profession"]
             if profession.name == "剛毅武士":
                 # baattle log
-                m["battle_log"].append(
+                self.battle_log.append(
                     f"{profession.name} 的被動技能「堅韌壁壘」發動！"
                 )
                 heal = int((profession.max_hp - m['hp']) * 0.1)
                 self.deal_healing(m, heal)
-            elif profession.name == "烈陽勇士":
-                # 太陽庇佑被動：每當敵方單位進入異常狀態時，回復自身5點生命值。
-                # 這部分已在 apply_status 中處理
-                pass
             elif profession.name == "血神":
                 # 血神被動：受到致死傷害時，5%機率免疫該次傷害
                 # 在 deal_damage 方法中實作
@@ -600,32 +661,9 @@ class BattleEnv(gym.Env):
         """ 
         # 我方處理       
         for i, m in mSkill:
-            # 假如是荒神
-            p = self.player_team[i]
-            if p["profession"].name == "荒神":
-                # 如果p的累積傷害超過了自身最大生命值的35%，則觸發荒神的被動技能：在回合結束時回復已損生命的5%
-                if p['accumulated_damage'] >= p['max_hp'] * 0.35:
-                    heal = int(p['accumulated_damage'] * 0.05)
-                    self.battle_log.append(
-                        f"{p['profession'].name} 的被動技能「荒蕪」發動！"
-                    )
-                    self.deal_healing(p, heal)
-                    p['accumulated_damage'] = 0
+
             
-            
-            # 烈陽勇士 技能 25 => 本回合防禦力增加30%，並對攻擊者附加1層燃燒
-            if m == 25:
-                # 取得當前玩家角色
-                player = self.player_team[i]
-                # 檢查該角色的最後攻擊者是否存在
-                if player["last_attacker"]:
-                    # 添加燃燒效果
-                    burn = Burn(duration=3, stacks=1)
-                    self.apply_status(player["last_attacker"], burn)
-                    self.battle_log.append(
-                        f"{player['profession'].name} 「日冕之盾」對攻擊者附加了燃燒效果！"
-                    )
-            
+
             # 雷霆護甲：2回合內，受到傷害時一定機率直接麻痺敵人。
             if m == 30:
                 player = self.player_team[i]
@@ -652,27 +690,6 @@ class BattleEnv(gym.Env):
                     self.battle_log.append(f"「絕地反擊」沒有攻擊者可反擊。")
 
         for i, e in eSkill:
-            # 假如是荒神
-            p = self.enemy_team[i]
-            if p["profession"].name == "荒神":
-                # 如果p的累積傷害超過了自身最大生命值的35%，則觸發荒神的被動技能：在回合結束時回復已損生命的5%
-                if p['accumulated_damage'] >= p['max_hp'] * 0.35:
-                    heal = int(p['accumulated_damage'] * 0.05)
-                    self.battle_log.append(
-                        f"{p['profession'].name} 的被動技能「荒蕪」發動！"
-                    )
-                    self.deal_healing(p, heal)
-                    p['accumulated_damage'] = 0
-            
-            # 烈陽勇士 技能 25 => 本回合防禦力增加30%，並對攻擊者附加1層燃燒
-            if e == 25:
-                enemy = self.enemy_team[i]
-                if enemy["last_attacker"]:
-                    burn = Burn(duration=3, stacks=1)
-                    self.apply_status(enemy["last_attacker"], burn)
-                    self.battle_log.append(
-                        f"{enemy['profession'].name} 「烈陽之盾」對攻擊者附加了燃燒效果！"
-                    )
             
             # 雷霆護甲：2回合內，受到傷害時一定機率直接麻痺敵人。
             if e == 30:
@@ -727,16 +744,16 @@ class BattleEnv(gym.Env):
                 if all(m["hp"] <= 0 for m in self.player_team) and all(e["hp"] <= 0 for e in self.enemy_team):
                     return 0
                 elif all(m["hp"] <= 0 for m in self.player_team):
-                    return -50
+                    return -100
                 elif all(e["hp"] <= 0 for e in self.enemy_team):
-                    return 50
+                    return 100
             else:
                 if all(m["hp"] <= 0 for m in self.player_team) and all(e["hp"] <= 0 for e in self.enemy_team):
                     return 0
                 elif all(m["hp"] <= 0 for m in self.player_team):
-                    return 50
+                    return 100
                 elif all(e["hp"] <= 0 for e in self.enemy_team):
-                    return -50
+                    return -100
         else:
             # 可以根據每回合的表現給予獎勵
             # 例如，造成傷害給予正獎勵，受到傷害給予負獎勵

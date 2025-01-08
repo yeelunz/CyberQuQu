@@ -566,7 +566,7 @@ class Freeze(StatusEffect):
             stacks=stacks,
             stackable=True,
             max_stack=5,
-            type='control',
+            type='dot',
             max_duration=5,
             id=6
         )

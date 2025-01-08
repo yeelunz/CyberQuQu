@@ -3,8 +3,15 @@ import numpy as np
 import random
 from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import DummyVecEnv
-
+import ray
+from ray import tune
+from ray.rllib.algorithms.ppo import PPOConfig
 from battle_env import BattleEnv
+
+from ray.rllib.models.torch.torch_modelv2 import TorchModelV2
+import torch
+import torch.nn as nn
+
 
 def multi_agent_cross_train(num_iterations, professions, skill_mgr,
                             save_path_1="multiagent_ai1.zip",
@@ -20,109 +27,49 @@ def multi_agent_cross_train(num_iterations, professions, skill_mgr,
     # 初始化 2 個 PPO 模型（注意：若你想共享權重，也可以只用一個 model）
     # 這裡示範最簡單的 DummyVecEnv 包起來，但因為我們是自訂 step => 會相對複雜
     # 下面只是一種示範，你也可以手動寫 rollouts
-    def make_env():
-        p_team = [{
-            "profession": random.choice(professions),
-            "hp": 0,
-            "max_hp": 0,
-            "status": {},
-            "skip_turn": False,
-            "is_defending": False,
-            "damage_multiplier": 1.0,
-            "defend_multiplier": 1.0,
-            "heal_multiplier": 1.0,
-            "battle_log": [],
-            "cooldowns": {}
-        }]
-        e_team = [{
-            "profession": random.choice(professions),
-            "hp": 0,
-            "max_hp": 0,
-            "status": {},
-            "skip_turn": False,
-            "is_defending": False,
-            "damage_multiplier": 1.0,
-            "defend_multiplier": 1.0,
-            "heal_multiplier": 1.0,
-            "battle_log": [],
-            "cooldowns": {}
-        }]
-        return BattleEnv(
-            team_size=1,
-            enemy_team_size=1,
-            max_rounds=30,
-            player_team=p_team,
-            enemy_team=e_team,
-            skill_mgr=skill_mgr,
-            show_battle_log=False  # 訓練時可關閉
+    
+    beconfig = make_env_config(skill_mgr,professions)
+    
+    ray.init()
+    config = (
+        PPOConfig()
+        .environment(
+            env=BattleEnv,            # 指定我們剛剛定義的環境 class
+            env_config=beconfig# 傳入給 env 的一些自定設定
         )
+        
+        .env_runners(num_env_runners=1,sample_timeout_s=120)  # 可根據你的硬體調整
+        .framework("torch")            # 或 "tf"
+        )
+    
+    config.api_stack(
+    enable_rl_module_and_learner=False,
+    enable_env_runner_and_connector_v2=False
+    )
+    
+    benv = BattleEnv(beconfig)
+    config = config.multi_agent(
+        policies={
+            "player_policy": (None, benv.observation_space,benv.action_space, {}),
+            "enemy_policy": (None, benv.observation_space,benv.action_space, {}),
+        },
+        policy_mapping_fn=lambda agent_id, episode, worker=None, **kwargs: 
+            "player_policy" if agent_id == "player" else "enemy_policy"
 
-    # Dummy 環境 (SB3 需要一個可 call 的 function array)
-    venv_1 = DummyVecEnv([make_env])
-    venv_2 = DummyVecEnv([make_env])
-
-    # 初始化兩個 PPO
-    model1 = PPO("MlpPolicy", venv_1, verbose=0)
-    model2 = PPO("MlpPolicy", venv_2, verbose=0)
-
-    # 這裡只是示範 loop，實際你應該用更完整的rollout收集
+    )
+    # TODO 遷移到新API
+    
+    algo = config.build()
+    
     for i in range(num_iterations):
-        print(f"\n--- Iteration {i+1}/{num_iterations} ---")
+        result = algo.train()
+        # print("result: ", result)   
+        print(f"Iteration {i}")
 
-        # 每一個 iteration 我們做若干 episodes
-        n_episodes = 5  # 你可以調整
-        for ep in range(n_episodes):
-            env = make_env()
-            obs = env.reset()
-            done = False
-            while not done:
-                # 分別取得 obs (player_obs, opponent_obs)
-                player_obs = obs["player_obs"]
-                oppo_obs = obs["opponent_obs"]
-                p_mask = obs["player_action_mask"]
-                e_mask = obs["opponent_action_mask"]
-
-                # model1 -> player_action
-                p_action, _ = model1.predict(player_obs, deterministic=False)
-                # 如果該動作 mask=0 => 換一個
-                if p_mask[p_action] == 0:
-                    valid_as = np.where(p_mask==1)[0]
-                    p_action = np.random.choice(valid_as) if len(valid_as)>0 else 0
-
-                # model2 -> opponent_action
-                e_action, _ = model2.predict(oppo_obs, deterministic=False)
-                if e_mask[e_action] == 0:
-                    valid_as = np.where(e_mask==1)[0]
-                    e_action = np.random.choice(valid_as) if len(valid_as)>0 else 0
-
-                actions = {
-                    "player_action": p_action,
-                    "opponent_action": e_action
-                }
-                next_obs, rewards, done, info = env.step(actions)
-
-                # 取出 player_reward / opponent_reward
-                r1 = rewards["player_reward"]
-                r2 = rewards["opponent_reward"]
-
-                # ... 這裡若你要把資料送進 replay buffer，就手動實作(因 SB3預設是一個 agent)
-                # 這個範例就簡化不做 buffer, 直接結束 ...
-
-                obs = next_obs
-
-        # 結束 ep 後，針對 model1, model2 各自做 learn() (此範例為教學示意)
-        # 一般來說，你需要先收集 Rollouts 到 buffer，再來做 model.learn()
-        # 這裡僅示範每個 iteration 結束就隨意 train N timesteps
-        model1.learn(total_timesteps=100)
-        model2.learn(total_timesteps=100)
-
-        # 可測試一下互打情況...
-        print("  => 訓練中暫不做任何評估")
-
-    # 訓練完後存檔
-    model1.save(save_path_1)
-    model2.save(save_path_2)
-    print(f"訓練完成, 已儲存到 {save_path_1}, {save_path_2}")
+    # 存檔
+    checkpoint_dir = algo.save("./my_battle_ppo_checkpoints")
+    print("Checkpoint saved at", checkpoint_dir)
+    ray.shutdown()
 
 
 
@@ -138,72 +85,48 @@ def version_test_random_vs_random(professions,skill_mgr,  num_battles=100):
 
     # 初始化結果字典
     results = {p.name: {op.name: {'win': 0, 'loss': 0, 'draw': 0} for op in professions if op != p} for p in professions}
-
+    # print(results)
     total_combinations = len(professions) * (len(professions) - 1)
     current_combination = 0
-
+ 
     for p in professions:
         for op in professions:
             if p == op:
                 continue
+            
             current_combination += 1
             print(f"\n對戰 {current_combination}/{total_combinations}: {p.name} VS {op.name}")
-
+            
             for battle_num in range(1, num_battles + 1):
-                # 建立兩隊隊伍，分別是p和op
-                team_p  = [{
-                "profession": random.choice(professions),
-                "hp": 0,
-                "max_hp": 0,
-                "status": {},
-                "skip_turn": False,
-                "is_defending": False,
-                "damage_multiplier": 1.0,
-                "defend_multiplier": 1.0,
-                "heal_multiplier": 1.0,
-                "battle_log": [],
-                "cooldowns": {}
-                }]
-                
-                team_e = [{
-                "profession": random.choice(professions),
-                "hp": 0,
-                "max_hp": 0,
-                "status": {},
-                "skip_turn": False,
-                "is_defending": False,
-                "damage_multiplier": 1.0,
-                "defend_multiplier": 1.0,
-                "heal_multiplier": 1.0,
-                "battle_log": [],
-                "cooldowns": {}
-                }]
 
-                # 初始化BattleEnv，關閉battle_log以加快速度
+                # 初始化 BattleEnv，關閉 battle_log 以加快速度
                 env = BattleEnv(
-                    team_size=1,
-                    enemy_team_size=1,
-                    max_rounds=30,
-                    player_team=team_p,
-                    enemy_team=team_e,
-                    skill_mgr=skill_mgr,
-                    show_battle_log=False  # 不顯示戰鬥日誌
+                    make_env_config(skill_mgr, professions, show_battlelog=False, pr1=p, pr2=op)
                 )
-                obs = env.reset()
+                # 編號決定先後攻
                 done = False
+                obs, _ = env.reset()
 
                 while not done:
-                    pmask = obs["player_action_mask"]
-                    emask = obs["opponent_action_mask"]
-                    p_actions = np.where(pmask==1)[0]
-                    e_actions = np.where(emask==1)[0]
-                    p_act = random.choice(p_actions) if len(p_actions)>0 else 0
-                    e_act = random.choice(e_actions) if len(e_actions)>0 else 0
-                    obs, rew, done, info = env.step({
-                        "player_action": p_act,
-                        "opponent_action": e_act
+                    # 取第 0~2 格，獲取合法動作
+                    pmask = obs["player"][0:3]
+                    emask = obs["enemy"][0:3]
+                    p_actions = np.where(pmask == 1)[0]
+                    e_actions = np.where(emask == 1)[0]
+                    p_act = random.choice(p_actions) if len(p_actions) > 0 else 0
+                    e_act = random.choice(e_actions) if len(e_actions) > 0 else 0
+
+
+                    obs, rew, done, tru, info = env.step({
+                        "player": p_act,
+                        "enemy": e_act
                     })
-                rew = rew["player_reward"]
+             
+
+                    done = done["__all__"]
+
+                rew = rew["player"]
+
                 # 判斷結果
                 if rew > 0:
                     results[p.name][op.name]['win'] += 1
@@ -215,6 +138,8 @@ def version_test_random_vs_random(professions,skill_mgr,  num_battles=100):
                 # 顯示進度
                 if battle_num % 10 == 0:
                     print(f"  完成 {battle_num}/{num_battles} 場")
+                    
+                
 
     # 計算勝率
     win_rate_table = {}
@@ -359,7 +284,7 @@ def compute_ai_elo(model_path_1, professions, skill_mgr, base_elo=1000, num_batt
     ELO = base_elo
     K = 32
     # 簡化：隨機電腦 ELO = 1000
-    opp_ELO = 1000
+    opp_ELO = 1500
 
     print("=== AI ELO測試 vs Random ===")
     for i in range(num_battles):
@@ -418,3 +343,49 @@ def compute_ai_elo(model_path_1, professions, skill_mgr, base_elo=1000, num_batt
 
     print(f"AI vs Random, 對戰 {num_battles} 場後, AI ELO = {ELO:.2f}")
     input("按Enter返回主選單...")
+
+
+
+def make_env_config(skill_mgr,professions,show_battlelog = False,pr1 = None,pr2 = None):
+    if pr1 is None:
+        pr1 = random.choice(professions)
+    if pr2 is None:
+        pr2 = random.choice(professions)
+    config = {
+    "team_size": 1,
+    "enemy_team_size": 1,
+    "max_rounds": 30,
+    "player_team": [{
+        "profession": pr1,
+        "hp": 0,
+        "max_hp": 0,
+        "status": {},
+        "skip_turn": False,
+        "is_defending": False,
+        "damage_multiplier": 1.0,
+        "defend_multiplier": 1.0,
+        "heal_multiplier": 1.0,
+        "battle_log": [],
+        "cooldowns": {}
+    }],
+    "enemy_team": [{
+        "profession": pr2,
+        "hp": 0,
+        "max_hp": 0,
+        "status": {},
+        "skip_turn": False,
+        "is_defending": False,
+        "damage_multiplier": 1.0,
+        "defend_multiplier": 1.0,
+        "heal_multiplier": 1.0,
+        "battle_log": [],
+        "cooldowns": {}
+    }],
+    "skill_mgr": skill_mgr,
+    "show_battle_log": show_battlelog,
+    "round_count": 1,
+    "done": False,
+    "battle_log": [],
+    "damage_coefficient": 1.0
+    }
+    return config

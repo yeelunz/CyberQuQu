@@ -59,7 +59,7 @@ class Paladin(BattleProfession):
         super().__init__(
             profession_id=0,
             name="聖騎士",
-            base_hp=270,
+            base_hp=295,
             passive_desc="聖光：攻擊時，15%機率回復最大血量的15%，回復超出最大生命時，對敵方造成50%的回復傷害",
             baseAtk=1.0,
             baseDef=1.2
@@ -93,14 +93,14 @@ class Paladin(BattleProfession):
                 f"{self.name} 的技能「堅守防禦」進入冷卻 3 回合。"
             )
         elif skill_id == 2:
-            # 技能 2 => 恢復血量，第一次50, 第二次35, 第三次及以後10
+            # 技能 2 => 恢復血量，第一次50, 第二次35, 第三次及以後15
             times_healed = user.get("times_healed", 0)
             if times_healed == 0:
                 heal_amount = 50
             elif times_healed == 1:
                 heal_amount = 35
             else:
-                heal_amount = 10
+                heal_amount = 15
             env.deal_healing(user, heal_amount,rate=0.5,heal_damage = True,target = targets[0])
             user["times_healed"] = times_healed + 1
 
@@ -111,7 +111,7 @@ class Mage(BattleProfession):
             name="法師",
             base_hp=175,
             passive_desc="魔力充盈：攻擊造成異常狀態時，50%機率額外疊加一層異常狀態(燃燒或凍結)。",
-            baseAtk=1.25,
+            baseAtk=1.35,
             baseDef=1.0
         )
 
@@ -149,21 +149,20 @@ class Mage(BattleProfession):
             
         elif skill_id == 5:
             # 技能 5 => 對敵方全體造成15點傷害，每層燃燒或是凍結增加25點傷害
-            base_dmg = 15 * self.baseAtk 
-            for target in env.enemy_team:
-                if target["hp"] > 0:
-                    # 計算燃燒或是凍結
-                    total_layers = 0
-                    for effects in target["effect_manager"].active_effects.values():
-                        for eff in effects:
-                            if isinstance(eff, (Burn, Freeze)):
-                                total_layers += eff.stacks
-                    dmg = base_dmg + 35 * total_layers
-                    env.deal_damage(user, target, dmg, can_be_blocked=True)
-                    # set burn and freeze stacks to 0
-                    # remove burn and freeze
-                    target["effect_manager"].remove_all_effects("燃燒")
-                    target["effect_manager"].remove_all_effects("凍結")
+            base_dmg = 15 * self.baseAtk
+            target = targets[0]
+            # 計算燃燒或是凍結
+            total_layers = 0
+            for effects in target["effect_manager"].active_effects.values():
+                for eff in effects:
+                    if isinstance(eff, (Burn, Freeze)):
+                        total_layers += eff.stacks
+            dmg = base_dmg + 35 * total_layers
+            env.deal_damage(user, target, dmg, can_be_blocked=True)
+            # set burn and freeze stacks to 0
+            # remove burn and freeze
+            target["effect_manager"].remove_all_effects("燃燒")
+            target["effect_manager"].remove_all_effects("凍結")
 
 class Assassin(BattleProfession):
     def __init__(self):
@@ -172,7 +171,7 @@ class Assassin(BattleProfession):
             name="刺客",
             base_hp=215,
             passive_desc="刺殺：攻擊時額外造成敵方當前5%生命值的傷害",
-            baseAtk=1.25,
+            baseAtk=1.15,
             baseDef=0.95
         )
     def passive(self,targets,damage):
@@ -181,7 +180,7 @@ class Assassin(BattleProfession):
         super().apply_skill(skill_id, user, targets, env)
         if skill_id == 6:
             # 技能 6 => 對單體造成45點傷害35%機率傷害翻倍
-            dmg = 45 * self.baseAtk
+            dmg = 40 * self.baseAtk
             dmg = self.passive(targets,dmg)
             if random.random() < 0.35:
                 env.battle_log.append(
@@ -287,7 +286,7 @@ class Berserker(BattleProfession):
         super().__init__(
             profession_id=4,
             name="狂戰士",
-            base_hp=365,
+            base_hp=375,
             passive_desc="狂暴：若自身血量<50%時，攻擊增加失去生命值的30%的傷害。",
             baseAtk=1.0,
             baseDef=0.79
@@ -316,10 +315,10 @@ class Berserker(BattleProfession):
             env.deal_healing(user, heal, self_mutilation = True)
             
         elif skill_id == 13:
-            # 技能 13 => 消耗150點血量，接下來5回合每回合回復20點生命值。冷卻5回合。
+            # 技能 13 => 消耗150點血量，接下來5回合每回合回復40點生命值。冷卻5回合。
             if user["hp"] > 150:
                 env.deal_healing(user, 150,self_mutilation = True)
-                heal_effect = HealthPointRecover(hp_recover=35, duration=5, stackable=False,source=skill_id,env=env)
+                heal_effect = HealthPointRecover(hp_recover=40, duration=5, stackable=False,source=skill_id,env=env)
                 env.apply_status(user, heal_effect)
 
                 # 怒吼進入五回合冷卻
@@ -348,8 +347,8 @@ class DragonGod(BattleProfession):
         super().__init__(
             profession_id=5,
             name="龍神",
-            base_hp=200,
-            passive_desc="龍血: 每回合疊加一個龍神狀態，龍神狀態每層增加3%攻擊力、3%防禦力",
+            base_hp=215,
+            passive_desc="龍血: 每回合疊加一個龍神狀態，龍神狀態每層增加 5% 攻擊力、5% 防禦力",
             baseAtk=1.0,
             baseDef=1.0
         )
@@ -479,9 +478,9 @@ class SteadfastWarrior(BattleProfession):
         super().__init__(
             profession_id=7,
             name="剛毅武士",
-            base_hp=260,
-            passive_desc="堅韌壁壘：每回合開始時恢復已損生命值的10%。",
-            baseAtk=0.98,
+            base_hp=245,
+            passive_desc="堅韌壁壘：每回合開始時恢復已損生命值的8%。",
+            baseAtk=0.88,
             baseDef=1.35
         )
     # 
@@ -489,7 +488,6 @@ class SteadfastWarrior(BattleProfession):
         # 已在env 中實作
         pass
     
-
     def apply_skill(self, skill_id, user, targets, env):
         super().apply_skill(skill_id, user, targets, env)
         
@@ -559,8 +557,8 @@ class Ranger(BattleProfession):
             profession_id=9,
             name="荒原遊俠",
             base_hp=235,
-            passive_desc="冷箭：受到攻擊時，25%機率反擊45點傷害。",
-            baseAtk=1.3,
+            passive_desc="冷箭：受到攻擊時，25%機率反擊 35 點傷害。",
+            baseAtk=1.2,
             baseDef=0.9
         )
 
@@ -573,7 +571,7 @@ class Ranger(BattleProfession):
         if skill_id == 27:
             # 技能 27 => 續戰：造成35傷害，每次連續使用攻擊技能時多增加15點傷害。
             times_used = user.get("skills_used", {}).get(skill_id, 0)
-            dmg = (35 + (20 * times_used)) * self.baseAtk 
+            dmg = (35 + (15 * times_used)) * self.baseAtk 
             
             env.deal_damage(user, targets[0], dmg, can_be_blocked=True)
             user["skills_used"][skill_id] = times_used + 1
@@ -600,7 +598,7 @@ class ElementalMage(BattleProfession):
             name="元素法師",
             base_hp=190,
             passive_desc="元素之力：攻擊時 30% 造成(麻痺、冰凍、燃燒)其中之一",
-            baseAtk=1.35,
+            baseAtk=1.45,
             baseDef=0.95
         )
 
@@ -618,7 +616,7 @@ class ElementalMage(BattleProfession):
         
         if skill_id == 30:
             # 技能 30 => 雷霆護甲：2回合內，受到傷害15%機率直接麻痺敵人。
-            def_buff = DefenseMultiplier(multiplier=1.2, duration=2, stackable=False,source=skill_id)
+            def_buff = DefenseMultiplier(multiplier=1.5, duration=2, stackable=False,source=skill_id)
             env.apply_status(user, def_buff)
             # 護甲麻痺部分在env中process_passives_end_of_turn實作
 
@@ -639,7 +637,7 @@ class ElementalMage(BattleProfession):
 
         elif skill_id == 32:
             # 技能 32 => 造成15傷害，50% 機率使敵方暈眩 1~3 回合。
-            dmg = 15 * self.baseAtk
+            dmg = 35 * self.baseAtk
             env.deal_damage(user, targets[0], dmg, can_be_blocked=True)
             target = targets[0]
             # 70% 2 25% 3 10% 4
@@ -654,9 +652,9 @@ class HuangShen(BattleProfession):
         super().__init__(
             profession_id=11,  # 確保職業ID唯一
             name="荒神",
-            base_hp=185,
-            baseAtk=1.15,
-            baseDef=1.25,
+            base_hp=195,
+            baseAtk=1.18,
+            baseDef=1.3,
             passive_desc="枯萎之刃：隨著造成傷害次數增加，攻擊時額外進行隨機追打，每造成兩次傷害增加一次最高追打機會，追打造成敵方當前生命的5%血量；額外追打不會累積傷害次數。",
         )
 
@@ -709,10 +707,10 @@ class GodOfStar(BattleProfession):
         super().__init__(
             profession_id=12,
             name="星神",
-            base_hp=215,
+            base_hp=275,
             passive_desc="天啟星盤：星神在戰鬥中精通增益與減益效果的能量運用。每當場上有一層「能力值增益」或「減益」效果時，每回合會額外造成 5點傷害 並回復 5點生命值。",
-            baseAtk=1.03,
-            baseDef=1.03
+            baseAtk=1.12,
+            baseDef=1.12
         )
 
     def passive(self, user, targets, env):
@@ -743,7 +741,7 @@ class GodOfStar(BattleProfession):
         dmg, heal = self.passive(user, targets, env)
         if skill_id == 36:
             # 技能 36 => 對單體造成30點傷害
-            dmg += 15 * self.baseAtk
+            dmg += 25 * self.baseAtk
             env.deal_damage(user, targets[0], dmg, can_be_blocked=True)
             # 隨機為自身附加以下一種增益效果，持續 3 回合：攻擊力提升 5%，防禦力提升 5%，治癒效果提升 5%。
             buff = random.choice([DamageMultiplier(multiplier=1.05, duration=3, stackable=False,source=skill_id), DefenseMultiplier(multiplier=1.05, duration=3, stackable=False,source=skill_id), HealMultiplier(multiplier=1.05, duration=3, stackable=False,source=skill_id)])
@@ -751,7 +749,7 @@ class GodOfStar(BattleProfession):
             env.deal_healing(user, heal)
         elif skill_id == 37:
             # 技能 37 => 為自身恢復 15 點生命值
-            heal += 15
+            heal += 25
             env.deal_damage(user, targets[0], dmg, can_be_blocked=True)
             env.deal_healing(user, heal)
             # 隨機為敵方附加以下一種減益效果，持續 3 回合：攻擊力降低 5%，防禦力降低 5%，治癒效果降低 5%。
@@ -759,11 +757,11 @@ class GodOfStar(BattleProfession):
             env.apply_status(targets[0], debuff)
         elif skill_id == 38:
             # 技能 38 => 對敵方單體造成 45 點傷害
-            dmg *=1.25
-            heal *=1.25
+            dmg *=1.5
+            heal *=1.5
             env.battle_log.append(
             f"「虛擬創星圖」強化了天啟星盤的力量，增加天啟星盤的加成效果。"
             )
-            dmg += 45 * self.baseAtk
+            dmg += 60 * self.baseAtk
             env.deal_damage(user, targets[0], dmg, can_be_blocked=True)
             env.deal_healing(user, heal)

@@ -19,6 +19,7 @@ from ray.rllib.algorithms.ppo import PPOConfig
 from ray.rllib.algorithms import ppo  # 或其他使用的算法
 import os
 from ray.rllib.utils.checkpoints import get_checkpoint_info
+import ray
 
 # 本檔案最重要的是「只留以下幾個功能選單」
 # 1) 交叉疊代訓練 (多智能體)
@@ -124,11 +125,12 @@ def computer_vs_computer(skill_mgr, professions):
         done = done["__all__"]
 
     # 判斷誰贏
-    final_rew = rew["player"]
+
+    res = info["__common__"]["result"]
     
-    if final_rew > 0:
+    if res == 1:
         print("電腦(左)贏了!")
-    elif final_rew < 0:
+    elif res == -1:
         print("電腦(右)贏了!")
     else:
         print("平手或回合耗盡")
@@ -245,7 +247,35 @@ def ai_vs_ai(model_path_1, model_path_2, skill_mgr, professions):
     """
     兩個AI互打: AI1 vs AI2 
     """
-    beconfig = make_env_config(skill_mgr=skill_mgr, professions=professions,show_battlelog=True)
+    # 列印 P1 職業選擇 (含異常處理)
+    print("AI1 職業選擇:")
+    for i, p in enumerate(professions):
+        print(f"{i}) {p.name}")
+    try:
+        p1_idx = int(input("請輸入AI1職業(0-12): "))
+        if p1_idx < 0 or p1_idx > 12:
+            p1_idx = 0
+    except:
+        p1_idx = 0
+    # AI2 職業選擇
+    print("AI2 職業選擇:")
+    for i, p in enumerate(professions):
+        print(f"{i}) {p.name}")
+    try:
+        p2_idx = int(input("請輸入AI2職業(0-12): "))
+        if p2_idx < 0 or p2_idx > 12:
+            p2_idx = 0
+    except:
+        p2_idx = 0
+    
+    # pr 1 = professions[p1_idx]
+    # pr 2 = professions[p2_idx]
+    p1 = professions[p1_idx]
+    p2 = professions[p2_idx]
+        
+    
+    
+    beconfig = make_env_config(skill_mgr=skill_mgr, professions=professions,pr1=p1,pr2=p2,show_battlelog=True)
     benv = BattleEnv(config=beconfig)
     
     config = (
@@ -259,9 +289,7 @@ def ai_vs_ai(model_path_1, model_path_2, skill_mgr, professions):
         )
     
     config.api_stack(enable_rl_module_and_learner=False,enable_env_runner_and_connector_v2=False)
-    model_path_1 = "my_battle_ppo_checkpoints/policies/player_policy"
-    model_path_2 = "my_battle_ppo_checkpoints/policies/enemy_policy"
-    
+
     # 其實兩個政策就代表先攻or後攻
     config = config.multi_agent(
         policies={
@@ -274,14 +302,15 @@ def ai_vs_ai(model_path_1, model_path_2, skill_mgr, professions):
     
     check_point_path = "my_battle_ppo_checkpoints"
     check_point_path = os.path.abspath("my_battle_ppo_checkpoints")
-    print(get_checkpoint_info(check_point_path))
+
 
     trainer = config.build()  # 用新的 API 构建训练器
     trainer.restore(check_point_path)
-
     done = False
     obs, _ = benv.reset()
+    
     while not done:
+        
         pmask = obs["player"][0:3]
         emask = obs["enemy"][0:3]
         p_actions = np.where(pmask == 1)[0]
@@ -303,11 +332,13 @@ def ai_vs_ai(model_path_1, model_path_2, skill_mgr, professions):
         obs, rew, done, tru, info = benv.step(actions)
         done = done["__all__"]
     
-    final_rew = rew["player"]
-    if final_rew > 0:
+    info = info["__common__"]["result"]
+    if info > 0:
         print("AI1(左)贏了!")
-    elif final_rew < 0:
+    elif info < 0:
         print("AI2(右)贏了!")
+    else :
+        print("平手或回合耗盡")
 
     input("按Enter返回主選單...")
 
@@ -315,6 +346,7 @@ def ai_vs_ai(model_path_1, model_path_2, skill_mgr, professions):
 # (主程式) 只留八個選項
 #---------------------------------------
 def main():
+    ray.init()
     skill_mgr = build_skill_manager()
     professions = build_professions()
 
@@ -360,7 +392,7 @@ def main():
                 model_path_2=default_model_path_2,
                 professions=professions,
                 skill_mgr=skill_mgr,
-                num_battles=20
+                num_battles=50
             )
         elif c == "4":
             # AI ELO

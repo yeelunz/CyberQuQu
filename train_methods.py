@@ -41,7 +41,7 @@ def multi_agent_cross_train(num_iterations, professions, skill_mgr,
     # 初始化環境配置
     beconfig = make_env_config(skill_mgr, professions, train_mode=True)
     
-    ray.init()
+    
     config = (
             PPOConfig()
             .environment(
@@ -74,8 +74,7 @@ def multi_agent_cross_train(num_iterations, professions, skill_mgr,
     # TODO 遷移到新API
     config.api_stack(
     enable_rl_module_and_learner=False,
-    enable_env_runner_and_connector_v2=False
-    )
+    enable_env_runner_and_connector_v2=False)
     
     algo = config.build()
     print("=== 模型初始化完成 ===")
@@ -144,12 +143,12 @@ def version_test_random_vs_random(professions,skill_mgr,  num_battles=100):
 
                     done = done["__all__"]
 
-                rew = rew["player"]
+                info = info["__common__"]["result"]
 
                 # 判斷結果
-                if rew > 0:
+                if info == 1:
                     results[p.name][op.name]['win'] += 1
-                elif rew < 0:
+                elif info == -1:
                     results[p.name][op.name]['loss'] += 1
                 else:
                     results[p.name][op.name]['draw'] += 1
@@ -221,23 +220,44 @@ def high_level_test_ai_vs_ai(model_path_1, model_path_2, professions, skill_mgr,
 
     每個職業相互對戰100場（使用隨機選擇技能），並計算勝率（不計入平局）
     """
-    print("\n開始進行每個職業相互對戰100場的測試...")
-    ray.init()
-
     # 初始化結果字典
+    # test ray if init here
+
     results = {p.name: {op.name: {'win': 0, 'loss': 0, 'draw': 0} for op in professions if op != p} for p in professions}
     # print(results)
     total_combinations = len(professions) * (len(professions) - 1)
     current_combination = 0
- 
+    beconfig = make_env_config(skill_mgr=skill_mgr, professions=professions,show_battlelog=True)
+    config = (
+    PPOConfig()
+    .environment(
+        env=BattleEnv,            # 指定我們剛剛定義的環境 class
+        env_config=beconfig# 傳入給 env 的一些自定設定
+    )
+    .env_runners(num_env_runners=1,sample_timeout_s=120)  # 可根據你的硬體調整
+    .framework("torch")            # 或 "tf"
+    )
+    benv = BattleEnv(config=beconfig)
+    config.api_stack(enable_rl_module_and_learner=False,enable_env_runner_and_connector_v2=False)
+    config = config.multi_agent(
+    policies={
+        "player_policy": (None, benv.observation_space, benv.action_space, {}),
+        "enemy_policy": (None, benv.observation_space, benv.action_space, {}),
+        },
+    policy_mapping_fn=lambda agent_id, episode, worker=None, **kwargs: 
+        "player_policy" if agent_id == "player" else "enemy_policy"
+        )
+    check_point_path = "my_battle_ppo_checkpoints"
+    check_point_path = os.path.abspath("my_battle_ppo_checkpoints")
+    trainer = config.build()  # 用新的 API 构建训练器
+    trainer.restore(check_point_path)
+    
     for p in professions:
         for op in professions:
             if p == op:
                 continue
-            
             current_combination += 1
             print(f"\n對戰 {current_combination}/{total_combinations}: {p.name} VS {op.name}")
-            
             for battle_num in range(1, num_battles + 1):
 
                 # 初始化 BattleEnv，關閉 battle_log 以加快速度
@@ -249,29 +269,22 @@ def high_level_test_ai_vs_ai(model_path_1, model_path_2, professions, skill_mgr,
                 obs, _ = env.reset()
 
                 while not done:
+                    
                     # 取第 0~2 格，獲取合法動作
-                    pmask = obs["player"][0:3]
-                    emask = obs["enemy"][0:3]
-                    p_actions = np.where(pmask == 1)[0]
-                    e_actions = np.where(emask == 1)[0]
-                    p_act = random.choice(p_actions) if len(p_actions) > 0 else 0
-                    e_act = random.choice(e_actions) if len(e_actions) > 0 else 0
-
-
-                    obs, rew, done, tru, info = env.step({
-                        "player": p_act,
-                        "enemy": e_act
-                    })
-             
-
+                    p_act = trainer.compute_single_action(obs['player'], policy_id="player_policy")
+                    # if p act in mask is 0, then choose random action
+                    e_act = trainer.compute_single_action(obs['enemy'] ,policy_id="enemy_policy")
+                    actions = {"player": p_act, "enemy": e_act}
+                    obs, rew, done, tru, info = env.step(actions)
                     done = done["__all__"]
 
-                rew = rew["player"]
+                
+                res = info["__common__"]["result"]
 
                 # 判斷結果
-                if rew > 0:
+                if res  == 1:
                     results[p.name][op.name]['win'] += 1
-                elif rew < 0:
+                elif res == -1:
                     results[p.name][op.name]['loss'] += 1
                 else:
                     results[p.name][op.name]['draw'] += 1
@@ -279,8 +292,6 @@ def high_level_test_ai_vs_ai(model_path_1, model_path_2, professions, skill_mgr,
                 # 顯示進度
                 if battle_num % 10 == 0:
                     print(f"  完成 {battle_num}/{num_battles} 場")
-                    
-                
 
     # 計算勝率
     win_rate_table = {}

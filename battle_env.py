@@ -220,7 +220,7 @@ class BattleEnv(MultiAgentEnv):
                     self.battle_log.append(
                         f"P隊伍{i}({user['profession'].name}) 選擇的技能不可用，隨機選擇 {skill_name}"
                     )
-                    p_penalty += 5000
+                    p_penalty += 1000
                 else:
                     # 如果沒有可用技能，跳過行動
                     self.battle_log.append(
@@ -276,7 +276,7 @@ class BattleEnv(MultiAgentEnv):
                     self.battle_log.append(
                         f"E隊伍{j}({e['profession'].name}) 選擇的技能不可用，隨機選擇 {skill_name}"
                     )
-                    e_penalty += 5000
+                    e_penalty += 1000
                 else:
                     # 如果沒有可用技能，跳過行動
                     self.battle_log.append(
@@ -411,10 +411,22 @@ class BattleEnv(MultiAgentEnv):
             "__all__": False,
         }
 
+        # result = 4 type
+        # notdone, playerwin, enemywin, draw
+        info_res  = 2
+        if self.done:
+            if all(m["hp"] <= 0 for m in self.player_team):
+                info_res = -1
+            elif all(e["hp"] <= 0 for e in self.enemy_team):
+                info_res = 1
+            else:
+                info_res = 0
+
         infos = {
-            "player": {"professions":self.mpro},
-            "enemy": {"professions":self.epro},
-            }
+        "player": {},  # 玩家相關的空信息
+        "enemy": {},   # 敵人相關的空信息
+        "__common__": {"result": info_res},  # 全局信息
+        }
         
         player_m = self.player_team[0]
         enemy_m = self.enemy_team[0]
@@ -588,7 +600,7 @@ class BattleEnv(MultiAgentEnv):
                 self.battle_log.append(
                     f"{target['profession'].name} 發動「冷箭」反擊！"
                 )
-                self.deal_damage(target, user, 45, can_be_blocked=False)
+                self.deal_damage(target, user, 35, can_be_blocked=False)
         
         
         # update last attacker and last damage
@@ -644,7 +656,6 @@ class BattleEnv(MultiAgentEnv):
         """
         target["effect_manager"].add_effect(status_effect)
 
-
     def _handle_status_end_of_turn(self):
         """
         處理每回合結束時的異常狀態效果
@@ -680,7 +691,7 @@ class BattleEnv(MultiAgentEnv):
                 self.battle_log.append(
                     f"{profession.name} 的被動技能「堅韌壁壘」發動！"
                 )
-                heal = int((profession.max_hp - m['hp']) * 0.1)
+                heal = int((profession.max_hp - m['hp']) * 0.08)
                 self.deal_healing(m, heal)
             elif profession.name == "血神":
                 # 血神被動：受到致死傷害時，5%機率免疫該次傷害
@@ -694,8 +705,8 @@ class BattleEnv(MultiAgentEnv):
                 # add 3% max hp, 3% attack, 3% defense for each stacks of dragon god
                 # source = -1 是此被動技能的skill_id
                 passive_id = profession.default_passive_id
-                deffect = DefenseMultiplier(multiplier=1.03,duration=99,stacks=1,source=passive_id,stackable=True,max_stack=99)
-                heffect = DamageMultiplier(multiplier=1.03,duration=99,stacks=1,source=passive_id,stackable=True,max_stack=99)
+                deffect = DefenseMultiplier(multiplier=1.05,duration=99,stacks=1,source=passive_id,stackable=True,max_stack=99)
+                heffect = DamageMultiplier(multiplier=1.05,duration=99,stacks=1,source=passive_id,stackable=True,max_stack=99)
                 # hpeffect = MaxHPmultiplier(multiplier=1.02,duration=99,stacks=1,source=passive_id,stackable=True,max_stack=99)
                 track = Track(name="龍神buff",duration=99,stacks=1,source=passive_id,stackable=True,max_stack=99)
                 self.apply_status(m,deffect)
@@ -791,16 +802,16 @@ class BattleEnv(MultiAgentEnv):
                 if all(m["hp"] <= 0 for m in self.player_team) and all(e["hp"] <= 0 for e in self.enemy_team):
                     return 0
                 elif all(m["hp"] <= 0 for m in self.player_team):
-                    return -250
+                    return -300
                 elif all(e["hp"] <= 0 for e in self.enemy_team):
-                    return 250
+                    return 300
             else:
                 if all(m["hp"] <= 0 for m in self.player_team) and all(e["hp"] <= 0 for e in self.enemy_team):
                     return 0
                 elif all(m["hp"] <= 0 for m in self.player_team):
-                    return 250
+                    return 300
                 elif all(e["hp"] <= 0 for e in self.enemy_team):
-                    return -250
+                    return -300
         else:
             # 可以根據每回合的表現給予獎勵
             # 例如，造成傷害給予正獎勵，受到傷害給予負獎勵
@@ -824,7 +835,6 @@ class BattleEnv(MultiAgentEnv):
                     reward += 2
             return reward
         return 0
-
 
     def _print_round_header(self):
         if self.show_battle_log:

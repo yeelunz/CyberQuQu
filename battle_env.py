@@ -184,7 +184,8 @@ class BattleEnv(MultiAgentEnv):
         enemy_heal_skills = []
         enemy_damage_skills = []
         
-
+        p_penalty = 0
+        e_penalty = 0
         
         # 分類我方技能
         for i in range(self.team_size):
@@ -219,6 +220,7 @@ class BattleEnv(MultiAgentEnv):
                     self.battle_log.append(
                         f"P隊伍{i}({user['profession'].name}) 選擇的技能不可用，隨機選擇 {skill_name}"
                     )
+                    p_penalty += 5000
                 else:
                     # 如果沒有可用技能，跳過行動
                     self.battle_log.append(
@@ -274,6 +276,7 @@ class BattleEnv(MultiAgentEnv):
                     self.battle_log.append(
                         f"E隊伍{j}({e['profession'].name}) 選擇的技能不可用，隨機選擇 {skill_name}"
                     )
+                    e_penalty += 5000
                 else:
                     # 如果沒有可用技能，跳過行動
                     self.battle_log.append(
@@ -392,8 +395,8 @@ class BattleEnv(MultiAgentEnv):
         self._print_round_footer()   
         
         rewards = {
-        "player":  self._get_reward(player=True),
-        "enemy": self._get_reward(player=False),
+        "player": self._get_reward(player=True)-p_penalty,
+        "enemy": self._get_reward(player=False)-e_penalty,
         }
         
         terminateds = {

@@ -18,12 +18,18 @@ from collections import defaultdict
 from train_var import player_train_times, enemy_train_times
 import os
 
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+# import RL model
 
-os.environ["PYTHONWARNINGS"] = "ignore::DeprecationWarning"
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
 
 
 
-def multi_agent_cross_train(num_iterations, professions, skill_mgr,
+def multi_agent_cross_train(num_iterations, professions, skill_mgr, 
                             save_path_1="multiagent_ai1.zip",
                             save_path_2="multiagent_ai2.zip"):
     """
@@ -54,13 +60,9 @@ def multi_agent_cross_train(num_iterations, professions, skill_mgr,
             .resources(
             num_gpus=1,  # 分配 1 個 GPU
             num_cpus_per_worker=2,  # 每個 worker 分配 1 個 CPU
-            num_gpus_per_worker=0  # Worker 是否使用 GPU
+            num_gpus_per_worker=1  # Worker 是否使用 GPU
             )
-
-            
         )
-
-    
     benv = BattleEnv(beconfig)
     config = config.multi_agent(
         policies={
@@ -81,22 +83,16 @@ def multi_agent_cross_train(num_iterations, professions, skill_mgr,
     print("=== 模型初始化完成 ===")
     # print("type(algo):", type(algo))
     # set train time to 0
-    
-    
     for i in range(num_iterations):
         result = algo.train()
         
         print("result:", result)
         print("-" * 60)
         
-        # 重置职业计数器
-
     # 存檔
     checkpoint_dir = algo.save("./my_battle_ppo_checkpoints")
     print("Checkpoint saved at", checkpoint_dir)
     ray.shutdown()
-
-
 
 
 

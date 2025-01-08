@@ -288,8 +288,8 @@ def ai_vs_ai(model_path_1, model_path_2, skill_mgr, professions):
         e_actions = np.where(emask == 1)[0]
         
         
-        print("p_actions:",pmask)
-        print("e_actions:",emask)
+        print("p_actions avaliable:",pmask)
+        print("e_actions avaliable:",emask)
         p_act = trainer.compute_single_action(obs['player'], policy_id="player_policy")
         # if p act in mask is 0, then choose random action
         e_act = trainer.compute_single_action(obs['enemy'] ,policy_id="enemy_policy")

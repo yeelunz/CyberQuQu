@@ -27,8 +27,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-
-
 def multi_agent_cross_train(num_iterations, professions, skill_mgr, 
                             save_path_1="multiagent_ai1.zip",
                             save_path_2="multiagent_ai2.zip"):

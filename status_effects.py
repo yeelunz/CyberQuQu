@@ -801,7 +801,8 @@ class Track(StatusEffect):
         raise ValueError("追蹤效果不支持set_stack，請直接用值設定stacks")
         
 
-
+# 這個是用來將效果ID轉換成效果名稱的字典
+# 用於顯示的功能
 EFFECT_NAME_MAPPING = {
     1: "攻擊力變更",
     2: "防禦力變更",

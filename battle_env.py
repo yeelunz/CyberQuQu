@@ -19,6 +19,12 @@ from gymnasium import spaces
 from gymnasium.spaces import Box, Discrete,Dict
 from ray.rllib.env import MultiAgentEnv
 
+from train_var import player_train_times,enemy_train_times
+
+
+# 13 len array
+
+
 
 class BattleEnv(MultiAgentEnv):
     """
@@ -55,13 +61,15 @@ class BattleEnv(MultiAgentEnv):
             self.done = False
             self.battle_log = []
             self.damage_coefficient = 1.0
+            self.size = 116
+            self.train_mode = config["train_mode"]
+            self.mpro = []
+            self.epro = []
             
-
+    
             self.agents = ["player", "enemy"]
-
-
             # 為每個代理配置觀察空間和動作空間
-            self.observation_space = Box(low=-1e4, high=1e4, shape=(26,), dtype=np.float32)
+            self.observation_space = Box(low=-1e4, high=1e4, shape=(self.size,), dtype=np.float32)
             self.action_space = Discrete(3)
 
     def reset(self,*, seed=None, options=None):
@@ -72,10 +80,18 @@ class BattleEnv(MultiAgentEnv):
         self.done = False
         self.battle_log.clear()
         self.damage_coefficient = 1.0
-
+        all_professions = self.config["all_professions"]
+        if self.train_mode:
+            for m in self.player_team + self.enemy_team:
+                m["profession"] = random.choice(all_professions)
+                
+        
+ 
         # 重置我方隊伍
         for m in self.player_team:
             prof = m["profession"]
+            # self.mpro.append(prof.name)
+            player_train_times[prof.profession_id] += 1
             m["hp"] = prof.base_hp
             m["max_hp"] = prof.base_hp
             m["times_healed"] = 0
@@ -87,16 +103,18 @@ class BattleEnv(MultiAgentEnv):
             m["battle_log"] = []
             m["skills_used"] = {} 
             m["cooldowns"] = {0:0, 1:0, 2:0}
-            
+            m["last_skill_used"] = None
             m["skills_used"] = {}  # 用於追蹤技能使用次數
             m["effect_manager"] = EffectManager(m)  # 初始化 EffectManager
             m["last_attacker"] = None
             m["last_damage"] = 0
             m['accumulated_damage'] = 0
-
+        
         # 重置敵方
         for e in self.enemy_team:
             prof = e["profession"]
+            # self.epro.append(prof.name)
+            enemy_train_times[prof.profession_id] += 1
             e["hp"] = prof.base_hp
             e["max_hp"] = prof.base_hp
             e["skip_turn"] = False
@@ -108,13 +126,17 @@ class BattleEnv(MultiAgentEnv):
             e["battle_log"] = []
             e["cooldowns"] = {0:0, 1:0, 2:0}
             
+            e["last_skill_used"] = None 
             e["skills_used"] = {} 
             e["effect_manager"] = EffectManager(e)  # 初始化 EffectManager
             e["last_attacker"] = None
             e["last_damage"] = 0
             e['accumulated_damage'] = 0
 
-        infos = {agent: {} for agent in self.agents}
+        infos = {
+             "player": {"professions":self.mpro},
+            "enemy": {"professions":self.epro},
+            }
         return {
             "player": self._get_obs("player"),
             "enemy": self._get_obs("enemy"),
@@ -387,9 +409,9 @@ class BattleEnv(MultiAgentEnv):
         }
 
         infos = {
-            "player": {},
-            "enemy": {},
-        }
+            "player": {"professions":self.mpro},
+            "enemy": {"professions":self.epro},
+            }
         
         player_m = self.player_team[0]
         enemy_m = self.enemy_team[0]
@@ -444,35 +466,57 @@ class BattleEnv(MultiAgentEnv):
 
             # 觀察值(可自行擴充)
             player_obs = np.array([
+                player_m["profession"].profession_id,
                 player_m["hp"],
                 player_m["max_hp"],
-                enemy_m["hp"],
-                enemy_m["max_hp"],
-                self.round_count,
-                # ... 你想加的資訊 ...
-                0,0,0,0,0  # filler for shape=(10,) 
+                player_m["damage_multiplier"],
+                player_m["defend_multiplier"],
+                player_m["heal_multiplier"],
+                player_m["accumulated_damage"],
+                player_m["profession"].baseAtk,
+                player_m["profession"].baseDef,
+                  # filler for shape=(10,) 
             ], dtype=np.float32)
-
-            opponent_obs = np.array([
+            
+  
+            # 9
+            enemy_obs = np.array([
+                enemy_m["profession"].profession_id,
                 enemy_m["hp"],
                 enemy_m["max_hp"],
-                player_m["hp"],
-                player_m["max_hp"],
-                self.round_count,
-                # ... 你想加的資訊 ...
-                0,0,0,0,0
+                enemy_m["damage_multiplier"],
+                enemy_m["defend_multiplier"],
+                enemy_m["heal_multiplier"],
+                enemy_m["accumulated_damage"],
+                enemy_m["profession"].baseAtk,
+                enemy_m["profession"].baseDef,
+                
             ], dtype=np.float32)
 
             # 行動遮罩)
             player_mask = self._get_action_mask(player_m)
             enemy_mask = self._get_action_mask(enemy_m)
-            
+ 
             # concat PLAYER_OBS + PLAYER_MASK
+            #  = 9+3 = 12
             flattened_pobs = np.concatenate([player_mask, player_obs])
-            flattened_eobs = np.concatenate([enemy_mask, opponent_obs])
+            flattened_eobs = np.concatenate([enemy_mask, enemy_obs])
             
-            pout = np.concatenate([flattened_pobs, flattened_eobs])
-            eout = np.concatenate([flattened_eobs, flattened_pobs])
+            
+            # 12 + 2 = 14
+            public_obs = np.array(
+                [self.damage_coefficient,
+                 self.round_count,
+                 ]
+                ,dtype=np.float32
+                )
+            
+            # 42
+            pem = player_m["effect_manager"].export_obs()
+            eem = enemy_m["effect_manager"].export_obs()
+            #  = 12 +12 +42 +42 +2
+            pout = np.concatenate([flattened_pobs, flattened_eobs,pem,eem,public_obs])
+            eout = np.concatenate([flattened_eobs, flattened_pobs,eem,pem,public_obs])
             
             if agent == "player":
                 return pout
@@ -744,16 +788,16 @@ class BattleEnv(MultiAgentEnv):
                 if all(m["hp"] <= 0 for m in self.player_team) and all(e["hp"] <= 0 for e in self.enemy_team):
                     return 0
                 elif all(m["hp"] <= 0 for m in self.player_team):
-                    return -100
+                    return -250
                 elif all(e["hp"] <= 0 for e in self.enemy_team):
-                    return 100
+                    return 250
             else:
                 if all(m["hp"] <= 0 for m in self.player_team) and all(e["hp"] <= 0 for e in self.enemy_team):
                     return 0
                 elif all(m["hp"] <= 0 for m in self.player_team):
-                    return 100
+                    return 250
                 elif all(e["hp"] <= 0 for e in self.enemy_team):
-                    return -100
+                    return -250
         else:
             # 可以根據每回合的表現給予獎勵
             # 例如，造成傷害給予正獎勵，受到傷害給予負獎勵

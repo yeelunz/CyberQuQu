@@ -26,6 +26,5 @@ EFFECT_MAPPING = {
 # 99: 39, # CustomEffect
 # 100: 42, # CustomEffect
 
-
 # 計算觀察向量中效果相關部分的總長度
 EFFECT_VECTOR_LENGTH = max(EFFECT_MAPPING.values()) + 3  # 每個效果佔3個位置

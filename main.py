@@ -262,6 +262,7 @@ def ai_vs_ai(model_path_1, model_path_2, skill_mgr, professions):
     model_path_1 = "my_battle_ppo_checkpoints/policies/player_policy"
     model_path_2 = "my_battle_ppo_checkpoints/policies/enemy_policy"
     
+    # 其實兩個政策就代表先攻or後攻
     config = config.multi_agent(
         policies={
             "player_policy": (None, benv.observation_space, benv.action_space, {}),
@@ -274,11 +275,7 @@ def ai_vs_ai(model_path_1, model_path_2, skill_mgr, professions):
     check_point_path = "my_battle_ppo_checkpoints"
     check_point_path = os.path.abspath("my_battle_ppo_checkpoints")
     print(get_checkpoint_info(check_point_path))
-    print("当前工作目录:", os.getcwd())
 
-# 检查文件是否存在
-    check_point_path = "my_battle_ppo_checkpoints"
-    print("文件存在:", os.path.exists(check_point_path))
     trainer = config.build()  # 用新的 API 构建训练器
     trainer.restore(check_point_path)
 
@@ -290,18 +287,15 @@ def ai_vs_ai(model_path_1, model_path_2, skill_mgr, professions):
         p_actions = np.where(pmask == 1)[0]
         e_actions = np.where(emask == 1)[0]
         
-        p_act = trainer.compute_action(obs["player"], policy_id="player_policy")
+        
+        print("p_actions:",pmask)
+        print("e_actions:",emask)
+        p_act = trainer.compute_single_action(obs['player'], policy_id="player_policy")
         # if p act in mask is 0, then choose random action
-        if p_act not in p_actions:
-            p_act = random.choice(p_actions)
-            print("使用到冷卻中的技能")
-            
-        e_act = trainer.compute_action(obs["enemy"], policy_id="enemy_policy")
-        
-        if e_act not in e_actions:
-            e_act = random.choice(e_actions)
-            print("使用到冷卻中的技能")
-        
+        e_act = trainer.compute_single_action(obs['enemy'] ,policy_id="enemy_policy")
+        print("p_act:",p_act)
+        print("e_act:",e_act)
+
         actions = {
             "player": p_act,
             "enemy": e_act
@@ -366,7 +360,7 @@ def main():
                 model_path_2=default_model_path_2,
                 professions=professions,
                 skill_mgr=skill_mgr,
-                num_battles=100
+                num_battles=20
             )
         elif c == "4":
             # AI ELO
@@ -394,3 +388,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+

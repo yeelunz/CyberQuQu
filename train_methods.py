@@ -88,7 +88,6 @@ def multi_agent_cross_train(num_iterations, professions, skill_mgr,
         
         print("result:", result)
         print("-" * 60)
-        
     # 存檔
     checkpoint_dir = algo.save("./my_battle_ppo_checkpoints")
     print("Checkpoint saved at", checkpoint_dir)

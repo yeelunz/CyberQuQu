@@ -286,6 +286,11 @@ def ai_vs_ai(model_path_1, model_path_2, skill_mgr, professions):
         )
         .env_runners(num_env_runners=1,sample_timeout_s=120)  # 可根據你的硬體調整
         .framework("torch")            # 或 "tf"
+        .training(
+            model={
+                "custom_model": "my_mask_model",
+            }
+        )
         )
     
     config.api_stack(enable_rl_module_and_learner=False,enable_env_runner_and_connector_v2=False)
@@ -314,7 +319,6 @@ def ai_vs_ai(model_path_1, model_path_2, skill_mgr, professions):
         emask = obs["enemy"][0:3]
         p_actions = np.where(pmask == 1)[0]
         e_actions = np.where(emask == 1)[0]
-        
         
         print("p_actions avaliable:",pmask)
         print("e_actions avaliable:",emask)
@@ -352,6 +356,9 @@ def main():
     # 方便測試，直接指定你訓練出來的檔名
     default_model_path_1 = "multiagent_ai1.zip"
     default_model_path_2 = "multiagent_ai2.zip"
+    
+    
+
 
     while True:
         print("\n=== 多智能體戰鬥系統 ===")

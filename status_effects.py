@@ -737,7 +737,7 @@ class CustomizeDoT(StatusEffect):
             max_stack=max_stack,
             stacks=stacks,
             type='dot',
-            id = 98 ,
+            id = 19 ,
             source=source,
             max_duration=max_duration
         )
@@ -778,7 +778,7 @@ class Track(StatusEffect):
             max_stack=max_stack,
             stacks=stacks,
             type='track',
-            id = 999
+            id = 13
         )
         # check source
         if not source:
@@ -816,8 +816,8 @@ EFFECT_NAME_MAPPING = {
     10: "眩暈",
     11: "回血",
     12: "最大生命值變更",
-    98: "自定義傷害效果",
-    999: "追蹤"
+    13: "追蹤",
+    19: "自定義傷害效果"
 }
     
     

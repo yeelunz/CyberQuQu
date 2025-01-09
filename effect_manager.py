@@ -1,4 +1,5 @@
 # effect_manager.py
+import numpy as np
 
 from status_effects import (
     Burn, Poison, Freeze, DamageMultiplier, DefenseMultiplier, HealMultiplier,
@@ -244,10 +245,6 @@ class EffectManager:
                         # 更新堆疊數
                         effect.stacks = stacks
                         effect.on_apply(tar)
-                    
-                    
-                        
-        
 
 
     def export_obs(self):
@@ -263,6 +260,9 @@ class EffectManager:
                 # 假設每個effect_id只會有一個效果實例（除非堆疊）
                 effect = effects[0]
                 obs[idx] = 1.0  # 存在標誌
-                obs[idx + 1] = effect.stacks
-                obs[idx + 2] = effect.duration
+                obs[idx + 1] = np.log(effect.stacks+1)
+                if effect.duration > 30:
+                    obs[idx + 2] = 1.0
+                else:
+                    obs[idx + 2] = effect.duration / 30.0 
         return obs

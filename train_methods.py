@@ -7,25 +7,62 @@ import ray
 from ray import tune
 from ray.rllib.algorithms.ppo import PPOConfig
 from battle_env import BattleEnv
-
 from ray.rllib.models.torch.torch_modelv2 import TorchModelV2
-import torch
-import torch.nn as nn
+from ray.rllib.models.modelv2 import ModelV2
+from ray.rllib.utils.annotations import override
+from ray.rllib.models.torch.torch_modelv2 import TorchModelV2
 
 from ray.rllib.algorithms.callbacks import DefaultCallbacks
 from ray.tune.logger import JsonLoggerCallback, CSVLoggerCallback, TBXLoggerCallback
 from collections import defaultdict
 from train_var import player_train_times, enemy_train_times
 import os
-
+from ray.rllib.models import ModelCatalog
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-# import RL model
+from ray.rllib.models.torch.fcnet import FullyConnectedNetwork
 
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
+class MaskedFullyConnectedNetwork(TorchModelV2, nn.Module):
+    """
+    基於 RLlib 的預設 FullyConnectedNetwork，添加動作掩碼處理。
+    """
+    def __init__(self, obs_space, action_space, num_outputs, model_config, name):
+        TorchModelV2.__init__(self, obs_space, action_space, num_outputs, model_config, name)
+        nn.Module.__init__(self)
+
+        # 使用內建 FullyConnectedNetwork 作為基礎模型
+        self.base_model = FullyConnectedNetwork(
+            obs_space, action_space, num_outputs, model_config, name + "_base"
+        )
+
+    @override(ModelV2)
+    def forward(self, input_dict, state, seq_lens):
+        """
+        前向傳播，將掩碼應用到 logits 上。
+        """
+        # 基礎模型的輸出 logits
+        base_out, state = self.base_model(input_dict, state, seq_lens)
+
+        # 提取掩碼：假設 obs 的前 3 維是掩碼
+        mask = input_dict["obs"][:, :3]  # (B, 3)
+
+        # 掩碼處理：將無效的 logits 設為極大負值
+        inf_mask = (1.0 - mask) * -1e10
+        masked_logits = base_out + inf_mask
+
+        self._last_output = masked_logits
+        return masked_logits, state
+
+    @override(ModelV2)
+    def value_function(self):
+        """
+        繼承基礎模型的 value_function。
+        """
+        return self.base_model.value_function()
+
+
+ModelCatalog.register_custom_model("my_mask_model", MaskedFullyConnectedNetwork)
 
 def multi_agent_cross_train(num_iterations, professions, skill_mgr, 
                             save_path_1="multiagent_ai1.zip",
@@ -37,6 +74,7 @@ def multi_agent_cross_train(num_iterations, professions, skill_mgr,
     - 訓練完後存檔
     """
     print("=== 開始多智能體交叉訓練 ===")
+    
 
     # 初始化環境配置
     beconfig = make_env_config(skill_mgr, professions, train_mode=True)
@@ -60,6 +98,15 @@ def multi_agent_cross_train(num_iterations, professions, skill_mgr,
             num_cpus_per_worker=2,  # 每個 worker 分配 1 個 CPU
             num_gpus_per_worker=1  # Worker 是否使用 GPU
             )
+            .training(
+            model={
+                "custom_model": "my_mask_model",
+                "fcnet_hiddens": [256, 256],  # 例如手動指定
+                "fcnet_activation": "ReLU",  # 例如手動指定
+                "vf_share_layers": False,     # 依需求可開關
+
+            }
+        )
         )
     benv = BattleEnv(beconfig)
     config = config.multi_agent(
@@ -87,7 +134,7 @@ def multi_agent_cross_train(num_iterations, professions, skill_mgr,
     # 存檔
     checkpoint_dir = algo.save("./my_battle_ppo_checkpoints")
     print("Checkpoint saved at", checkpoint_dir)
-    ray.shutdown()
+    
 
 
 
@@ -257,20 +304,28 @@ def high_level_test_ai_vs_ai(model_path_1, model_path_2, professions, skill_mgr,
     """
     # 初始化結果字典
     # test ray if init here
+    eps = 0
+    steps = 0
 
     results = {p.name: {op.name: {'win': 0, 'loss': 0, 'draw': 0} for op in professions if op != p} for p in professions}
+    skill_usage = {p.name: [0,0,0] for p in professions}
     # print(results)
     total_combinations = len(professions) * (len(professions) - 1)
     current_combination = 0
     beconfig = make_env_config(skill_mgr=skill_mgr, professions=professions,show_battlelog=True)
     config = (
-    PPOConfig()
-    .environment(
-        env=BattleEnv,            # 指定我們剛剛定義的環境 class
-        env_config=beconfig# 傳入給 env 的一些自定設定
+        PPOConfig()
+        .environment(
+            env=BattleEnv,            # 指定我們剛剛定義的環境 class
+            env_config=beconfig# 傳入給 env 的一些自定設定
+        )
+        .env_runners(num_env_runners=1,sample_timeout_s=120)  # 可根據你的硬體調整
+        .framework("torch")            # 或 "tf"
+        .training(
+        model={
+            "custom_model": "my_mask_model",
+        }
     )
-    .env_runners(num_env_runners=1,sample_timeout_s=120)  # 可根據你的硬體調整
-    .framework("torch")            # 或 "tf"
     )
     benv = BattleEnv(config=beconfig)
     config.api_stack(enable_rl_module_and_learner=False,enable_env_runner_and_connector_v2=False)
@@ -293,36 +348,55 @@ def high_level_test_ai_vs_ai(model_path_1, model_path_2, professions, skill_mgr,
             current_combination += 1
             print(f"\n對戰 {current_combination}/{total_combinations}: {p.name} VS {op.name}")
             for battle_num in range(1, num_battles + 1):
+                eps += 1
 
                 # 初始化 BattleEnv，關閉 battle_log 以加快速度
-                env = BattleEnv(
-                    make_env_config(skill_mgr, professions, show_battlelog=False, pr1=p, pr2=op)
-                )
+                # 前半 = p 先攻，後半 = op 先攻
+                if battle_num % 2 == 1:
+                    env = BattleEnv(
+                        make_env_config(skill_mgr, professions, show_battlelog=False, pr1=p, pr2=op)
+                    )
+                else:
+                    env = BattleEnv(
+                        make_env_config(skill_mgr, professions, show_battlelog=False, pr1=op, pr2=p)
+                    )
+
                 # 編號決定先後攻
                 done = False
                 obs, _ = env.reset()
 
                 while not done:
+                    steps += 1
                     
                     # 取第 0~2 格，獲取合法動作
                     p_act = trainer.compute_single_action(obs['player'], policy_id="shared_policy")
                     # if p act in mask is 0, then choose random action
                     e_act = trainer.compute_single_action(obs['enemy'] ,policy_id="shared_policy")
+                    
+                    # track skill usage
+                    skill_usage[p.name][p_act] += 1
+                    skill_usage[op.name][e_act] += 1
+                    
+                    
                     actions = {"player": p_act, "enemy": e_act}
                     obs, rew, done, tru, info = env.step(actions)
                     done = done["__all__"]
 
                 
                 res = info["__common__"]["result"]
-
+                # res 代表先攻方的結果， 因此如果前面是op先攻，則結果要反轉
+                if battle_num % 2 == 0:
+                    res = -res
+                
                 # 判斷結果
-                if res  == 1:
+                if res == 1:
                     results[p.name][op.name]['win'] += 1
                 elif res == -1:
                     results[p.name][op.name]['loss'] += 1
                 else:
                     results[p.name][op.name]['draw'] += 1
-
+                
+                
                 # 顯示進度
                 if battle_num % 10 == 0:
                     print(f"  完成 {battle_num}/{num_battles} 場")
@@ -365,7 +439,7 @@ def high_level_test_ai_vs_ai(model_path_1, model_path_2, professions, skill_mgr,
             }
 
     # 顯示結果 
-    print("\n=== 每個職業相互對戰100場的勝率（括號內為enemy方數據）===") 
+    print("\n=== 每個職業相互對戰100場的勝率（括號內為後攻方之數據）===") 
     for player_prof, stats in win_rate_table.items(): 
         opponents = list(stats.keys()) 
         print(f"\n職業 {player_prof}") 
@@ -413,7 +487,18 @@ def high_level_test_ai_vs_ai(model_path_1, model_path_2, professions, skill_mgr,
         total_win_rate = (total_wins / (total_wins + total_losses)) * 100 if (total_wins + total_losses) > 0 else 0 
         total_enemy_win_rate = (total_enemy_wins / (total_enemy_wins + total_enemy_losses)) * 100 
         print("勝率 | " + " | ".join(win_rate_values) + f" | {total_win_rate:.2f}%({total_enemy_win_rate:.2f}%)")
-
+    
+    print("\n=== 各職業使用技能0/技能1/技能2的次數統計 ===")
+    for prof, skills in skill_usage.items():
+        print(f"\n職業 {prof}")
+        print(f"技能0: {skills[0]} 次")
+        print(f"技能1: {skills[1]} 次")
+        print(f"技能2: {skills[2]} 次")
+    
+    # prnit env info
+    # 列印戰鬥平均回合數
+    print(f"\n平均回合數: {steps / eps:.2f}")
+    
     input("對戰完成。按Enter返回主選單...")
 
     return
@@ -444,17 +529,22 @@ def compute_ai_elo(model_path_1, professions, skill_mgr, base_elo=1500, opponent
     total_second = 0
     randomELO = 1500
 
+
     # 設定環境配置
     beconfig = make_env_config(skill_mgr=skill_mgr, professions=professions, show_battlelog=False)
     config = (
         PPOConfig()
         .environment(
-            env=BattleEnv,
-            env_config=beconfig
+            env=BattleEnv,            # 指定我們剛剛定義的環境 class
+            env_config=beconfig# 傳入給 env 的一些自定設定
         )
-        .env_runners(num_env_runners=1, sample_timeout_s=120)
-        .framework("torch")
-    )
+        .env_runners(num_env_runners=1,sample_timeout_s=120)  # 可根據你的硬體調整
+        .framework("torch")            # 或 "tf"
+        .training(
+        model={
+            "custom_model": "my_mask_model",
+        }))
+    
     benv = BattleEnv(config=beconfig)
     # 定義多代理策略
     config = config.multi_agent(
@@ -489,7 +579,8 @@ def compute_ai_elo(model_path_1, professions, skill_mgr, base_elo=1500, opponent
             while not done:
                 # AI 的動作
 
-                ai_act = trainer.compute_single_action(obs['player'], policy_id="shared_policy")
+                ai_act = random.choice([0, 1, 2])
+                # ai_act = trainer.compute_single_action(obs['player'], policy_id="shared_policy")
             
                 # 電腦（隨機）動作
                 # random action from 0 - 2
@@ -530,8 +621,8 @@ def compute_ai_elo(model_path_1, professions, skill_mgr, base_elo=1500, opponent
                 # 電腦（隨機）動作
                 enemy_act = random.choice([0, 1, 2])
                 # AI 的動作
-                # AI 的動作
-                ai_act = trainer.compute_single_action(obs['enemy'], policy_id="enemy_policy")
+                # ai_act = trainer.compute_single_action(obs['enemy'], policy_id="shared_policy")
+                ai_act = random.choice([0, 1, 2])
                     
                 actions = {"player": enemy_act, "enemy": ai_act}
                 obs, rew, done_dict, tru, info = env.step(actions)

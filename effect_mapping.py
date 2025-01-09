@@ -17,10 +17,10 @@ EFFECT_MAPPING = {
     10: 27, # 暈眩
     11: 30, # HP Recovery
     12: 33, # Max HP Increase
+    13: 39, # Track
+    19: 42, # CustomEffect Dot
 
     
-    98: 39, # CustomEffect Dot
-    999: 42, # Track
 }
 
 # 99: 39, # CustomEffect

@@ -61,12 +61,18 @@ class BattleEnv(MultiAgentEnv):
             self.done = False
             self.battle_log = []
             self.damage_coefficient = 1.0
-            self.size = 116
+            self.size = 140
             self.train_mode = config["train_mode"]
             self.mpro = []
             self.epro = []
-            
-    
+            all_professions = self.config["all_professions"]
+            # 為了標準化觀察空間，需要知道最大的 base_hp
+            self.maxProfession_hp = 0
+            for m in all_professions:
+                if m.base_hp > self.maxProfession_hp:
+                    self.maxProfession_hp = m.base_hp
+                
+
             self.agents = ["player", "enemy"]
             # 為每個代理配置觀察空間和動作空間
             self.observation_space = Box(low=-1e4, high=1e4, shape=(self.size,), dtype=np.float32)
@@ -85,8 +91,6 @@ class BattleEnv(MultiAgentEnv):
             for m in self.player_team + self.enemy_team:
                 m["profession"] = random.choice(all_professions)
                 
-        
- 
         # 重置我方隊伍
         for m in self.player_team:
             prof = m["profession"]
@@ -184,9 +188,7 @@ class BattleEnv(MultiAgentEnv):
         enemy_heal_skills = []
         enemy_damage_skills = []
         
-        p_penalty = 0
-        e_penalty = 0
-        
+
         # 分類我方技能
         for i in range(self.team_size):
             user = self.player_team[i]
@@ -220,7 +222,7 @@ class BattleEnv(MultiAgentEnv):
                     self.battle_log.append(
                         f"P隊伍{i}({user['profession'].name}) 選擇的技能不可用，隨機選擇 {skill_name}"
                     )
-                    p_penalty += 1000
+  
                 else:
                     # 如果沒有可用技能，跳過行動
                     self.battle_log.append(
@@ -276,7 +278,6 @@ class BattleEnv(MultiAgentEnv):
                     self.battle_log.append(
                         f"E隊伍{j}({e['profession'].name}) 選擇的技能不可用，隨機選擇 {skill_name}"
                     )
-                    e_penalty += 1000
                 else:
                     # 如果沒有可用技能，跳過行動
                     self.battle_log.append(
@@ -394,9 +395,12 @@ class BattleEnv(MultiAgentEnv):
 
         self._print_round_footer()   
         
+        
+        
+        #  返回觀測、獎勵、終止條件、截斷條件、信息
         rewards = {
-        "player": self._get_reward(player=True)-p_penalty,
-        "enemy": self._get_reward(player=False)-e_penalty,
+        "player": self._get_reward(player=True),
+        "enemy": self._get_reward(player=False),
         }
         
         terminateds = {
@@ -427,40 +431,7 @@ class BattleEnv(MultiAgentEnv):
         "enemy": {},   # 敵人相關的空信息
         "__common__": {"result": info_res},  # 全局信息
         }
-        
-        player_m = self.player_team[0]
-        enemy_m = self.enemy_team[0]
-
-        # 觀察值(可自行擴充)
-        player_obs = np.array([
-            player_m["hp"],
-            player_m["max_hp"],
-            enemy_m["hp"],
-            enemy_m["max_hp"],
-            self.round_count,
-            # ... 你想加的資訊 ...
-            0,0,0,0,0  # filler for shape=(10,) 
-        ], dtype=np.float32)
-
-        enemy_obs = np.array([
-            enemy_m["hp"],
-            enemy_m["max_hp"],
-            player_m["hp"],
-            player_m["max_hp"],
-            self.round_count,
-            # ... 你想加的資訊 ...
-            0,0,0,0,0
-        ], dtype=np.float32)
-
-        # 行動遮罩)
-        player_mask = self._get_action_mask(player_m)
-        enemy_mask = self._get_action_mask(enemy_m)
-        
-        # concat PLAYER_OBS + PLAYER_MASK
-        flattened_pobs = np.concatenate([player_mask, player_obs])
-        flattened_eobs = np.concatenate([enemy_mask, enemy_obs])
-        
-        
+    
         obs_next = {
             "player":self._get_obs("player"),
             "enemy":self. _get_obs("enemy"),
@@ -469,74 +440,84 @@ class BattleEnv(MultiAgentEnv):
 
 
     def _get_obs(self, agent):
-            """
-            回傳同時給AI1、AI2的觀測。 
-            同時要加上 action_mask，表示哪些動作可用(沒進CD) => 1/0
-            """
-            # 這裡示範做得很簡單：只回傳 [ player_hp, enemy_hp, round_count ] 等資訊
-            # 你可以自行加回你原本的觀察資訊(例如各種buff等)
-            # TODO 待改寫
-            player_m = self.player_team[0]
-            enemy_m = self.enemy_team[0]
+        """
+        回傳同時給AI1、AI2的觀測。 
+        同時要加上 action_mask，表示哪些動作可用(沒進CD) => 1/0
+        """
+        player_m = self.player_team[0]
+        enemy_m = self.enemy_team[0]
 
-            # 觀察值(可自行擴充)
-            player_obs = np.array([
-                player_m["profession"].profession_id,
-                player_m["hp"],
-                player_m["max_hp"],
+        # 定義職業數量，用於 One-Hot 編碼
+        num_professions = 13  # 假設職業 ID 的範圍是 0 ~ 12
+        
+        # One-Hot 編碼職業 ID
+        def one_hot_encode(profession_id, num_classes):
+            one_hot = np.zeros(num_classes, dtype=np.float32)
+            one_hot[profession_id] = 1.0
+            return one_hot
+
+        # 編碼 Player 和 Enemy 的 profession_id
+        player_profession_one_hot = one_hot_encode(player_m["profession"].profession_id, num_professions)
+        enemy_profession_one_hot = one_hot_encode(enemy_m["profession"].profession_id, num_professions)
+
+        # 構建觀測值 共有 13 + 8 = 21 個特徵
+        player_obs = np.concatenate([
+            player_profession_one_hot,  # One-Hot 編碼的 profession_id
+            [
+                player_m["hp"]/player_m["max_hp"],
+                player_m["max_hp"]/self.maxProfession_hp,
                 player_m["damage_multiplier"],
                 player_m["defend_multiplier"],
                 player_m["heal_multiplier"],
-                player_m["accumulated_damage"],
+                np.log(player_m["accumulated_damage"]+1),
                 player_m["profession"].baseAtk,
                 player_m["profession"].baseDef,
-                  # filler for shape=(10,) 
-            ], dtype=np.float32)
-            
-  
-            # 9
-            enemy_obs = np.array([
-                enemy_m["profession"].profession_id,
-                enemy_m["hp"],
-                enemy_m["max_hp"],
+            ]
+        ], dtype=np.float32)
+
+        enemy_obs = np.concatenate([
+            enemy_profession_one_hot,  # One-Hot 編碼的 profession_id
+            [
+                enemy_m["hp"]/enemy_m["max_hp"],
+                enemy_m["max_hp"]/self.maxProfession_hp,
                 enemy_m["damage_multiplier"],
                 enemy_m["defend_multiplier"],
                 enemy_m["heal_multiplier"],
-                enemy_m["accumulated_damage"],
+                np.log(enemy_m["accumulated_damage"]+1),
                 enemy_m["profession"].baseAtk,
                 enemy_m["profession"].baseDef,
-                
-            ], dtype=np.float32)
+            ]
+        ], dtype=np.float32)
 
-            # 行動遮罩)
-            player_mask = self._get_action_mask(player_m)
-            enemy_mask = self._get_action_mask(enemy_m)
- 
-            # concat PLAYER_OBS + PLAYER_MASK
-            #  = 9+3 = 12
-            flattened_pobs = np.concatenate([player_mask, player_obs])
-            flattened_eobs = np.concatenate([enemy_mask, enemy_obs])
-            
-            
-            # 12 + 2 = 14
-            public_obs = np.array(
-                [self.damage_coefficient,
-                 self.round_count,
-                 ]
-                ,dtype=np.float32
-                )
-            
-            # 42
-            pem = player_m["effect_manager"].export_obs()
-            eem = enemy_m["effect_manager"].export_obs()
-            #  = 12 +12 +42 +42 +2
-            pout = np.concatenate([flattened_pobs, flattened_eobs,pem,eem,public_obs])
-            eout = np.concatenate([flattened_eobs, flattened_pobs,eem,pem,public_obs])
-            
-            if agent == "player":
-                return pout
-            else:
-                return eout
+        # 行動遮罩 共有 3 個特徵
+        player_mask = self._get_action_mask(player_m)
+        enemy_mask = self._get_action_mask(enemy_m)
+
+        # 合併 PLAYER_OBS + PLAYER_MASK => 21 + 3 = 24
+        flattened_pobs = np.concatenate([player_mask, player_obs])
+        flattened_eobs = np.concatenate([enemy_mask, enemy_obs])
+
+        # 公共觀測值 共有 2 個特徵 
+        public_obs = np.array(
+            [self.damage_coefficient
+             , self.round_count/self.max_rounds],
+            dtype=np.float32
+        )
+
+        # 特效管理器觀測值 共有42個特徵
+        pem = player_m["effect_manager"].export_obs()
+        eem = enemy_m["effect_manager"].export_obs()
+
+        # 最終觀測值拼接 共有 24 + 24 + 2 + 42 +42 = 134 個特徵
+        pout = np.concatenate([flattened_pobs, flattened_eobs, pem, eem, public_obs])
+        eout = np.concatenate([flattened_eobs, flattened_pobs, eem, pem, public_obs])
+        
+
+        if agent == "player":
+            return pout
+        else:
+            return eout
+
 
     def _check_both_defeated(self):
         """
@@ -802,16 +783,16 @@ class BattleEnv(MultiAgentEnv):
                 if all(m["hp"] <= 0 for m in self.player_team) and all(e["hp"] <= 0 for e in self.enemy_team):
                     return 0
                 elif all(m["hp"] <= 0 for m in self.player_team):
-                    return -300
+                    return -3
                 elif all(e["hp"] <= 0 for e in self.enemy_team):
-                    return 300
+                    return 3
             else:
                 if all(m["hp"] <= 0 for m in self.player_team) and all(e["hp"] <= 0 for e in self.enemy_team):
                     return 0
                 elif all(m["hp"] <= 0 for m in self.player_team):
-                    return 300
+                    return 3
                 elif all(e["hp"] <= 0 for e in self.enemy_team):
-                    return -300
+                    return -3
         return 0
 
     def _print_round_header(self):

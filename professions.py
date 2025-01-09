@@ -442,8 +442,6 @@ class BloodGod(BattleProfession):
             # 技能 18 => 血斬：造成25傷害，疊加一層流血狀態。
             dmg = 45 * self.baseAtk 
             env.deal_damage(user, targets[0], dmg, can_be_blocked=True)
-            bleed_effect = BleedEffect(duration=5, stacks=1)  # 
-            env.apply_status(targets[0], bleed_effect)
             # 被動技能：血神流血附加
             self.passive(user, targets, env)
             
@@ -548,7 +546,7 @@ class Devour(BattleProfession):
             self.passive(user, dmg, env)
         elif skill_id == 26:
             # "堅硬皮膚", "提升25%防禦力，持續3回合。"
-            def_buff = DefenseMultiplier(multiplier=1.25, duration=3, stackable=False,source=skill_id)
+            def_buff = DefenseMultiplier(multiplier=1.35, duration=3, stackable=False,source=skill_id)
             env.apply_status(user, def_buff)
     
 class Ranger(BattleProfession):
@@ -618,6 +616,9 @@ class ElementalMage(BattleProfession):
             # 技能 30 => 雷霆護甲：2回合內，受到傷害15%機率直接麻痺敵人。
             def_buff = DefenseMultiplier(multiplier=1.5, duration=2, stackable=False,source=skill_id)
             env.apply_status(user, def_buff)
+            # 雷霆護甲", "2 回合內，受到傷害時有 30% 機率直接麻痺敵人，並增加 50% 防禦力，回復最大生命的 5% ", 'effect'))
+            heal = user["max_hp"] * 0.05
+            env.deal_healing(user, heal)
             # 護甲麻痺部分在env中process_passives_end_of_turn實作
 
         elif skill_id == 31:
@@ -762,6 +763,6 @@ class GodOfStar(BattleProfession):
             env.battle_log.append(
             f"「虛擬創星圖」強化了天啟星盤的力量，增加天啟星盤的加成效果。"
             )
-            dmg += 60 * self.baseAtk
+            dmg += 50 * self.baseAtk
             env.deal_damage(user, targets[0], dmg, can_be_blocked=True)
             env.deal_healing(user, heal)

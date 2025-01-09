@@ -293,11 +293,10 @@ def ai_vs_ai(model_path_1, model_path_2, skill_mgr, professions):
     # 其實兩個政策就代表先攻or後攻
     config = config.multi_agent(
         policies={
-            "player_policy": (None, benv.observation_space, benv.action_space, {}),
-            "enemy_policy": (None, benv.observation_space, benv.action_space, {}),
+            "shared_policy": (None, benv.observation_space, benv.action_space, {}),
         },
         policy_mapping_fn=lambda agent_id, episode, worker=None, **kwargs: 
-            "player_policy" if agent_id == "player" else "enemy_policy"
+            "shared_policy" if agent_id == "player" else "shared_policy"
     )
     
     check_point_path = "my_battle_ppo_checkpoints"
@@ -319,9 +318,9 @@ def ai_vs_ai(model_path_1, model_path_2, skill_mgr, professions):
         
         print("p_actions avaliable:",pmask)
         print("e_actions avaliable:",emask)
-        p_act = trainer.compute_single_action(obs['player'], policy_id="player_policy")
+        p_act = trainer.compute_single_action(obs['player'], policy_id="shared_policy")
         # if p act in mask is 0, then choose random action
-        e_act = trainer.compute_single_action(obs['enemy'] ,policy_id="enemy_policy")
+        e_act = trainer.compute_single_action(obs['enemy'] ,policy_id="shared_policy")
         print("p_act:",p_act)
         print("e_act:",e_act)
 

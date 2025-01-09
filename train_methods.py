@@ -64,11 +64,10 @@ def multi_agent_cross_train(num_iterations, professions, skill_mgr,
     benv = BattleEnv(beconfig)
     config = config.multi_agent(
         policies={
-            "player_policy": (None, benv.observation_space, benv.action_space, {}),
-            "enemy_policy": (None, benv.observation_space, benv.action_space, {}),
+            "shared_policy": (None, benv.observation_space, benv.action_space, {}),
         },
         policy_mapping_fn=lambda agent_id, episode, worker=None, **kwargs: 
-            "player_policy" if agent_id == "player" else "enemy_policy"
+            "shared_policy" if agent_id == "player" else "shared_policy"
 
     )
     # TODO 遷移到新API
@@ -277,11 +276,10 @@ def high_level_test_ai_vs_ai(model_path_1, model_path_2, professions, skill_mgr,
     config.api_stack(enable_rl_module_and_learner=False,enable_env_runner_and_connector_v2=False)
     config = config.multi_agent(
     policies={
-        "player_policy": (None, benv.observation_space, benv.action_space, {}),
-        "enemy_policy": (None, benv.observation_space, benv.action_space, {}),
+        "shared_policy": (None, benv.observation_space, benv.action_space, {}),
         },
     policy_mapping_fn=lambda agent_id, episode, worker=None, **kwargs: 
-        "player_policy" if agent_id == "player" else "enemy_policy"
+        "shared_policy" if agent_id == "player" else "shared_policy"
         )
     check_point_path = "my_battle_ppo_checkpoints"
     check_point_path = os.path.abspath("my_battle_ppo_checkpoints")
@@ -307,9 +305,9 @@ def high_level_test_ai_vs_ai(model_path_1, model_path_2, professions, skill_mgr,
                 while not done:
                     
                     # 取第 0~2 格，獲取合法動作
-                    p_act = trainer.compute_single_action(obs['player'], policy_id="player_policy")
+                    p_act = trainer.compute_single_action(obs['player'], policy_id="shared_policy")
                     # if p act in mask is 0, then choose random action
-                    e_act = trainer.compute_single_action(obs['enemy'] ,policy_id="enemy_policy")
+                    e_act = trainer.compute_single_action(obs['enemy'] ,policy_id="shared_policy")
                     actions = {"player": p_act, "enemy": e_act}
                     obs, rew, done, tru, info = env.step(actions)
                     done = done["__all__"]
@@ -425,7 +423,7 @@ import os
 import math
 import random
 
-def compute_ai_elo(model_path_1, professions, skill_mgr, base_elo=1000, opponent_elo=1500, num_battles=100, K=32):
+def compute_ai_elo(model_path_1, professions, skill_mgr, base_elo=1500, opponent_elo=1500, num_battles=100, K=32):
     """
     計算 AI 的 ELO 分數，與固定 ELO1500 的隨機電腦對戰。
 
@@ -445,14 +443,6 @@ def compute_ai_elo(model_path_1, professions, skill_mgr, base_elo=1000, opponent
     total_first = 0
     total_second = 0
     randomELO = 1500
-    
-    # 選擇你要測試的 policy 1. Player 2. Enemy
-    ch = input("請選擇要測試的策略：1. Player 2. Enemy")
-    if ch == "1":
-        choice = "player_policy"
-    else:
-        choice = "enemy_policy"
-    
 
     # 設定環境配置
     beconfig = make_env_config(skill_mgr=skill_mgr, professions=professions, show_battlelog=False)
@@ -469,11 +459,10 @@ def compute_ai_elo(model_path_1, professions, skill_mgr, base_elo=1000, opponent
     # 定義多代理策略
     config = config.multi_agent(
         policies={
-            "player_policy": (None, benv.observation_space, benv.action_space, {}),
-            "enemy_policy": (None, benv.observation_space, benv.action_space, {}),
+            "shared_policy": (None, benv.observation_space, benv.action_space, {}),
         },
         policy_mapping_fn=lambda agent_id, episode, worker=None, **kwargs: 
-            "player_policy" if agent_id == "player" else "enemy_policy"
+            "shared_policy" if agent_id == "player" else "shared_policy"
     )
     config.api_stack(enable_rl_module_and_learner=False,enable_env_runner_and_connector_v2=False)
 
@@ -499,10 +488,8 @@ def compute_ai_elo(model_path_1, professions, skill_mgr, base_elo=1000, opponent
 
             while not done:
                 # AI 的動作
-                if choice == "player_policy":
-                    ai_act = trainer.compute_single_action(obs['player'], policy_id="player_policy")
-                else:
-                    ai_act = trainer.compute_single_action(obs['player'], policy_id="enemy_policy")
+
+                ai_act = trainer.compute_single_action(obs['player'], policy_id="shared_policy")
             
                 # 電腦（隨機）動作
                 # random action from 0 - 2
@@ -544,10 +531,7 @@ def compute_ai_elo(model_path_1, professions, skill_mgr, base_elo=1000, opponent
                 enemy_act = random.choice([0, 1, 2])
                 # AI 的動作
                 # AI 的動作
-                if choice == "player_policy":
-                    ai_act = trainer.compute_single_action(obs['enemy'], policy_id="player_policy")
-                else:
-                    ai_act = trainer.compute_single_action(obs['enemy'], policy_id="enemy_policy")
+                ai_act = trainer.compute_single_action(obs['enemy'], policy_id="enemy_policy")
                     
                 actions = {"player": enemy_act, "enemy": ai_act}
                 obs, rew, done_dict, tru, info = env.step(actions)
@@ -592,7 +576,7 @@ def compute_ai_elo(model_path_1, professions, skill_mgr, base_elo=1000, opponent
     average_total = (average_first + average_second) / 2
 
     # 輸出結果表格
-    print(f"\n=== ELO 結果 {choice}===")
+    print(f"\n=== ELO 結果===")
     print(f"{'職業':<15} | {'先攻方 ELO':<15} | {'後攻方 ELO':<15} | {'總和 ELO':<10}")
     print("-" * 60)
     for prof, elos in elo_results.items():

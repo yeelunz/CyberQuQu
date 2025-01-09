@@ -390,7 +390,7 @@ def main():
             )
         elif c == "2":
             # 版本環境測試 => 雙方隨機 => 交叉對戰
-            version_test_random_vs_random(professions, skill_mgr, num_battles=100)
+            version_test_random_vs_random(professions, skill_mgr, num_battles=10)
         elif c == "3":
             # 高段環境測試 => 雙方都是 AI => 交叉對戰
             high_level_test_ai_vs_ai(

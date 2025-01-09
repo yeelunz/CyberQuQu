@@ -71,6 +71,8 @@ class StatusEffect:
     def set_stack(self,stacks,target):
         if self.stackable:
             # not exceed max_stack
+            # check if max stacks and stcaks is int
+
             fin_stack = min(stacks,self.max_stack)
             self.stacks = fin_stack
         else:
@@ -118,7 +120,7 @@ class DamageMultiplier(StatusEffect):
         super().on_apply(target)
         target['damage_multiplier'] *= self.multiplier  # 直接設置倍率
         target['battle_log'].append(
-            f"{target['profession'].name} 的傷害比例變為 {target['damage_multiplier']}。"
+            f"{target['profession'].name} 的傷害比例變為 {target['damage_multiplier']:.2f}。"
         )
     def set_stack(self, stacks, target):
         # 先儲存原本的stack
@@ -138,10 +140,10 @@ class DamageMultiplier(StatusEffect):
         # battle log
         # XX效果的層數變為XX
         target['battle_log'].append(
-            f"{self.name} 的層數變為 {self.stacks}。"
+            f"{self.name} 的層數設定為為 {self.stacks}。"
         )
         target['battle_log'].append(
-            f"{target['profession'].name} 的傷害比例變為 {target['damage_multiplier']}。")
+            f"{target['profession'].name} 的傷害比例設定為 {target['damage_multiplier']:.2f}。")
     def on_remove(self, target):
         # 這邊要考慮如果是stackable的話，要根據stack來還原
         # 例如：stack = 3, multiplier = 1.5
@@ -156,7 +158,7 @@ class DamageMultiplier(StatusEffect):
 
         # 
         target['battle_log'].append(
-            f"{target['profession'].name} 的傷害增減比例恢復為 {target['damage_multiplier']}。"
+            f"{target['profession'].name} 的傷害增減比例恢復為 {target['damage_multiplier']:.2f}。"
         )
         super().on_remove(target)
         
@@ -167,7 +169,7 @@ class DamageMultiplier(StatusEffect):
         for i in range(add_stack):
             target['damage_multiplier'] *= self.multiplier
         target['battle_log'].append(
-            f"{target['profession'].name} 的傷害增減比例變為 {target['damage_multiplier']}。"
+            f"{target['profession'].name} 的傷害增減比例更新為 {target['damage_multiplier']:.2f}。"
         )
 
 
@@ -208,7 +210,7 @@ class DefenseMultiplier(StatusEffect):
         super().on_apply(target)
         target['defend_multiplier'] *= self.multiplier  # 直接設置倍率
         target['battle_log'].append(
-            f"{target['profession'].name} 的防禦增減比例變為 {target['defend_multiplier']}。"
+            f"{target['profession'].name} 的防禦增減比例更新為 {target['defend_multiplier']:.2f}。"
         )
 
     def on_remove(self, target):
@@ -218,7 +220,7 @@ class DefenseMultiplier(StatusEffect):
         for i in range(now_stack):
             target['defend_multiplier'] /= self.multiplier
         target['battle_log'].append(
-            f"{target['profession'].name} 的防禦增減比例恢復為 {target['defend_multiplier']}。"
+            f"{target['profession'].name} 的防禦增減比例恢復為 {target['defend_multiplier']:.2f}。"
         )
         super().on_remove(target)
     def update(self, target,now_stack,add_stack):
@@ -229,7 +231,7 @@ class DefenseMultiplier(StatusEffect):
             target['defend_multiplier'] *= self.multiplier
         
         target['battle_log'].append(
-            f"{target['profession'].name} 的防禦增減比例變為 {target['defend_multiplier']}。"
+            f"{target['profession'].name} 的防禦增減比例變為 {target['defend_multiplier']:.2f}。"
         )
         # 
     def set_stack(self, stacks,target): 
@@ -253,7 +255,7 @@ class DefenseMultiplier(StatusEffect):
             f"{self.name} 的層數變為 {self.stacks}。"
         )
         target['battle_log'].append(
-            f"{target['profession'].name} 的防禦增減比例變為 {target['defend_multiplier']}。")
+            f"{target['profession'].name} 的防禦增減比例設定為 {target['defend_multiplier']:.2f}。")
 
 
 class HealMultiplier(StatusEffect):
@@ -336,7 +338,7 @@ class HealMultiplier(StatusEffect):
             f"{self.name} 的層數變為 {self.stacks}。"
         )
         target['battle_log'].append(
-            f"{target['profession'].name} 的治療增減比例變為 {target['heal_multiplier']}。")
+            f"{target['profession'].name} 的治療增減比例設定為 {target['heal_multiplier']}。")
 
 
 class HealthPointRecover(StatusEffect):

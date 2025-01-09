@@ -301,67 +301,80 @@ class BattleEnv(MultiAgentEnv):
 
         # 處理技能順序：先效果類，再治療類，最後傷害類
         # 1. 我方效果技能
-        for i, skill_id in player_effect_skills:
-            user = self.player_team[i]
-            targets = self._select_targets(self.enemy_team)
-            if targets:
-                user["profession"].apply_skill(skill_id, user, targets, self)
-            else:
-                # 敵方全滅，結束遊戲
-                self.done = True
+        def effect_player():
+            for i, skill_id in player_effect_skills:
+                user = self.player_team[i]
+                targets = self._select_targets(self.enemy_team)
+                if targets:
+                    user["profession"].apply_skill(skill_id, user, targets, self)
+                else:
+                    # 敵方全滅，結束遊戲
+                    self.done = True
 
         # 2. 敵方效果技能
-        for j, skill_id in enemy_effect_skills:
-            e = self.enemy_team[j]
-            targets = self._select_targets(self.player_team)
-            if targets:
-                e["profession"].apply_skill(skill_id, e, targets, self)
-            else:
-                # 我方全滅，結束遊戲
-                self.done = True
+        def effect_enemy():
+            for j, skill_id in enemy_effect_skills:
+                e = self.enemy_team[j]
+                targets = self._select_targets(self.player_team)
+                if targets:
+                    e["profession"].apply_skill(skill_id, e, targets, self)
+                else:
+                    # 我方全滅，結束遊戲
+                    self.done = True
 
         # 3. 我方治療技能
-        for i, skill_id in player_heal_skills:
-            user = self.player_team[i]
-            targets = self._select_heal_targets(user)
-            if targets:
-                user["profession"].apply_skill(skill_id, user, targets, self)
-            else:
-                # 治療目標不存在，可能無需額外處理
-                pass
+        def heal_player():
+            for i, skill_id in player_heal_skills:
+                user = self.player_team[i]
+                targets = self._select_heal_targets(user)
+                if targets:
+                    user["profession"].apply_skill(skill_id, user, targets, self)
+                else:
+                    # 治療目標不存在，可能無需額外處理
+                    pass
 
         # 4. 敵方治療技能（如有）
-        for j, skill_id in enemy_heal_skills:
-            e = self.enemy_team[j]
-            targets = self._select_heal_targets(e)
-            if targets:
-                e["profession"].apply_skill(skill_id, e, targets, self)
-            else:
-                # 治療目標不存在，可能無需額外處理
-                pass
+        def heal_enemy():
+            for j, skill_id in enemy_heal_skills:
+                e = self.enemy_team[j]
+                targets = self._select_heal_targets(e)
+                if targets:
+                    e["profession"].apply_skill(skill_id, e, targets, self)
+                else:
+                    # 治療目標不存在，可能無需額外處理
+                    pass
 
         # 5. 我方傷害技能
-        for i, skill_id in player_damage_skills:
-            user = self.player_team[i]
-            targets = self._select_targets(self.enemy_team)
-            if targets:
-                user["profession"].apply_skill(skill_id, user, targets, self)
-            else:
-                # 敵方全滅，結束遊戲
-                self.done = True
+        def damage_player():
+            for i, skill_id in player_damage_skills:
+                user = self.player_team[i]
+                targets = self._select_targets(self.enemy_team)
+                if targets:
+                    user["profession"].apply_skill(skill_id, user, targets, self)
+                else:
+                    # 敵方全滅，結束遊戲
+                    self.done = True
 
         # 6. 敵方傷害技能
-        for j, skill_id in enemy_damage_skills:
-            e = self.enemy_team[j]
-            targets = self._select_targets(self.player_team)
-            if targets:
-                e["profession"].apply_skill(skill_id, e, targets, self)
-            else:
-                # 我方全滅，結束遊戲
-                self.done = True
+        def damage_enemy():
+            for j, skill_id in enemy_damage_skills:
+                e = self.enemy_team[j]
+                targets = self._select_targets(self.player_team)
+                if targets:
+                    e["profession"].apply_skill(skill_id, e, targets, self)
+                else:
+                    # 我方全滅，結束遊戲
+                    self.done = True
 
-
-
+        # 抽籤處理順序
+        # 兩兩一組排序，但依然按照效果、治療、傷害的順序
+        order = [[effect_player, effect_enemy], [heal_player, heal_enemy], [damage_player, damage_enemy]]
+        for pair in order:
+            # 組內隨機排序
+            random.shuffle(pair)
+            pair[0]()
+            pair[1]()
+            
         # check 我方是否全滅
         if all(m["hp"] <= 0 for m in self.player_team):
             self.done = True
@@ -394,9 +407,7 @@ class BattleEnv(MultiAgentEnv):
                 
 
         self._print_round_footer()   
-        
-        
-        
+            
         #  返回觀測、獎勵、終止條件、截斷條件、信息
         rewards = {
         "player": self._get_reward(player=True),
@@ -509,8 +520,8 @@ class BattleEnv(MultiAgentEnv):
         eem = enemy_m["effect_manager"].export_obs()
 
         # 最終觀測值拼接 共有 24 + 24 + 2 + 42 +42 = 134 個特徵
-        pout = np.concatenate([flattened_pobs, flattened_eobs, pem, eem, public_obs])
-        eout = np.concatenate([flattened_eobs, flattened_pobs, eem, pem, public_obs])
+        pout = np.concatenate([flattened_pobs,pem, flattened_eobs,  eem, public_obs])
+        eout = np.concatenate([flattened_eobs,eem, flattened_pobs,  pem, public_obs])
         
 
         if agent == "player":
@@ -672,7 +683,7 @@ class BattleEnv(MultiAgentEnv):
                 self.battle_log.append(
                     f"{profession.name} 的被動技能「堅韌壁壘」發動！"
                 )
-                heal = int((profession.max_hp - m['hp']) * 0.08)
+                heal = int((profession.max_hp - m['hp']) * 0.1)
                 self.deal_healing(m, heal)
             elif profession.name == "血神":
                 # 血神被動：受到致死傷害時，5%機率免疫該次傷害
@@ -717,13 +728,12 @@ class BattleEnv(MultiAgentEnv):
             if m == 23:
                 player = self.player_team[i]
                 if player["last_attacker"]:
-                    dmg = player["last_damage"] * 2
+                    dmg = player["last_damage"] * 3
                     self.battle_log.append(
                         f"{player['profession'].name} 啟動「絕地反擊」。"
                     )
                     self.deal_damage(player, player["last_attacker"], dmg)
                     # 進入冷卻
-                    player["cooldowns"][2] = 3
                     self.battle_log.append(f"「絕地反擊」進入 3 回合的冷卻。")
                 else:
                     self.battle_log.append(f"「絕地反擊」沒有攻擊者可反擊。")
@@ -744,13 +754,13 @@ class BattleEnv(MultiAgentEnv):
             if e == 23:
                 enemy = self.enemy_team[i]
                 if enemy["last_attacker"]:
-                    dmg = enemy["last_damage"] * 2
+                    dmg = enemy["last_damage"] * 3
                     self.battle_log.append(
                         f"{enemy['profession'].name} 啟動「絕地反擊」。"
                     )
                     self.deal_damage(enemy, enemy["last_attacker"], dmg)
                     # 進入冷卻
-                    enemy["cooldowns"][2] = 3
+
                     self.battle_log.append(f"「絕地反擊」進入 3 回合的冷卻。")
                 else:
                     self.battle_log.append(f"「絕地反擊」沒有攻擊者可反擊。")

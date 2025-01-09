@@ -218,7 +218,7 @@ class EffectManager:
         
         :param effect_name: status_effect類中的name屬性
         :param tar: 目標對象，通常是角色本身。
-        :param stacks: 要設置的堆疊數（正數增加，負數減少）。
+        :param stacks: 要設置的堆疊數。
         :param sources: 效果的來源，用於區分不同來源的效果。
         """
         # 對於特定的效果ID，需要指定來源
@@ -236,15 +236,13 @@ class EffectManager:
             for effect in effects:
                 # 如果有source才要檢查source
                 # 如果沒有source來源的話，則設定所有的同名效果
-                if effect.name == effect_name and (not sources or effect.source == sources):
-                    # 如果堆疊數為0，則移除效果
-                    if stacks == 0:
-                        effect.on_remove(tar)
-                        effects_to_remove.append((effect_id, effect))
-                    else:
-                        # 更新堆疊數
-                        effect.stacks = stacks
-                        effect.on_apply(tar)
+                if effect.name == effect_name and (sources) and effect.source == sources:
+                    effect.set_stack(stacks, tar)
+                # 沒有source來源 全部同名效果都設定
+                elif not sources:
+                    if effect.name == effect_name:
+                        effect.set_stack(stacks, tar)
+                
 
 
     def export_obs(self):

@@ -579,8 +579,8 @@ def compute_ai_elo(model_path_1, professions, skill_mgr, base_elo=1500, opponent
             while not done:
                 # AI 的動作
 
-                ai_act = random.choice([0, 1, 2])
-                # ai_act = trainer.compute_single_action(obs['player'], policy_id="shared_policy")
+                # ai_act = random.choice([0, 1, 2])
+                ai_act = trainer.compute_single_action(obs['player'], policy_id="shared_policy")
             
                 # 電腦（隨機）動作
                 # random action from 0 - 2
@@ -621,19 +621,19 @@ def compute_ai_elo(model_path_1, professions, skill_mgr, base_elo=1500, opponent
                 # 電腦（隨機）動作
                 enemy_act = random.choice([0, 1, 2])
                 # AI 的動作
-                # ai_act = trainer.compute_single_action(obs['enemy'], policy_id="shared_policy")
-                ai_act = random.choice([0, 1, 2])
+                ai_act = trainer.compute_single_action(obs['enemy'], policy_id="shared_policy")
+                # ai_act = random.choice([0, 1, 2])
                     
                 actions = {"player": enemy_act, "enemy": ai_act}
                 obs, rew, done_dict, tru, info = env.step(actions)
                 done = done_dict["__all__"]
 
             res = info["__common__"]["result"]
-            # 確定比賽結果
+            # 確定比賽結果 這邊要反轉 因為res是先攻方的結果
             if res == 1:
-                score = 1  # AI 勝利
+                score = 0  # AI 勝利
             elif res == -1:
-                score = 0  # AI 敗北
+                score = 1  # AI 敗北
             else:
                 score = 0.5  # 平局
 

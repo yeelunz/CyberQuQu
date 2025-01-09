@@ -109,8 +109,8 @@ sm.add_skill(Skill(29, "荒原抗性", "消耗 15 點生命力，免疫一回合
 
 # ElementalMage (元素法師) 技能定義
 sm.add_skill(Skill(30, "雷霆護甲", "2 回合內，受到傷害時有 30% 機率直接麻痺敵人，並增加 50% 防禦力。", 'effect'))
-sm.add_skill(Skill(31, "凍燒雷", "造成 55 點傷害，對每層麻痺、冰凍、燃燒狀態額外造成 15 點傷害。", 'damage'))
-sm.add_skill(Skill(32, "雷擊術", "造成 35 點傷害，35 % 機率使敵方暈眩 1~3 回合。", 'effect'))
+sm.add_skill(Skill(31, "凍燒雷", "造成 55 點傷害，對每層麻痺、冰凍、燃燒狀態額外造成 20 點傷害。", 'damage'))
+sm.add_skill(Skill(32, "雷擊術", "造成 35 點傷害，35 % 機率使敵方暈眩 2~4 回合。", 'effect'))
 
 # HuangShen (荒神) 技能定義
 sm.add_skill(Skill(33, "枯骨的永恆", "基礎傷害30，隨機造成 1 ~ 3 次傷害，傷害會隨著額外次數而降低。", 'damage'))

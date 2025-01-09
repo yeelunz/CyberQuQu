@@ -812,28 +812,6 @@ class BattleEnv(MultiAgentEnv):
                     return 300
                 elif all(e["hp"] <= 0 for e in self.enemy_team):
                     return -300
-        else:
-            # 可以根據每回合的表現給予獎勵
-            # 例如，造成傷害給予正獎勵，受到傷害給予負獎勵
-            reward = 0
-            if player:
-                # 計算玩家的傷害和受到的傷害
-                # reward += player_damage_done * 0.1
-                # reward -= player_damage_received * 0.1
-                reward += sum([m['accumulated_damage'] for m in self.enemy_team]) * 0.1
-                # 如果血量比對方高，給予額外獎勵 +2
-                if sum([m['hp'] for m in self.player_team]) > sum([m['hp'] for m in self.enemy_team]):
-                    reward += 2
- 
-            else:
-                # 計算對手的傷害和受到的傷害
-                # reward += opponent_damage_done * 0.1
-                # reward -= opponent_damage_received * 0.1
-                reward += sum([m['accumulated_damage'] for m in self.player_team]) * 0.1
-                # 如果血量比對方高，給予額外獎勵 +2
-                if sum([m['hp'] for m in self.enemy_team]) > sum([m['hp'] for m in self.player_team]):
-                    reward += 2
-            return reward
         return 0
 
     def _print_round_header(self):

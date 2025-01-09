@@ -62,7 +62,7 @@ class Paladin(BattleProfession):
             base_hp=295,
             passive_desc="聖光：攻擊時，15%機率回復最大血量的15%，回復超出最大生命時，對敵方造成50%的回復傷害",
             baseAtk=1.0,
-            baseDef=1.2
+            baseDef=1.25
         )
         self.heal_counts = {}
 
@@ -109,9 +109,9 @@ class Mage(BattleProfession):
         super().__init__(
             profession_id=1,
             name="法師",
-            base_hp=175,
+            base_hp=185,
             passive_desc="魔力充盈：攻擊造成異常狀態時，50%機率額外疊加一層異常狀態(燃燒或凍結)。",
-            baseAtk=1.35,
+            baseAtk=1.45,
             baseDef=1.0
         )
 
@@ -420,10 +420,10 @@ class BloodGod(BattleProfession):
         super().__init__(
             profession_id=6,
             name="血神",
-            base_hp=225,
+            base_hp=245,
             passive_desc="攻擊時50%對敵方附加流血狀態，每層流血狀態造成1點傷害，最多可以疊加10層(流血傷害持續5回合)。",
-            baseAtk=1.06,
-            baseDef=1.08
+            baseAtk=1.15,
+            baseDef=1.15
 
         )
         self.bleed_stacks = 0
@@ -448,7 +448,7 @@ class BloodGod(BattleProfession):
             self.passive(user, targets, env)
             
         elif skill_id == 19:
-            # 技能 19 => 飲血：消耗敵方現在一半的流血狀態，每層消耗的流血狀態對敵方造成5點傷害，並回復3點血量。
+            # 技能 19 => 飲血：消耗敵方現在一半的流血狀態，每層消耗的流血狀態對敵方造成5點傷害，並回復5點血量。
             target = targets[0]
             bleed_effects = target["effect_manager"].get_effects("流血")
             total_bleed = sum(eff.stacks for eff in bleed_effects)
@@ -480,7 +480,7 @@ class SteadfastWarrior(BattleProfession):
             name="剛毅武士",
             base_hp=245,
             passive_desc="堅韌壁壘：每回合開始時恢復已損生命值的8%。",
-            baseAtk=0.88,
+            baseAtk=0.92,
             baseDef=1.35
         )
     # 
@@ -515,7 +515,7 @@ class Devour(BattleProfession):
         super().__init__(
             profession_id=8,
             name="鯨吞",
-            base_hp=600,
+            base_hp=650,
             passive_desc="巨鯨：攻擊時會消耗8%當前生命值。",
             baseAtk=1.0,
             baseDef=1.0
@@ -603,7 +603,7 @@ class ElementalMage(BattleProfession):
         )
 
     def passive(self, user, targets, env):
-        # 元素之力：攻擊時25%造成(麻痺、冰凍、燃燒)其中之一
+        # 元素之力：攻擊時30%造成(麻痺、冰凍、燃燒)其中之一
         if random.random() < 0.3:
             effect = random.choice([Burn(duration=3, stacks=1), Freeze(duration=3, stacks=1), Paralysis(duration=2)])
             env.battle_log.append(
@@ -621,7 +621,7 @@ class ElementalMage(BattleProfession):
             # 護甲麻痺部分在env中process_passives_end_of_turn實作
 
         elif skill_id == 31:
-            # 技能 31 => 凍燒雷：造成55點傷害，每層麻痺、冰凍、燃燒，額外造成10點傷害
+            # 技能 31 => 凍燒雷：造成55點傷害，每層麻痺、冰凍、燃燒，額外造成20點傷害
             dmg = 55 * self.baseAtk 
             target = targets[0]   
    
@@ -631,7 +631,7 @@ class ElementalMage(BattleProfession):
                 for eff in effects:
                     if eff.name in ["麻痺", "凍結", "燃燒"]:
                         total_layers += eff.stacks
-            extra_dmg = 15 * total_layers + dmg  
+            extra_dmg = 20 * total_layers + dmg  
             env.deal_damage(user, target, extra_dmg, can_be_blocked=True)
             self.passive(user, targets, env)
 
@@ -641,7 +641,7 @@ class ElementalMage(BattleProfession):
             env.deal_damage(user, targets[0], dmg, can_be_blocked=True)
             target = targets[0]
             # 70% 2 25% 3 10% 4
-            para_duration = random.choices([2, 3, 4], weights=[0.7, 0.25, 0.05], k=1)[0]
+            para_duration = random.choices([2, 3, 4], weights=[0.6, 0.3, 0.1], k=1)[0]
             if random.random() < 0.35:
                 stun_effect = Paralysis(duration=para_duration)
                 env.apply_status(target, stun_effect)
@@ -707,7 +707,7 @@ class GodOfStar(BattleProfession):
         super().__init__(
             profession_id=12,
             name="星神",
-            base_hp=275,
+            base_hp=255,
             passive_desc="天啟星盤：星神在戰鬥中精通增益與減益效果的能量運用。每當場上有一層「能力值增益」或「減益」效果時，每回合會額外造成 5點傷害 並回復 5點生命值。",
             baseAtk=1.12,
             baseDef=1.12

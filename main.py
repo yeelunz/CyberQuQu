@@ -392,7 +392,7 @@ def main():
                 model_path_2=default_model_path_2,
                 professions=professions,
                 skill_mgr=skill_mgr,
-                num_battles=50
+                num_battles=25
             )
         elif c == "4":
             # AI ELO
@@ -400,8 +400,9 @@ def main():
                 model_path_1=default_model_path_1,
                 professions=professions,
                 skill_mgr=skill_mgr,
-                base_elo=1000,
-                num_battles=100
+                base_elo=1500,
+                opponent_elo=1500,
+                num_battles=200
             )
         elif c == "5":
             # 電腦 VS 電腦

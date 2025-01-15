@@ -1,0 +1,47 @@
+<!-- backend/templates/index.html -->
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <title>cyberququ</title>
+  <!-- 更新 CSS 路徑 -->
+  <link rel="stylesheet" href="/static/css/style.css?v=1.0" />
+</head>
+<body>
+  <!-- 頂部資訊列 -->
+  <header>
+    <div id="game-version">版本：v0.0.1</div>
+    <div id="action-times">可行動次數：<span id="action-count">0</span></div>
+    <button id="skip-round-btn">跳過當前回合</button>
+  </header>
+
+  <div class="container">
+    <!-- 左側選單列 -->
+    <nav class="sidebar">
+      <ul>
+        <li><a href="#" id="menu-train">訓練模型</a></li>
+        <li><a href="#" id="menu-elo">ELO 排名</a></li>
+        <li><a href="#" id="menu-battle">戰鬥系統</a></li>
+        <li><a href="#" id="menu-version">版本資訊</a></li>
+        <li><a href="#" id="menu-test-random">隨機對戰測試</a></li>
+        <li><a href="#" id="menu-info">Ban&Pick</a></li>
+        <li><a href="#" id="menu-info">測試</a></li>
+        <li><a href="#" id="menu-info">測試B</a></li>
+        <li><a href="#" id="menu-info">各職業介紹</a></li>
+      </ul>
+    </nav>
+
+    <!-- 右側主要內容區 -->
+    <main class="main-content">
+      <h1>cyberququ</h1>
+      <div id="content-area">
+        <!-- 這裡根據使用者點選不同功能，動態更新內容 -->
+        <p>請從左側選單選擇功能</p>
+      </div>
+    </main>
+  </div>
+
+  <!-- 更新 JS 路徑 -->
+  <script src="/static/js/script.js?v=1.0"></script>
+</body>
+</html>

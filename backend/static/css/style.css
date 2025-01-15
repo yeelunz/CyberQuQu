@@ -166,6 +166,7 @@ header #skip-round-btn:hover {
 .passive-container img {
     width: 50px; /* 調整圖片大小 */
     height: 50px;
+    border-radius: 5px;
 }
 
 /* 技能區 */
@@ -197,6 +198,7 @@ header #skip-round-btn:hover {
     width: 40px;
     height: 40px;
     flex-shrink: 0; /* 防止圖片縮小 */
+    border-radius: 5px;
 }
 
 .skills li div {
@@ -330,11 +332,14 @@ header #skip-round-btn:hover {
     .passive-container img {
         width: 40px;
         height: 40px;
+        border-radius: 5px;
+
     }
 
     .skills li img.skill-image {
         width: 30px;
         height: 30px;
+        border-radius: 5px;
     }
 
     .skills li {

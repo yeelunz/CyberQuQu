@@ -357,7 +357,7 @@ class DragonGod(BattleProfession):
             name="龍神",
             base_hp=315,
             passive_name = "龍血",
-            passive_desc="每回合疊加一個龍神狀態，龍神狀態每層增加 5% 攻擊力、5% 防禦力",
+            passive_desc="每回合疊加一個龍神狀態，龍神狀態每層增加 5% 攻擊力、增加 5% 防禦力",
             baseAtk=1.05,
             baseDef=1.05
         )
@@ -427,8 +427,8 @@ class BloodGod(BattleProfession):
             profession_id=6,
             name="血神",
             base_hp=296,
-            passive_name = "血神",
-            passive_desc="攻擊時50%對敵方附加流血狀態，每層流血狀態造成1點傷害，最多可以疊加10層(流血傷害持續5回合)。",
+            passive_name = "出血",
+            passive_desc="攻擊時 50% 機率對敵方附加流血狀態。流血狀態會對敵方造成 1 點傷害，最多可以疊加10層(流血傷害持續5回合)。",
             baseAtk=1.15,
             baseDef=1.15
 
@@ -721,7 +721,7 @@ class GodOfStar(BattleProfession):
             name="星神",
             base_hp=295,
             passive_name="天啟星盤",
-            passive_desc="星神在戰鬥中精通增益與減益效果的能量運用。每當場上有一層「能力值增益」或「減益」效果時，每回合會額外造成 5點傷害 並回復 5點生命值。",
+            passive_desc="星神在戰鬥中精通增益與減益效果的能量運用。每當場上有一層「能力值增益」或「減益」效果時，每回合會額外對敵方造成 5 點傷害 並恢復 5 點生命值。",
             baseAtk=1.08,
             baseDef=1.08
         )

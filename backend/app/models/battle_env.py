@@ -23,6 +23,39 @@ from .train_var import player_train_times, enemy_train_times
 
 # 13 len array
 
+class BattleLog:
+    def __init__(self, text, animation):
+        """
+            text = 基本的戰鬥log 文字顯示
+            
+            animation = 用來給前端顯示的動畫效果
+            可以是多個動畫效果，會依序執行
+            其中格式為 [ target , animate , number]
+            target : 決定動畫效果的目標
+            animate : 決定動畫效果的內容
+            number : 如果是傷害類的話，可以多顯示一個數字在動畫上，其中 number 會隨著animate變色，但只接受 "heal" 與 "damage" 這兩類
+                    可以是None 或是根本不填，這樣就不會顯示數字
+            ---
+            例如: 
+            text = 弓箭手 使用了技能 五連矢。
+            animate = [ "enemy", "arrow_shot", None]
+             or 
+            animate = [ "enemy", "arrow_shot"]
+            之後會自動根據 使用者是玩家或是敵方來轉成 right or left
+            如果是玩家的話
+            
+            text = 弓箭手 對 元素法師 造成 60 點傷害 (剩餘HP=133)
+            (因為是受擊對像)
+            animate = [ "user", "damage", 60]
+            
+        
+        """
+        self.text = text
+        self.animation = animation
+        
+
+
+
 
 
 class BattleEnv(MultiAgentEnv):

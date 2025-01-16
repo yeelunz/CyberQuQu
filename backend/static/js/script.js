@@ -7,6 +7,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const menuVersion = document.getElementById("menu-version");
     const menuTestRandom = document.getElementById("menu-test-random");
     const menuInfo = document.getElementById("menu-info");
+    
 
     const contentArea = document.getElementById("content-area");
 
@@ -237,6 +238,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     menuBattle.addEventListener("click", (e) => {
         e.preventDefault();
+        
         alert("這裡可以做戰鬥相關操作(5:電腦vs電腦 / 6:AI vs電腦)，請自行對應後端 API。");
     });
 
@@ -244,4 +246,13 @@ document.addEventListener("DOMContentLoaded", () => {
         e.preventDefault();
         alert("版本資訊可自行設計 UI 介面並連動後端。");
     });
+
+    menuTestRandom.addEventListener("click", (e) => {
+        e.preventDefault();
+        fetch("/api/computer_vs_computer")
+        // show it will finish in backend
+        alert("在後端 查看。");
+        
+    });
+
 });

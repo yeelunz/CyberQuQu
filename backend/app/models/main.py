@@ -101,6 +101,7 @@ def computer_vs_computer(skill_mgr, professions):
             "enemy": e_act
         }
         obs, rew, done_, tru, info = env.step(actions)
+        
         done = done_["__all__"]
 
     res = info["__common__"]["result"]

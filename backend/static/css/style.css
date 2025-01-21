@@ -1,4 +1,425 @@
 /* backend/static/style.css */
+/* backend/static/style.css */
+
+/* 重置一些預設樣式 */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+  
+  body {
+    font-family: "Microsoft JhengHei", sans-serif;
+    background-color: #f0f2f5;
+    color: #333;
+  }
+  
+  header {
+    display: flex;
+    align-items: center;
+    padding: 10px 30px;
+    background: #2c3e50;
+    color: #fff;
+    gap: 20px;
+  }
+  
+  header #skip-round-btn {
+    margin-left: auto;
+    padding: 8px 16px;
+    cursor: pointer;
+    background-color: #e74c3c;
+    border: none;
+    border-radius: 4px;
+    color: #fff;
+    font-weight: bold;
+    transition: background-color 0.3s;
+  }
+  
+  header #skip-round-btn:hover {
+    background-color: #c0392b;
+  }
+  
+  .container {
+    display: flex;
+    height: calc(100vh - 50px);
+  }
+  
+  /* 左側選單 */
+  .sidebar {
+    width: 220px;
+    background: #34495e;
+    padding: 20px;
+  }
+  
+  .sidebar ul {
+    list-style: none;
+  }
+  
+  .sidebar li {
+    margin-bottom: 15px;
+  }
+  
+  .sidebar a {
+    text-decoration: none;
+    color: #ecf0f1;
+    font-weight: 500;
+    display: block;
+    padding: 10px 15px;
+    border-radius: 4px;
+    transition: background 0.3s, color 0.3s;
+  }
+  
+  .sidebar a:hover {
+    background: #3d566e;
+    color: #fff;
+  }
+  
+  /* 右側主要內容 */
+  .main-content {
+    flex: 1;
+    padding: 30px;
+    overflow-y: auto;
+    background-color: #fff;
+    box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.05);
+  }
+  
+  .main-content h1 {
+    margin-bottom: 20px;
+    color: #2c3e50;
+    text-align: center;
+  }
+  
+  #content-area {
+    margin-top: 10px;
+  }
+  
+  /* 職業卡片的樣式 */
+  .profession-card {
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+    background-color: #fafafa;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+    display: flex;
+    align-items: flex-start;
+    gap: 20px;
+  }
+  
+  .profession-image {
+    width: 150px;
+    height: 150px;
+    object-fit: cover;
+    border-radius: 10px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  }
+  
+  .profession-details {
+    flex: 1;
+  }
+  
+  .profession-name {
+    font-size: 1.5em;
+    color: #2c3e50;
+    margin-bottom: 10px;
+  }
+  
+  .profession-name .hp {
+    font-size: 0.9em;
+    color: #e74c3c;
+  }
+  
+  .profession-details p {
+    font-size: 1em;
+    margin: 5px 0;
+  }
+  
+  .profession-details .attack {
+    color: #de2713;
+    font-weight: bold;
+  }
+  
+  .profession-details .defense {
+    color: #27ae60;
+    font-weight: bold;
+  }
+  
+  /* 被動技 */
+  .passive h3 {
+    font-size: 1.1em;
+    color: #8e44ad; /* 你想要的顏色 */
+    margin-top: 15px;
+    margin-bottom: 5px;
+  }
+  
+  /* 被動技能描述區 */
+  .passive p {
+    font-size: 0.95em;
+    color: #34495e;
+  }
+  
+  .passive-container {
+    display: flex;
+    align-items: center;
+    gap: 10px; /* 圖片與描述之間的間距 */
+  }
+  
+  .passive-container img {
+    width: 50px; /* 調整圖片大小 */
+    height: 50px;
+    border-radius: 5px;
+  }
+  
+  /* 技能區 */
+  .skills h3 {
+    font-size: 1.1em;
+    color: #e67e22;
+    margin-top: 15px;
+    margin-bottom: 10px;
+  }
+  
+  .skills ul {
+    list-style-type: none;
+    padding: 0;
+  }
+  
+  /* 每個技能項目之間用下方虛線分隔 */
+  .skills li {
+    display: flex;
+    flex-direction: row; /* 圖片+文字 */
+    align-items: flex-start; /* 垂直頂對齊 */
+    gap: 10px; /* 圖片與文字之間的間距 */
+    margin-bottom: 15px;
+    padding-bottom: 15px;
+    border-bottom: 1px dashed #ccc;
+  }
+  
+  /* 技能圖片 */
+  .skills li img.skill-image {
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0; /* 防止圖片縮小 */
+    border-radius: 5px;
+  }
+  
+  .skills li div {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  /* 技能名稱、類型一起放在同一行，不要固定寬度 */
+  .skills li div .skill-name {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: #d35400; /* 特殊顏色 */
+    font-weight: bold;
+    /* 移除原本的 width: 100px; */
+  }
+  
+  /* 技能描述 */
+  .skills li div p {
+    margin-top: 5px;
+    color: #34495e;
+    line-height: 1.4em;
+  }
+  
+  /* 冷卻回合：淡藍色 + 粗體 */
+  .skill-cooldown {
+    color: #3498db;
+    font-weight: bold;
+  }
+  
+  /* 技能類型的彩色方塊 */
+  .skill-type {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.85em;
+    font-weight: bold;
+    color: #fff;
+    min-height: 20px;
+    white-space: nowrap;
+  }
+  
+  /* 根據技能類型設置背景顏色 */
+  .skill-type.damage {
+    background-color: #e74c3c; /* 紅色 */
+  }
+  
+  .skill-type.heal {
+    background-color: #27ae60; /* 綠色 */
+  }
+  
+  .skill-type.effect {
+    background-color: #8e44ad; /* 紫色 */
+  }
+  
+  .skill-type.buff {
+    background-color: #f1c40f; /* 黃色 */
+  }
+  
+  .skill-type.debuff {
+    background-color: #d35400; /* 橙色 */
+  }
+  
+  .skill-type.unknown {
+    background-color: #7f8c8d; /* 灰色 */
+  }
+  
+  /* 數值顯示用的額外顏色 (傷害/治癒/buff...) */
+  .damage-text {
+    color: #c0392b;
+    font-weight: bold;
+  }
+  
+  .heal-text {
+    color: #27ae60;
+    font-weight: bold;
+  }
+  
+  .buff-text {
+    color: #f1c40f;
+    font-weight: bold;
+  }
+  
+  .passive-text {
+    color: #8e44ad;
+    font-weight: bold;
+  }
+  
+  /* 無圖片的提示樣式 */
+  .no-image {
+    width: 150px;
+    height: 150px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #eee;
+    border-radius: 10px;
+    color: #999;
+    font-style: italic;
+    font-size: 0.9em;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  }
+  
+  /* 無圖片的技能提示樣式 */
+  .no-image.skill {
+    width: 40px;
+    height: 40px;
+  }
+  
+  /* 響應式設計 */
+  @media (max-width: 768px) {
+    .container {
+      flex-direction: column;
+    }
+  
+    .sidebar {
+      width: 100%;
+    }
+  
+    .profession-card {
+      flex-direction: column;
+      align-items: center;
+    }
+  
+    .profession-image {
+      width: 100px;
+      height: 100px;
+    }
+  
+    .passive-container img {
+      width: 40px;
+      height: 40px;
+      border-radius: 5px;
+    }
+  
+    .skills li img.skill-image {
+      width: 30px;
+      height: 30px;
+      border-radius: 5px;
+    }
+  
+    .skills li {
+      flex-direction: column; /* 小螢幕時讓技能圖片、描述縱向排列 */
+      align-items: flex-start;
+    }
+  }
+  
+  .probability-text {
+    color: #9b59b6; /* 紫色 */
+    font-weight: bold;
+  }
+  
+  /* 持續回合文字 - 黃色 */
+  .duration-text {
+    color: #f1c40f; /* 黃色 */
+    font-weight: bold;
+  }
+  
+  /* 扣除生命值文字 - 紅色 */
+  .deduct-health-text {
+    color: #e74c3c; /* 紅色 */
+    font-weight: bold;
+  }
+  
+  /* 暈眩回合數 - 黃色 */
+  .stun-duration-text {
+    color: #f1c40f; /* 黃色 */
+    font-weight: bold;
+  }
+  
+  /* 多次傷害次數 - 深紅色 */
+  .multiplier-text {
+    color: #c0392b; /* 深紅色 */
+    font-weight: bold;
+  }
+  
+  /* 增益/減益效果 - 黃色 */
+  .effect-text {
+    color: #f1c40f; /* 黃色 */
+    font-weight: bold;
+  }
+  
+  /* 異常狀態 */
+  
+  /* 冰凍 - 藍色 */
+  .frozen-text {
+    color: #3498db;
+    font-weight: bold;
+  }
+  
+  /* 中毒 - 綠色 */
+  .poisoned-text {
+    color: #2ecc71;
+    font-weight: bold;
+  }
+  
+  /* 流血 - 紅色 */
+  .bleeding-text {
+    color: #e74c3c;
+    font-weight: bold;
+  }
+  
+  /* 燃燒 - 橙色 */
+  .burning-text {
+    color: #ef3939;
+    font-weight: bold;
+  }
+  
+  .paralyzed-text {
+    color: #e0d431;
+    font-weight: bold;
+  }
+  
+  /* 通用異常狀態文字 */
+  .status-text {
+    font-weight: bold;
+    /* 可以根據需要設定默認顏色 */
+  }
+  
 
 /* 重置一些預設樣式 */
 * {

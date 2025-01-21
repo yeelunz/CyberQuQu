@@ -22,9 +22,9 @@ const EFFECT_DATA = {
   6: { name: "凍結", type: "frozen" },
   7: { name: "免疫傷害", type: "special" },
   8: { name: "免疫控制", type: "special" },
-  9: { name: "流血", type: "dot" },
-  10: { name: "麻痺", type: "stunned" },
-  11: { name: "回血", type: "buff" },
+  9: { name: "流血", type: "bleeding" },
+  10: { name: "麻痺", type: "paralyzed" },
+  11: { name: "生命值持續變更", type: "buff" },
   12: { name: "最大生命值變更", type: "buff" },
   13: { name: "追蹤", type: "track" },
   19: { name: "自定義傷害效果", type: "dot" },
@@ -61,10 +61,10 @@ function initBattleView() {
   const battleContainer = document.createElement("div");
   battleContainer.id = "battle-container";
 
-    // ❶ 滿版寬度、使用 80vh 高度(可自行調整)、並設個 min-height
-    battleContainer.style.width = "100%";
-    battleContainer.style.height = "80vh";
-    battleContainer.style.minHeight = "600px";
+  // ❶ 滿版寬度、使用 80vh 高度(可自行調整)、並設個 min-height
+  battleContainer.style.width = "100%";
+  battleContainer.style.height = "80vh";
+  battleContainer.style.minHeight = "600px";
 
   // (1) 最上方: 回合 / 全域傷害倍率 / 速度控制
   const topControls = document.createElement("div");
@@ -75,11 +75,14 @@ function initBattleView() {
       <span id="global-damage-coeff">全域傷害倍率: 1.00</span>
     </div>
     <div id="speed-control-panel">
-      <button class="speed-btn" data-speed="1000">1x</button>
-      <button class="speed-btn" data-speed="500">2x</button>
-      <button class="speed-btn" data-speed="333">3x</button>
-      <button id="pause-btn">暫停</button>
-      <button id="replay-btn" disabled>Replay</button>
+        <button class="speed-btn" data-speed="2000">0.5x</button>
+        <button class="speed-btn" data-speed="1000">1x</button>
+        <button class="speed-btn" data-speed="500">2x</button>
+        <button class="speed-btn" data-speed="333">3x</button>
+        <button class="speed-btn" data-speed="200">5x</button>
+        <button id="pause-btn">暫停</button>
+        <button id="skip-all-btn">跳過全部</button>
+        <button id="replay-btn" disabled>Replay</button>
     </div>
   `;
   battleContainer.appendChild(topControls);
@@ -182,6 +185,17 @@ function initBattleView() {
   replayBtn.addEventListener("click", () => {
     replayBattle();
   });
+  const skipAllBtn = document.getElementById("skip-all-btn");
+
+  skipAllBtn.addEventListener("click", () => {
+    skipAllEvents();
+  });
+
+  function skipAllEvents() {
+    clearTimeout(battleTimerGlobal);
+    battleIndexGlobal = battleLogGlobal.length; // 等於直接跳到結束
+    showBattleEnd();
+  }
 
   contentArea.appendChild(battleContainer);
 }
@@ -311,7 +325,7 @@ function handleBattleEvent(event) {
     case "heal":
       if (event.appendix?.amount) {
         showFloatingNumber(
-          `${event.user}-panel`,
+          `${event.target}-panel`,
           `+${event.appendix.amount}`,
           "float-heal"
         );
@@ -374,6 +388,7 @@ function addTurnBroadcastLine(msg, className = "") {
   if (className) p.classList.add(className);
   p.textContent = msg; // or innerHTML
   tb.appendChild(p);
+  tb.scrollTop = tb.scrollHeight;
 }
 
 function clearTurnBroadcast() {
@@ -550,31 +565,41 @@ function parseEffects(effectVector) {
   if (!effectVector || effectVector.length === 0) {
     return `<div class="no-effects">無狀態</div>`;
   }
-  // 每 5 個: [effectID, stack, maxStack, duration, multiplier]
   let htmlStr = "";
   for (let i = 0; i < effectVector.length; i += 5) {
     const effId = effectVector[i];
     const stacks = effectVector[i + 1];
     const maxStacks = effectVector[i + 2];
     const duration = effectVector[i + 3];
-    // const mult = effectVector[i+4]; // 可能用不到
+    const multiplier = effectVector[i + 4]; // 用來判斷 <1 or >=1
 
-    // 取得效果名稱 + 類型(決定顏色)
     const effData = EFFECT_DATA[effId] || {
       name: `效果ID:${effId}`,
       type: "other",
     };
     const effName = effData.name;
-    const effType = effData.type;
-    const colorClass = getEffectColorClass(effType);
+    let baseClass = getEffectColorClass(effData.type);
+    // 追加您想要的特殊處理
+    if (effId === 1) {
+      // 攻擊力變更 buff
+      baseClass =
+        multiplier < 1 ? "badge-buff-attack-lower" : "badge-buff-attack";
+    } else if (effId === 2) {
+      // 防禦力變更 buff
+      baseClass =
+        multiplier < 1 ? "badge-buff-defense-lower" : "badge-buff-defense";
+    } else if (effId === 3) {
+      // 治癒力變更 buff
+      baseClass = multiplier < 1 ? "badge-buff-heal-lower" : "badge-buff-heal";
+    }
 
     htmlStr += `
-      <div class="effect-badge ${colorClass}">
-        <span class="eff-name">${effName}</span>
-        <span class="eff-stack">(${stacks}/${maxStacks})</span>
-        <span class="eff-duration">${duration}T</span>
-      </div>
-    `;
+        <div class="effect-badge ${baseClass}">
+          <span class="eff-name">${effName}</span>
+          <span class="eff-stack">(${stacks}/${maxStacks})</span>
+          <span class="eff-duration">${duration}T</span>
+        </div>
+      `;
   }
   return htmlStr;
 }
@@ -602,11 +627,10 @@ function buildSkillsHTML(professionName, cooldowns) {
   // cooldowns 範例: { "0": 2, "1": 0, "2": 5 }
   // 也假設有被動 skillIndex = "passive"？
   let htmlStr = "";
-    // debug 輸出cooldowns
-    console.log("professionName: ", professionName);
-    console.log(cooldowns);
+  // debug 輸出cooldowns
+  console.log("professionName: ", professionName);
+  console.log(cooldowns);
 
-  
   // 再處理一般技能(0~N)
   for (let i in cooldowns) {
     if (i === "passive") continue; // 跳過被動
@@ -653,23 +677,80 @@ function createSkillIcon(imgUrl, cooldown, isPassive = false, skillIndex = 0) {
 
 // 若有任一 buff 效果 -> 加 "buff-glow"
 function toggleBuffGlow(panel, effectVector) {
-  if (!panel || !effectVector) return;
-  // 檢查是否有 buff
-  let hasBuff = false;
-  for (let i = 0; i < effectVector.length; i += 5) {
-    const effId = effectVector[i];
-    const effData = EFFECT_DATA[effId];
-    if (effData && effData.type === "buff") {
-      hasBuff = true;
-      break;
+    // 1) 先清掉舊的 Glow class
+    panel.classList.remove(
+      "buff-glow",              
+      "buff-glow-attack",
+      "buff-glow-attack-lower",
+      "buff-glow-defense",
+      "buff-glow-defense-lower",
+      "buff-glow-heal",
+      "buff-glow-heal-lower"
+    );
+  
+    // 2) 清除上次 setInterval (若有)
+    if (panel.buffGlowInterval) {
+      clearInterval(panel.buffGlowInterval);
+      delete panel.buffGlowInterval;
     }
+  
+    // 3) 準備一個陣列來存「所有對應的 glow class」
+    const glowClasses = [];
+  
+    // 逐一檢查 effectVector ([effId, stacks, maxStacks, duration, multiplier])
+    for (let i = 0; i < effectVector.length; i += 5) {
+      const effId = effectVector[i];
+      const multiplier = effectVector[i + 4];
+  
+      // 假設 effId=1 => 攻擊力, effId=2 => 防禦力, effId=3 => 治癒力
+      switch (effId) {
+        case 1: // 攻擊力
+          glowClasses.push(
+            multiplier >= 1 ? "buff-glow-attack" : "buff-glow-attack-lower"
+          );
+          break;
+        case 2: // 防禦力
+          glowClasses.push(
+            multiplier >= 1 ? "buff-glow-defense" : "buff-glow-defense-lower"
+          );
+          break;
+        case 3: // 治癒力
+          glowClasses.push(
+            multiplier >= 1 ? "buff-glow-heal" : "buff-glow-heal-lower"
+          );
+          break;
+        // 其他 buff 是否需要也交替光環？視您需求自行加
+      }
+    }
+  
+    // 如果沒找到任何 glow class 就結束
+    if (glowClasses.length === 0) {
+      return;
+    }
+  
+    // 如果只有一種光環，直接加
+    if (glowClasses.length === 1) {
+      panel.classList.add(glowClasses[0]);
+      return;
+    }
+  
+    // ====== 核心：多種 buff => 輪流顯示 ======
+
+    let idx = 0; // 隨機開始
+    // 先加上第一種
+    panel.classList.add(glowClasses[idx]);
+  
+    // 用 setInterval 每隔 1 秒 (1000 ms) 換下一個
+    panel.buffGlowInterval = setInterval(() => {
+      // 先移除舊的
+      panel.classList.remove(glowClasses[idx]);
+      // 前進
+      idx = (idx + 1) % glowClasses.length;
+      // 加新的
+      panel.classList.add(glowClasses[idx]);
+    }, 500); // 您可自行調整速度(毫秒)
   }
-  if (hasBuff) {
-    panel.classList.add("buff-glow");
-  } else {
-    panel.classList.remove("buff-glow");
-  }
-}
+  
 
 // 中間大字提示
 function showCenterNotice(msg, extraClass = "") {
@@ -712,51 +793,49 @@ function showFloatingNumber(panelId, text, floatClass) {
 
 /* 紅光 + 震動 */
 function redGlowAndShake(panelId) {
-    const panel = document.getElementById(panelId);
-    if (!panel) return;
-  
-    // 檢查原本是否有 buff-glow
-    const hadBuffGlow = panel.classList.contains("buff-glow");
-    if (hadBuffGlow) {
-      panel.classList.remove("buff-glow");
-    }
-  
-    // 播動畫
-    panel.style.zIndex = "999"; // 讓它在最上層
-    panel.classList.add("red-glow", "shake");
-    setTimeout(() => {
-      panel.classList.remove("red-glow", "shake");
-      panel.style.zIndex = "";
-  
-      // 播完再加回 buff-glow
-      if (hadBuffGlow) {
-        panel.classList.add("buff-glow");
-      }
-    }, 500);
-  }
-  
-  /* 綠光 + 閃 */
-  function greenGlow(panelId) {
-    const panel = document.getElementById(panelId);
-    if (!panel) return;
-  
-    const hadBuffGlow = panel.classList.contains("buff-glow");
-    if (hadBuffGlow) {
-      panel.classList.remove("buff-glow");
-    }
-  
-    panel.style.zIndex = "999";
-    panel.classList.add("heal-effect");
-    setTimeout(() => {
-      panel.classList.remove("heal-effect");
-      panel.style.zIndex = "";
-      if (hadBuffGlow) {
-        panel.classList.add("buff-glow");
-      }
-    }, 800);
+  const panel = document.getElementById(panelId);
+  if (!panel) return;
+
+  // 檢查原本是否有 buff-glow
+  const hadBuffGlow = panel.classList.contains("buff-glow");
+  if (hadBuffGlow) {
+    panel.classList.remove("buff-glow");
   }
 
+  // 播動畫
+  panel.style.zIndex = "999"; // 讓它在最上層
+  panel.classList.add("red-glow", "shake");
+  setTimeout(() => {
+    panel.classList.remove("red-glow", "shake");
+    panel.style.zIndex = "";
 
+    // 播完再加回 buff-glow
+    if (hadBuffGlow) {
+      panel.classList.add("buff-glow");
+    }
+  }, 500);
+}
+
+/* 綠光 + 閃 */
+function greenGlow(panelId) {
+  const panel = document.getElementById(panelId);
+  if (!panel) return;
+
+  const hadBuffGlow = panel.classList.contains("buff-glow");
+  if (hadBuffGlow) {
+    panel.classList.remove("buff-glow");
+  }
+
+  panel.style.zIndex = "999";
+  panel.classList.add("heal-effect");
+  setTimeout(() => {
+    panel.classList.remove("heal-effect");
+    panel.style.zIndex = "";
+    if (hadBuffGlow) {
+      panel.classList.add("buff-glow");
+    }
+  }, 800);
+}
 
 // 技能動畫 (示例：微晃動 + 閃光)
 function skillAnimation(panelId) {
@@ -771,36 +850,7 @@ function skillAnimation(panelId) {
 }
 
 /* 狀態: 燃燒/中毒/冰凍/暈眩 => Apply/Remove */
-function handleEffectApplyOrTick(event) {
-  // event.user = "left" or "right"
-  const panel = document.getElementById(`${event.user}-panel`);
-  if (!panel) return;
 
-  const effName = event.appendix.effect_name; // "燃燒", "中毒"...
-  // 用簡易 mapping
-  let cssClass = "";
-  switch (effName) {
-    case "燃燒":
-      cssClass = "effect-burning";
-      break;
-    case "中毒":
-      cssClass = "effect-poison";
-      break;
-    case "凍結":
-      cssClass = "effect-frozen";
-      break;
-    case "麻痺":
-      cssClass = "effect-stunned";
-      break;
-  }
-  if (!cssClass) return;
-
-  // (1) Apply / Tick 都加 class (若已加過也不重複)
-  // 讓它持續到 remove
-  if (!panel.classList.contains(cssClass)) {
-    panel.classList.add(cssClass);
-  }
-}
 
 function handleEffectRemove(event) {
   const effectType = getEffectTypeByName(event.appendix.effect_name);

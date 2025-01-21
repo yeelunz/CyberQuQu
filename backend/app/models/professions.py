@@ -507,7 +507,7 @@ class SteadfastWarrior(BattleProfession):
         pass
     
     def on_turn_start(self, user, targets, env , id):
-        heal = int(self.max_hp - user["hp"] * 0.1)
+        heal = int( (self.max_hp - user["hp"]) * 0.1)
         env.add_event(event = BattleEvent(type="text",text=f"{self.name} 的被動技能「堅韌壁壘」觸發。"))
         env.deal_healing(user, heal)
 

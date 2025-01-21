@@ -513,20 +513,71 @@ body {
 }
 
 /* 預設情況下，無 buff-glow */
-.character-panel.buff-glow {
-  animation: buffPulse 2s infinite;
-  box-shadow: 0 0 15px rgba(255, 255, 0, 0.4);
-}
-@keyframes buffPulse {
-  0% {
-    box-shadow: 0 0 10px rgba(255, 255, 0, 0.2);
+@keyframes buffPulseRed {
+  0%,
+  100% {
+    box-shadow: 0 0 10px rgba(255, 0, 0, 0.3),
+      inset 0 0 5px rgba(255, 0, 0, 0.3);
   }
   50% {
-    box-shadow: 0 0 15px rgba(255, 255, 0, 0.7);
+    box-shadow: 0 0 15px rgba(255, 0, 0, 0.8),
+      inset 0 0 10px rgba(255, 0, 0, 0.7);
   }
+}
+@keyframes buffPulseBlue {
+  0%,
   100% {
-    box-shadow: 0 0 10px rgba(255, 255, 0, 0.2);
+    box-shadow: 0 0 10px rgba(0, 100, 255, 0.3),
+      inset 0 0 5px rgba(0, 100, 255, 0.3);
   }
+  50% {
+    box-shadow: 0 0 15px rgba(0, 100, 255, 0.8),
+      inset 0 0 10px rgba(0, 100, 255, 0.7);
+  }
+}
+@keyframes buffPulseGreen {
+  0%,
+  100% {
+    box-shadow: 0 0 10px rgba(0, 200, 0, 0.3),
+      inset 0 0 5px rgba(0, 200, 0, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 15px rgba(0, 200, 0, 0.8),
+      inset 0 0 10px rgba(0, 200, 0, 0.7);
+  }
+}
+
+/* 攻擊力 buff (>=1 => 亮紅) */
+.buff-glow-attack {
+  animation: buffPulseRed 2s infinite;
+}
+
+/* 攻擊力 buff (<1 => 暗紅) */
+.buff-glow-attack-lower {
+  animation: buffPulseRed 2s infinite;
+  opacity: 0.7; /* 或者box-shadow: 另外寫 */
+}
+
+/* 防禦力 buff (>=1 => 藍) */
+.buff-glow-defense {
+  animation: buffPulseBlue 2s infinite;
+}
+
+/* 防禦力 buff (<1 => 暗藍) */
+.buff-glow-defense-lower {
+  animation: buffPulseBlue 2s infinite;
+  opacity: 0.7;
+}
+
+/* 治癒力 buff (>=1 => 綠) */
+.buff-glow-heal {
+  animation: buffPulseGreen 2s infinite;
+}
+
+/* 治癒力 buff (<1 => 暗綠) */
+.buff-glow-heal-lower {
+  animation: buffPulseGreen 2s infinite;
+  opacity: 0.7;
 }
 
 /* ========================
@@ -930,35 +981,7 @@ body {
   }
 }
 
-/* ==== 浮動數字 ==== */
-.floating-number {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 1.2rem;
-  font-weight: bold;
-  animation: floatUp 1s forwards;
-}
-.float-damage {
-  color: #e74c3c;
-}
-.float-heal {
-  color: #2ecc71;
-}
 
-@keyframes floatUp {
-  0% {
-    transform: translate(-50%, 0);
-    opacity: 1;
-  }
-  50% {
-    transform: translate(-50%, -15px);
-  }
-  100% {
-    transform: translate(-50%, -30px);
-    opacity: 0;
-  }
-}
 
 /* 1) 狀態特效容器：在 .character-panel 內已有 <div class="status-effects-layer"> */
 .status-effects-layer {
@@ -981,43 +1004,51 @@ body {
      燃燒 (火花粒子)
      =============== */
 .burning-effect {
-  position: absolute;
-  top: -5px;
-  left: -5px;
-  right: -5px;
-  bottom: -5px; /* 稍微比框大一點 */
-  pointer-events: none;
-  overflow: hidden; /* 防止子元素飄出 */
+  position: relative;
 }
 
 .burning-effect::before {
   content: "";
   position: absolute;
-  width: 200%;
-  height: 200%;
-  left: -50%; /* 讓中心在面板中央 */
-  top: 100%; /* 從下方開始往上 */
-  background-image: radial-gradient(
-    circle,
-    rgba(255, 140, 0, 0.4) 10%,
-    rgba(255, 0, 0, 0) 70%
-  );
-  animation: burningSparks 2s infinite linear;
-  opacity: 0.8;
+  top: -5px;
+  left: -5px;
+  right: -5px;
+  bottom: -5px;
+  background: radial-gradient(
+      circle at 50% 50%,
+      rgba(255, 180, 0, 0.4) 0%,
+      rgba(255, 120, 0, 0.3) 30%,
+      rgba(255, 60, 0, 0.2) 50%,
+      transparent 70%
+    ),
+    repeating-radial-gradient(
+      circle at 50% 80%,
+      rgba(255, 70, 0, 0.2) 0%,
+      rgba(255, 70, 0, 0.2) 5%,
+      transparent 10%
+    );
+  filter: blur(3px);
+  animation: burnEffect 2s infinite alternate;
+  pointer-events: none;
+  z-index: 1;
 }
 
-@keyframes burningSparks {
+@keyframes burnEffect {
   0% {
-    top: 100%;
+    opacity: 0.4;
+    transform: scale(0.95);
   }
   100% {
-    top: -50%; /* 向上飄 */
+    opacity: 0.8;
+    transform: scale(1.05);
   }
 }
+
+/* 之後在JS動態產生多個 <span class="spark"></span> 會更逼真；純CSS示範簡化了 */
 
 /* ===============
      中毒 (綠泡泡)
-     =============== */
+=============== */
 .poison-effect {
   position: absolute;
   top: 0;
@@ -1094,31 +1125,58 @@ body {
 /* ===============
      暈眩 (金色閃)
      =============== */
-.stunned-effect {
-  pointer-events: none;
+.paralyzed-effect {
   position: absolute;
   top: -5px;
   left: -5px;
   right: -5px;
   bottom: -5px;
   overflow: hidden;
+  pointer-events: none;
+  background: none;
 }
 
-.stunned-effect::before {
+.paralyzed-effect::before,
+.paralyzed-effect::after {
   content: "";
   position: absolute;
-  width: 200%;
-  height: 200%;
-  top: -50%;
-  left: -50%;
+  width: 180%;
+  height: 180%;
+  top: -40%;
+  left: -40%;
   background: repeating-linear-gradient(
     45deg,
     rgba(255, 255, 0, 0.3) 0px,
-    rgba(255, 255, 0, 0.3) 5px,
-    rgba(0, 0, 0, 0) 10px,
-    rgba(0, 0, 0, 0) 15px
+    rgba(255, 255, 0, 0.3) 4px,
+    transparent 4px,
+    transparent 8px
   );
-  animation: electricArc 1s infinite linear;
+  animation: lightning 1s infinite linear;
+}
+
+.paralyzed-effect::after {
+  /* 第二層，稍微不同方向 */
+  background: repeating-linear-gradient(
+    -45deg,
+    rgba(255, 255, 0, 0.3) 0px,
+    rgba(255, 255, 0, 0.3) 4px,
+    transparent 4px,
+    transparent 8px
+  );
+  animation-duration: 1.2s;
+  animation-direction: alternate;
+}
+
+@keyframes lightning {
+  0% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: rotate(10deg);
+  }
+  100% {
+    transform: rotate(0deg);
+  }
 }
 
 @keyframes electricArc {
@@ -1133,6 +1191,69 @@ body {
   }
 }
 
+
+.bleeding-effect {
+    position: absolute;
+    top: -5px;
+    left: -5px;
+    right: -5px;
+    bottom: -5px;
+    pointer-events: none;
+    overflow: hidden; /* 防止血滴跑出面板外 */
+  }
+  
+  /* 1) 背景暈染：淡紅色的圓形脈動 */
+  .bleeding-effect::before {
+    content: "";
+    position: absolute;
+    inset: 0; /* top:0; left:0; right:0; bottom:0; */
+    background: radial-gradient(
+      circle at 50% 50%,
+      rgba(255, 0, 0, 0.2) 20%,
+      transparent 70%
+    );
+    animation: bleedPulse 2s infinite;
+  }
+  
+  @keyframes bleedPulse {
+    0%, 100% {
+      opacity: 0.3;
+    }
+    50% {
+      opacity: 0.7;
+    }
+  }
+  
+  /* 2) 單顆血滴不停從面板底部向下滴落 */
+  .bleeding-effect::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: calc(50% - 200px); /* 從面板底部稍微往上 10px */
+    transform: translateX(-50%);
+    width: 6px;
+    height: 6px;
+    background-color: rgba(200, 0, 0, 0.8);
+    border-radius: 50%;
+    animation: bleedDrip 1.2s infinite ease-in-out;
+  }
+  
+  @keyframes bleedDrip {
+    0% {
+      top: calc(100% - 10px);
+      opacity: 1;
+    }
+    80% {
+      opacity: 1;
+    }
+    100% {
+      top: 120%; /* 往容器外滴落 */
+      opacity: 0;
+    }
+  }
+  
+
+
 /* ===============
      Buff glow (若你原本有 buff-glow)
      =============== */
@@ -1144,7 +1265,7 @@ body {
   transform: translateX(-50%);
   animation: floatUp 1.2s forwards;
   z-index: 999; /* 保證在特效之上 */
-  font-size: 1.5rem; /* 加大 */
+  font-size: 2.5rem; /* 加大 */
   font-weight: 900; /* 粗體 */
 }
 .float-damage {
@@ -1229,4 +1350,30 @@ body {
     transform: scale(1);
     box-shadow: none;
   }
+}
+
+/* 原本 .badge-buff 可能是綠色；現在我們拆多種: */
+
+/* 攻擊力 buff */
+.badge-buff-attack {
+  background-color: #bcd145; /* 亮紅 */
+}
+.badge-buff-attack-lower {
+  background-color: #4f5e13; /* 暗紅, 可自行選 */
+}
+
+/* 防禦力 buff */
+.badge-buff-defense {
+  background-color: #3498db; /* 亮藍 */
+}
+.badge-buff-defense-lower {
+  background-color: #0a212b; /* 暗藍 */
+}
+
+/* 治癒力 buff */
+.badge-buff-heal {
+  background-color: #2ecc71; /* 亮綠 */
+}
+.badge-buff-heal-lower {
+  background-color: #0a2715; /* 暗綠 */
 }

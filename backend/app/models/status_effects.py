@@ -333,7 +333,7 @@ class HealthPointRecover(StatusEffect):
     """
     def __init__(self, duration: int = 1, hp_recover: int =  10,stackable: bool = False, source = None,env = None,roundCalculate=None,roundCalculateArg=None,self_mutilation = False):
         super().__init__(
-            name='hp_recover',
+            name='生命值持續變更',
             duration=duration,
             stackable=False,
             max_stack=1,

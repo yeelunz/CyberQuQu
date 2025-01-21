@@ -18,45 +18,7 @@ from gymnasium.spaces import Box, Discrete, Dict
 from ray.rllib.env import MultiAgentEnv
 
 from .train_var import player_train_times, enemy_train_times
-
-
-
-# 13 len array
-
-class BattleLog:
-    def __init__(self, text, animation):
-        """
-            text = 基本的戰鬥log 文字顯示
-            
-            animation = 用來給前端顯示的動畫效果
-            可以是多個動畫效果，會依序執行
-            其中格式為 [ target , animate , number]
-            target : 決定動畫效果的目標
-            animate : 決定動畫效果的內容
-            number : 如果是傷害類的話，可以多顯示一個數字在動畫上，其中 number 會隨著animate變色，但只接受 "heal" 與 "damage" 這兩類
-                    可以是None 或是根本不填，這樣就不會顯示數字
-            ---
-            例如: 
-            text = 弓箭手 使用了技能 五連矢。
-            animate = [ "enemy", "arrow_shot", None]
-             or 
-            animate = [ "enemy", "arrow_shot"]
-            之後會自動根據 使用者是玩家或是敵方來轉成 right or left
-            如果是玩家的話
-            
-            text = 弓箭手 對 元素法師 造成 60 點傷害 (剩餘HP=133)
-            (因為是受擊對像)
-            animate = [ "user", "damage", 60]
-            
-        
-        """
-        self.text = text
-        self.animation = animation
-        
-
-
-
-
+from .battle_event import BattleEvent
 
 class BattleEnv(MultiAgentEnv):
     """
@@ -136,14 +98,13 @@ class BattleEnv(MultiAgentEnv):
             m["damage_multiplier"] = 1.0
             m["defend_multiplier"] = 1.0
             m["heal_multiplier"] = 1.0
-            m["battle_log"] = []
             m["skills_used"] = {} 
             m["cooldowns"] = {0:0, 1:0, 2:0}
             m["last_skill_used"] = None
             m["skills_used"] = {}  # 用於追蹤技能使用次數
-            m["effect_manager"] = EffectManager(m)  # 初始化 EffectManager
+            m["effect_manager"] = EffectManager(target=m, env=self)  # 初始化 EffectManager
             m["last_attacker"] = None
-            m["last_damage"] = 0
+            m["last_damage_taken"] = 0
             m['accumulated_damage'] = 0
         
         # 重置敵方
@@ -159,14 +120,13 @@ class BattleEnv(MultiAgentEnv):
             e["damage_multiplier"] = 1.0
             e["defend_multiplier"] = 1.0
             e["heal_multiplier"] = 1.0
-            e["battle_log"] = []
             e["cooldowns"] = {0:0, 1:0, 2:0}
             
             e["last_skill_used"] = None 
             e["skills_used"] = {} 
-            e["effect_manager"] = EffectManager(e)  # 初始化 EffectManager
+            e["effect_manager"] = EffectManager(target=e, env=self)  # 初始化 EffectManager
             e["last_attacker"] = None
-            e["last_damage"] = 0
+            e["last_damage_taken"] = 0
             e['accumulated_damage'] = 0
 
         infos = {
@@ -177,7 +137,177 @@ class BattleEnv(MultiAgentEnv):
             "player": self._get_obs("player"),
             "enemy": self._get_obs("enemy"),
         }, infos
+        
+    def add_event(self, user=None, target=None, event=None):
+        """
+        這個取代原本的add battle_log
 
+        - type: str, 事件類型
+            其中包含以下事件類型:
+            - damage: 傷害事件
+            - heal: 治療事件
+            - self_mutilation: 自傷事件
+            - status_apply: 異常狀態
+            - status_tick: 異常狀態持續
+            - status_remove: 異常狀態移除
+            - status_set 異常狀態設置stack
+            - skip_turn: 跳過行動
+            - skill: 技能事件
+            - text : 純文字事件
+            - turn_start: 回合開始
+            - turn_end: 回合結束
+            - refresh_status : 刷新雙方血量條/ 異常狀態條
+            - other: 其他事件
+        - appendix: DICT, 附加資訊
+        - user: str, 動畫使用者(left/right) 
+            此項只在 damage/heal/skill中被使用，只有單目標有動畫則優先使用此項
+        - target: str, 動畫目標(left/right)
+            此項為動畫中的目標
+        - animation: str, 動畫名稱
+            如果沒有指定的話，則從type中自動選擇
+
+        - text: str, 純文字事件的文字(這個會自動生成，但當指定時)，選擇"text" 時需要自己填寫"
+        """
+        if not event:
+            raise ValueError("event is None")
+        
+        # 如果在 player team 中發現user => user = left
+        # 如果在 enemy team 中發現user => user = right
+        if user in self.player_team:
+            event.user = "left"
+            event.target = "right"
+        else:
+            event.user = "right"
+            event.target = "left"
+        
+        
+        match event.type:
+            case "damage":
+                # 文字格式為：【{user['profession'].name}】 對 【{target['profession'].name}】 造成 {event.appendix["amount"]} 點傷害
+                if event.text is None:
+                    event.text = f"【{user['profession'].name}】 對 【{target['profession'].name}】 造成 {event.appendix['amount']} 點傷害"
+                # 動畫格式為：
+                # 1. event.target 使用受傷動畫 (在前端js處理)
+                # 2. 啟用傷害數字動畫，數字在event.applendix["amount"] (在前端js處理)
+                self.battle_log.append(event)
+                # 3. 啟用狀態刷新動畫
+                self.battle_log.append(BattleEvent(type="refresh_status"))
+                
+            case "heal":
+                # f"{user['profession'].name} 恢復了 {heal_amount} 點生命值
+                if event.text is None:
+                    event.text = f"{user['profession'].name} 恢復了 {event.appendix['amount']} 點生命值"
+                # 動畫格式為：
+                # 1. event.user 使用治療動畫 (在前端js處理)
+                # 2. 啟用治療數字動畫，數字在event.applendix["amount"] (在前端js處理)
+                self.battle_log.append(event)
+                # 3. 啟用狀態刷新動畫
+                self.battle_log.append(BattleEvent(type="refresh_status"))
+            
+            case "self_mutilation":
+                # 文字格式為：【{user['profession'].name}】 自傷 {event.appendix["amount"]} 點生命值
+                if event.text is None:
+                    event.text = f"【{user['profession'].name}】 自傷 {event.appendix['amount']} 點生命值"
+                # 動畫格式為：
+                # 1. event.user 使用受傷動畫 (在前端js處理)
+                # 2. 啟用傷害數字動畫，數字在event.applendix["amount"] (在前端js處理)
+                self.battle_log.append(event)
+                # 3. 啟用狀態刷新動畫
+                self.battle_log.append(BattleEvent(type="refresh_status"))
+
+            case "status_apply":
+                # 處理異常狀態施加事件
+                # 文字和動畫可根據需求實現
+                # 例如：
+                pass
+
+            case "status_tick":
+                # 處理異常狀態持續事件
+                pass
+                
+            case "status_remove":
+                # 處理異常狀態移除事件
+                pass
+                
+            case "status_set":
+                # 處理異常狀態堆疊設置事件
+                pass
+                
+            case "skip_turn":
+                # 文字格式為： 【{user['profession'].name}】，因 {event.applendix["effect_name"]} 跳過行動
+                if event.text is None:
+                    event.text = f"【{user['profession'].name}】，因 {event.appendix['effect_name']} 跳過行動" 
+                # 動畫格式為： 不顯示動畫
+                self.battle_log.append(event)
+
+            case "skill":
+                # 文字格式為： f"{self.name} 使用了技能 {sm.get_skill_name(skill_id)}。"
+                if event.text is None:
+                    event.text = f"{user['profession'].name} 使用了技能 {self.skill_mgr.get_skill_name(event.appendix['skill_id'])}。"
+                # 動畫格式為： event.user 使用技能動畫 (在前端js處理)
+                self.battle_log.append(event)
+            
+            case "text":
+                # 文字格式為： event.text
+                # 動畫格式： 不顯示動畫
+                if not event.text:
+                    raise ValueError("text is None")
+                self.battle_log.append(event)
+                
+            case "refresh_status":
+                # 文字格式為： 不顯示文字
+                # 動畫格式為： 刷新雙方血量條/ 異常狀態條
+                # 將以下dict加入 event.appendix 以刷新前端的數字
+                # 註：left = player, right = enemy
+                
+                # 構建 appendix 字典
+                appendix = {
+                    "global": {
+                        "round": self.round_count
+                    },
+                    "left": {
+                        "hp": self.player_team[0]["hp"],
+                        "max_hp": self.player_team[0]["max_hp"],
+                        "effects": self.player_team[0].effect_manager.get_effect_vector(),
+                        "multiplier": {
+                            "damage": self.player_team[0]["damage_multiplier"],
+                            "defend": self.player_team[0]["defend_multiplier"],
+                            "heal": self.player_team[0]["heal_multiplier"]
+                        }
+                    },
+                    "right": {
+                        "hp": self.enemy_team[0]["hp"],
+                        "max_hp": self.enemy_team[0]["max_hp"],
+                        "effects": self.enemy_team[0].effect_manager.get_effect_vector(),
+                        "multiplier": {
+                            "damage": self.enemy_team[0]["damage_multiplier"],
+                            "defend": self.enemy_team[0]["defend_multiplier"],
+                            "heal": self.enemy_team[0]["heal_multiplier"]
+                        }
+                    }
+                }
+                
+                # 設定 appendix
+                event.appendix = appendix
+                # 清除文字
+                event.text = None
+                # 動畫格式為： 刷新狀態動畫 (在前端js處理)
+                self.battle_log.append(event)
+            
+            case "turn_start":
+                # add refresh_status
+                self.battle_log.append(BattleEvent(type="refresh_status"))
+                
+            case "turn_end":
+                # add refresh_status
+                self.battle_log.append(BattleEvent(type="refresh_status"))
+            
+            case "other":
+                # 處理其他事件類型
+                self.battle_log.append(event)
+
+
+        
         
     def _get_action_mask(self, member):
       """
@@ -207,7 +337,7 @@ class BattleEnv(MultiAgentEnv):
         
         # 回合初始化
         for m in self.player_team + self.enemy_team:
-            m["last_damage"] = 0
+            m["last_damage_taken"] = 0
             m["last_attacker"] = None
             m["accumulated_damage"] = 0
             
@@ -228,13 +358,16 @@ class BattleEnv(MultiAgentEnv):
             if user["hp"] > 0 and not user["effect_manager"].has_effect('免疫控制') :
                 # 麻痺 or 暈眩
                 if user["skip_turn"] and (user["effect_manager"].has_effect('麻痺') or user["effect_manager"].has_effect('暈眩')):
-                    self.battle_log.append(f"【{user['profession'].name}】，因異常狀態跳過行動")
+                    e = BattleEvent(type="skip_turn",appendix={"effect_name":"麻痺"})
+                    self.add_event(user,event=e)
                     continue
                 # 冰凍的跳過
                 elif user["skip_turn"]:
-                    self.battle_log.append(f"【{user['profession'].name}】，因異常狀態跳過行動")
-                    user["skip_turn"] = False
+                    e = BattleEvent(type="skip_turn",appendix={"effect_name":"凍結"})
+                    self.add_event(user,event=e)
+
                     # remove freeze effect
+                    user["skip_turn"] = False
                     user["effect_manager"].remove_all_effects('凍結')
                     continue
 
@@ -251,15 +384,11 @@ class BattleEnv(MultiAgentEnv):
                     skill_index = random.choice(available_skill_indices)
                     skill_id = 3 * profession_id + skill_index
                     skill_name = self.skill_mgr.get_skill_name(skill_id)
-                    self.battle_log.append(
-                        f"P隊伍{i}({user['profession'].name}) 選擇的技能不可用，隨機選擇 {skill_name}"
-                    )
+                    self.add_event(user,event=BattleEvent(type="text",text=f"P隊伍{i}({user['profession'].name}) 選擇的技能不可用，隨機選擇 {skill_name}"))
   
                 else:
                     # 如果沒有可用技能，跳過行動
-                    self.battle_log.append(
-                        f"P隊伍{i}({user['profession'].name}) 沒有可用技能，跳過行動"
-                    )
+                    self.add_event(user,event=BattleEvent(type="text",text=f"P隊伍{i}({user['profession'].name}) 沒有可用技能，跳過行動"))
                     continue
             else:
                 skill_name = self.skill_mgr.get_skill_name(skill_id)
@@ -282,14 +411,17 @@ class BattleEnv(MultiAgentEnv):
             # 需要檢查沒有免疫控制
             if e["hp"] > 0 and not e["effect_manager"].has_effect('免疫控制') :
                 # 麻痺 or 暈眩
-                if e["skip_turn"] and (e["effect_manager"].has_effect('麻痺') or e["effect_manager"].has_effect('暈眩')):
-                    self.battle_log.append(f"【{e['profession'].name}】，因異常狀態跳過行動")
+                if e["skip_turn"] and (e["effect_manager"].has_effect('麻痺') or e["effect_manager"].has_effect('暈眩')):         
+                    be = BattleEvent(type="skip_turn",appendix={"effect_name":"麻痺"})
+                    self.add_event(e,event=be)
+
                     continue
                 # 冰凍的跳過
                 elif e["skip_turn"]:
-                    self.battle_log.append(f"【{e['profession'].name}】，因異常狀態跳過行動")
-                    e["skip_turn"] = False
+                    be = BattleEvent(type="skip_turn",appendix={"effect_name":"凍結"})
+                    self.add_event(e,event=be)
                     # remove freeze effect
+                    e["skip_turn"] = False
                     e["effect_manager"].remove_all_effects('凍結')
                     
                     continue
@@ -307,14 +439,12 @@ class BattleEnv(MultiAgentEnv):
                     skill_index = random.choice(available_skill_indices)
                     skill_id = 3 * profession_id + skill_index
                     skill_name = self.skill_mgr.get_skill_name(skill_id)
-                    self.battle_log.append(
-                        f"E隊伍{j}({e['profession'].name}) 選擇的技能不可用，隨機選擇 {skill_name}"
-                    )
+                    self.add_event(e,event=BattleEvent(type="text",text=f"E隊伍{j}({e['profession'].name}) 選擇的技能不可用，隨機選擇 {skill_name}"))
+
                 else:
                     # 如果沒有可用技能，跳過行動
-                    self.battle_log.append(
-                        f"E隊伍{j}({e['profession'].name}) 沒有可用技能，跳過行動"
-                    )
+                    self.add_event(e,event=BattleEvent(type="text",text=f"E隊伍{j}({e['profession'].name}) 沒有可用技能，跳過行動"))
+
                     continue
             else:
                 skill_name = self.skill_mgr.get_skill_name(skill_id)
@@ -410,15 +540,16 @@ class BattleEnv(MultiAgentEnv):
         # check 我方是否全滅
         if all(m["hp"] <= 0 for m in self.player_team):
             self.done = True
-            self.battle_log.append("我方全滅，敵方獲勝！")
+            self.add_event(event=BattleEvent(type="text",text="我方全滅，敵方獲勝！"))
         # check 敵方是否全滅
         if all(e["hp"] <= 0 for e in self.enemy_team):
             self.done = True
-            self.battle_log.append("敵方全滅，我方獲勝！")
+            self.add_event(event=BattleEvent(type="text",text="敵方全滅，我方獲勝！"))
         # check 雙方全滅?
         if self._check_both_defeated():
             self.done = True
-            self.battle_log.append("雙方全滅，平手！")
+            self.add_event(event=BattleEvent(type="text",text="雙方全滅，平手！"))
+
         
         #  最後階段的處理(冷卻，回合狀態，回合末端技能)
         if not self.done:
@@ -430,8 +561,7 @@ class BattleEnv(MultiAgentEnv):
         # 增加戰鬥特性：超過10回合後，每過2回合，雙方的傷害係數增加10%
             if self.round_count > 10 and (self.round_count - 10) % 2 == 0:
                 self.damage_coefficient *= 1.1
-                self.battle_log.append(
-                f"戰鬥超過10回合，雙方的傷害係數增加了10%，現在為 {self.damage_coefficient:.2f}。")
+                self.add_event(event=BattleEvent(type="text",text=f"戰鬥超過10回合，雙方的傷害係數增加了10%，現在為 {self.damage_coefficient:.2f}。"))
         # 強制停止
         self.round_count += 1
         if self.round_count > self.max_rounds:
@@ -582,19 +712,17 @@ class BattleEnv(MultiAgentEnv):
             chance = 0.15 * total_freeze_layers
             # enemy not immune to control
             if random.random() < chance and not target["effect_manager"].has_effect('免疫控制'):
-                self.battle_log.append(
-                    f"{target['profession'].name} 被凍結，將跳過下一回合的行動。"
-                )
+                self.add_event(event=BattleEvent(type="text",text=f"{target['profession'].name} 被凍結，將跳過下一回合的行動。"))
                 # 移除所有凍結
                 target["effect_manager"].remove_all_effects('凍結')
 
         # 檢查目標是否免疫傷害
         if target["effect_manager"].has_effect('免疫傷害'):
-            self.battle_log.append(f"{target['profession'].name} 免疫所有傷害!")
+            self.add_event(event=BattleEvent(type="text",text=f"{target['profession'].name} 免疫所有傷害!"))
             return
 
         if can_be_blocked and target["is_defending"]:
-            self.battle_log.append(f"{target['profession'].name} 擋下了攻擊!")
+            self.add_event(event=BattleEvent(type="text",text=f"{target['profession'].name} 正在防禦，擋下了攻擊!"))
             return
 
         # 應用傷害增減比例
@@ -613,24 +741,17 @@ class BattleEnv(MultiAgentEnv):
         # 實際減血
         target["hp"] = max(0, target["hp"] - dmg)
         target['accumulated_damage'] += dmg
-        self.battle_log.append(
-            f"{user['profession'].name} 對 {target['profession'].name} 造成 {dmg} 點傷害 (剩餘HP={int(target['hp'])})"
-        )
+        self.add_event(user=user,target=target,event=BattleEvent(type="damage",appendix={"amount":dmg}))
         
         # 如果職業是荒原遊俠
         # 進行冷箭判定冷箭：受到攻擊時，20%機率反擊45點傷害。
-        if target["profession"].name == "荒原遊俠":
-            if random.random() < 0.25:
-                self.battle_log.append(
-                    f"{target['profession'].name} 發動「冷箭」反擊！"
-                )
-                self.deal_damage(target, user, 35, can_be_blocked=False)
-        
+        target["profession"].damage_taken(target,user,self,dmg)
+    
         
         # update last attacker and last damage
         if user in self.player_team:
             target["last_attacker"] = user
-            target["last_damage"] = dmg
+            target["last_damage_taken"] = dmg
 
     def deal_healing(self, user, heal_amount, rate = 0,heal_damage=False,target=None,self_mutilation = False):
         """
@@ -638,7 +759,6 @@ class BattleEnv(MultiAgentEnv):
         # heal_damage 與 self_mutilation 不能同時為True
         """
         if user["hp"] <= 0 :
-            self.battle_log.append(f"{user['profession'].name} 已被擊敗，無法恢復生命值。")
             return
         # 首先進行治療增減比例的應用
         if self_mutilation and heal_damage:
@@ -653,18 +773,19 @@ class BattleEnv(MultiAgentEnv):
                 heal_amount = user["max_hp"] - user["hp"]
             # 實際治療
             user["hp"] = min(user["hp"] + heal_amount, user["max_hp"])
-            self.battle_log.append(f"{user['profession'].name} 恢復了 {heal_amount} 點生命值 (剩餘HP={int(user['hp'])})")
+            self.add_event(user = user,event=BattleEvent(type="heal",appendix={"amount":heal_amount}))
         # 接著如果 heal_damage 為 True，則對目標造成治療量的rate%傷害
         if heal_damage and target:
             dmg = int(extra_heal * rate)  
             if extra_heal > 0:
-                self.battle_log.append(f"{user['profession'].name} 治療溢出造成傷害！ ")
+                self.add_event(BattleEvent(type="text",text=f"{user['profession'].name} 治療溢出造成傷害！"))
                 self.deal_damage(user, target, dmg, can_be_blocked=False)
         # 最後如果 self_mutilation 為 True，則對自己造成治療量的傷害(但不會低於最低血量)
         if self_mutilation:
             dmg = int(heal_amount)
             user["hp"] = max(1, user["hp"] - dmg)
-            self.battle_log.append(f"{user['profession'].name} 自傷 {dmg} 點生命值 (剩餘HP={int(user['hp'])})")
+
+            self.add_event(user = user,event=BattleEvent(type="self_mutilation",appendix={"amount":dmg}))
             # 累積傷害
             user['accumulated_damage'] += dmg
 
@@ -672,13 +793,13 @@ class BattleEnv(MultiAgentEnv):
         """
         設置特定status_id 的stack
         """
-        target["effect_manager"].set_effect_stack(status_name,target,stacks,source)
+        target["effect_manager"].set_effect_stack(status_name,target,stacks,source,self.battle_log)
         
     def apply_status(self, target, status_effect):
         """
         應用異常狀態
         """
-        target["effect_manager"].add_effect(status_effect)
+        target["effect_manager"].add_effect(status_effect,self.battle_log)
 
     def _handle_status_end_of_turn(self):
         """
@@ -688,7 +809,7 @@ class BattleEnv(MultiAgentEnv):
         for m in alist:
             if m["hp"] <= 0:
                 continue
-            m["effect_manager"].tick_effects()
+            m["effect_manager"].tick_effects(self.battle_log)
 
         # 重置一次性buff
         for m in alist:
@@ -706,97 +827,29 @@ class BattleEnv(MultiAgentEnv):
         """
         處理每回合開始時的被動技能
         """
-        for m in self.player_team + self.enemy_team:
-            if m["hp"] <= 0:
-                continue
-            profession = m["profession"]
-            if profession.name == "剛毅武士":
-                # baattle log
-                self.battle_log.append(
-                    f"{profession.name} 的被動技能「堅韌壁壘」發動！"
-                )
-                heal = int((profession.max_hp - m['hp']) * 0.1)
-                self.deal_healing(m, heal)
-            elif profession.name == "血神":
-                # 血神被動：受到致死傷害時，5%機率免疫該次傷害
-                # 在 deal_damage 方法中實作
-                pass
-            elif profession.name == "元素法師":
-                # 元素法師被動已在技能中處理
-                pass
-            elif profession.name == "龍神":
-                self.battle_log.append(f"{profession.name} 神血回歸，變得更加強大！")
-                # add 3% max hp, 3% attack, 3% defense for each stacks of dragon god
-                # source = -1 是此被動技能的skill_id
-                passive_id = profession.default_passive_id
-                deffect = DefenseMultiplier(multiplier=1.05,duration=99,stacks=1,source=passive_id,stackable=True,max_stack=99)
-                heffect = DamageMultiplier(multiplier=1.05,duration=99,stacks=1,source=passive_id,stackable=True,max_stack=99)
-                # hpeffect = MaxHPmultiplier(multiplier=1.02,duration=99,stacks=1,source=passive_id,stackable=True,max_stack=99)
-                track = Track(name="龍神buff",duration=99,stacks=1,source=passive_id,stackable=True,max_stack=99)
-                self.apply_status(m,deffect)
-                self.apply_status(m,heffect)
-                self.apply_status(m,track)
-     
+        for member in self.player_team:
+            left =  member
+        for member in self.enemy_team:
+            right =  member
+        left.on_turn_start(left,right,self,-1)
+        right.on_turn_start(right,left,self,-1)
+        
     def _process_passives_end_of_turn(self,mSkill = None,eSkill = None):
         """
-        # take all 
+        # take all  on turn end skill
         """ 
         # 我方處理       
         for i, m in mSkill:
-
-            
-
-            # 雷霆護甲：2回合內，受到傷害時一定機率直接麻痺敵人。
-            if m == 30:
-                player = self.player_team[i]
-                if player["last_attacker"]:
-                    if random.random() < 0.3:
-                        self.battle_log.append(
-                            f"{player['profession'].name} 發動「雷霆護甲」麻痺了攻擊者！"
-                        )
-                        self.apply_status(player["last_attacker"], Paralysis(duration=2))
-            
-            # 絕地反擊 23 => 對攻擊者立即造成其本次攻擊傷害的200%，此技能需冷卻3回合
-            if m == 23:
-                player = self.player_team[i]
-                if player["last_attacker"]:
-                    dmg = player["last_damage"] * 3
-                    self.battle_log.append(
-                        f"{player['profession'].name} 啟動「絕地反擊」。"
-                    )
-                    self.deal_damage(player, player["last_attacker"], dmg)
-                    # 進入冷卻
-                    self.battle_log.append(f"「絕地反擊」進入 3 回合的冷卻。")
-                else:
-                    self.battle_log.append(f"「絕地反擊」沒有攻擊者可反擊。")
+            left = self.player_team[i]
+            left_skill = m     
 
         for i, e in eSkill:
-            
-            # 雷霆護甲：2回合內，受到傷害時一定機率直接麻痺敵人。
-            if e == 30:
-                enemy = self.enemy_team[i]
-                if enemy["last_attacker"]:
-                    if random.random() < 0.3:
-                        self.battle_log.append(
-                            f"{enemy['profession'].name} 發動「雷霆護甲」麻痺了攻擊者！"
-                        )
-                        self.apply_status(enemy["last_attacker"], Paralysis(duration=2))
-            
-            # 絕地反擊 23 => 對攻擊者立即造成其本次攻擊傷害的200%，此技能需冷卻3回合
-            if e == 23:
-                enemy = self.enemy_team[i]
-                if enemy["last_attacker"]:
-                    dmg = enemy["last_damage"] * 3
-                    self.battle_log.append(
-                        f"{enemy['profession'].name} 啟動「絕地反擊」。"
-                    )
-                    self.deal_damage(enemy, enemy["last_attacker"], dmg)
-                    # 進入冷卻
-
-                    self.battle_log.append(f"「絕地反擊」進入 3 回合的冷卻。")
-                else:
-                    self.battle_log.append(f"「絕地反擊」沒有攻擊者可反擊。")
-                                 
+            right = self.enemy_team[i]
+            right_skill = e
+        
+        left.on_turn_end(left,right,self,left_skill)
+        right.on_turn_end(right,left,self,right_skill)
+                 
     def _select_targets(self, team):
         """
         選擇目標：選擇HP最高的敵人
@@ -844,7 +897,7 @@ class BattleEnv(MultiAgentEnv):
     def _print_round_footer(self):
         if self.show_battle_log:
             for line in self.battle_log:
-                print(line)
+                print(line.type, line.text)
             self.battle_log = []
             print("回合結束\n---")
 

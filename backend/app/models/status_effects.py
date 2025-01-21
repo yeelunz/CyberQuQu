@@ -119,9 +119,7 @@ class DamageMultiplier(StatusEffect):
     def on_apply(self, target):
         super().on_apply(target)
         target['damage_multiplier'] *= self.multiplier  # 直接設置倍率
-        target['battle_log'].append(
-            f"{target['profession'].name} 的傷害比例變為 {target['damage_multiplier']:.2f}。"
-        )
+
     def set_stack(self, stacks, target):
         # 先儲存原本的stack
         old_stack = self.stacks
@@ -137,13 +135,7 @@ class DamageMultiplier(StatusEffect):
             # 如果是減少，則要進行除法
             for i in range(old_stack - new_stack):
                 target['damage_multiplier'] /= self.multiplier
-        # battle log
-        # XX效果的層數變為XX
-        target['battle_log'].append(
-            f"{self.name} 的層數設定為為 {self.stacks}。"
-        )
-        target['battle_log'].append(
-            f"{target['profession'].name} 的傷害比例設定為 {target['damage_multiplier']:.2f}。")
+
     def on_remove(self, target):
         # 這邊要考慮如果是stackable的話，要根據stack來還原
         # 例如：stack = 3, multiplier = 1.5
@@ -157,9 +149,7 @@ class DamageMultiplier(StatusEffect):
             target['damage_multiplier'] /= self.multiplier  # 恢復為初始值
 
         # 
-        target['battle_log'].append(
-            f"{target['profession'].name} 的傷害增減比例恢復為 {target['damage_multiplier']:.2f}。"
-        )
+
         super().on_remove(target)
         
     def update(self, target,now_stack,add_stack):
@@ -168,9 +158,7 @@ class DamageMultiplier(StatusEffect):
         self.stacks = now_stack+add_stack
         for i in range(add_stack):
             target['damage_multiplier'] *= self.multiplier
-        target['battle_log'].append(
-            f"{target['profession'].name} 的傷害增減比例更新為 {target['damage_multiplier']:.2f}。"
-        )
+
 
 
 class DefenseMultiplier(StatusEffect):
@@ -209,9 +197,7 @@ class DefenseMultiplier(StatusEffect):
     def on_apply(self, target):
         super().on_apply(target)
         target['defend_multiplier'] *= self.multiplier  # 直接設置倍率
-        target['battle_log'].append(
-            f"{target['profession'].name} 的防禦增減比例更新為 {target['defend_multiplier']:.2f}。"
-        )
+
 
     def on_remove(self, target):
         # 這邊要考慮如果是stackable的話，要根據stack來還原
@@ -219,9 +205,7 @@ class DefenseMultiplier(StatusEffect):
         now_stack = self.stacks
         for i in range(now_stack):
             target['defend_multiplier'] /= self.multiplier
-        target['battle_log'].append(
-            f"{target['profession'].name} 的防禦增減比例恢復為 {target['defend_multiplier']:.2f}。"
-        )
+
         super().on_remove(target)
     def update(self, target,now_stack,add_stack):
         # 只能在buff類的stackable效果中使用，用來更新效果
@@ -230,9 +214,7 @@ class DefenseMultiplier(StatusEffect):
         for i in range(add_stack):
             target['defend_multiplier'] *= self.multiplier
         
-        target['battle_log'].append(
-            f"{target['profession'].name} 的防禦增減比例變為 {target['defend_multiplier']:.2f}。"
-        )
+
         # 
     def set_stack(self, stacks,target): 
         # 先儲存原本的stack
@@ -250,12 +232,7 @@ class DefenseMultiplier(StatusEffect):
             for i in range(old_stack - new_stack):
                 target['defend_multiplier'] /= self.multiplier
         # battle log
-        # XX效果的層數變為XX
-        target['battle_log'].append(
-            f"{self.name} 的層數變為 {self.stacks}。"
-        )
-        target['battle_log'].append(
-            f"{target['profession'].name} 的防禦增減比例設定為 {target['defend_multiplier']:.2f}。")
+
 
 
 class HealMultiplier(StatusEffect):
@@ -295,18 +272,14 @@ class HealMultiplier(StatusEffect):
     def on_apply(self, target):
         super().on_apply(target)
         target['heal_multiplier'] *= self.multiplier  # 直接設置倍率
-        target['battle_log'].append(
-            f"{target['profession'].name} 的治癒力增減比例變為 {target['heal_multiplier']}。"
-        )
+
 
     def on_remove(self, target):
         # 這邊要考慮如果是stackable的話，要根據stack來還原
         now_stack = self.stacks
         for i in range(now_stack):
             target['heal_multiplier'] /= self.multiplier
-        target['battle_log'].append(
-            f"{target['profession'].name} 的治療增減比例恢復為 {target['heal_multiplier']}。"
-        )
+
         super().on_remove(target)
     def update(self, target,now_stack,add_stack):
         # 只能在buff類的stackable效果中使用，用來更新效果
@@ -314,9 +287,7 @@ class HealMultiplier(StatusEffect):
         self.stacks = now_stack+add_stack
         for i in range(add_stack):
             target['heal_multiplier'] *= self.multiplier
-        target['battle_log'].append(
-            f"{target['profession'].name} 的治療增減比例變為 {target['heal_multiplier']}。"
-        )
+
     def set_stack(self, stacks,target):
         # 先儲存原本的stack
         old_stack = self.stacks
@@ -334,11 +305,7 @@ class HealMultiplier(StatusEffect):
                 target['heal_multiplier'] /= self.multiplier
         # battle log
         # XX效果的層數變為XX
-        target['battle_log'].append(
-            f"{self.name} 的層數變為 {self.stacks}。"
-        )
-        target['battle_log'].append(
-            f"{target['profession'].name} 的治療增減比例設定為 {target['heal_multiplier']}。")
+
 
 
 class HealthPointRecover(StatusEffect):
@@ -378,14 +345,7 @@ class HealthPointRecover(StatusEffect):
 
     def on_apply(self, target):
         super().on_apply(target)
-        if self.self_mutilation:
-            target['battle_log'].append(
-                f"{target['profession'].name} 進入自傷狀態。"
-            )
-        else:
-            target['battle_log'].append(
-                f"{target['profession'].name} 進入回血狀態。"
-            )
+
     def on_tick(self, target):
         if self.roundCalculate:
             self.hp_recover = self.roundCalculate(self.roundCalculateArg) 
@@ -424,9 +384,7 @@ class MaxHPmultiplier(StatusEffect):
     def on_apply(self, target):
         super().on_apply(target)
         target['max_hp'] *= self.multiplier  # 直接設置倍率
-        target['battle_log'].append(
-            f"{target['profession'].name} 的最大生命值變為 {int(target['max_hp'])}。"
-        )
+
         # 同時回復增加的生命值
         target['hp'] += target['max_hp'] - target['hp']
         
@@ -435,9 +393,7 @@ class MaxHPmultiplier(StatusEffect):
         now_stack = self.stacks
         for i in range(now_stack):
             target['max_hp'] /= self.multiplier
-        target['battle_log'].append(
-            f"{target['profession'].name} 的最大生命值恢復為 {target['max_hp']}。"
-        )
+
         # 如果超出生命值最大值，則變為最大值
         target['hp'] = min(target['hp'], target['max_hp'])
         
@@ -449,9 +405,7 @@ class MaxHPmultiplier(StatusEffect):
         for i in range(add_stack):
             target['max_hp'] *= self.multiplier
             target['hp'] += target['max_hp'] - target['hp']
-        target['battle_log'].append(
-            f"{target['profession'].name} 的最大生命值變為 {target['max_hp']}。"
-        )
+
         # 同時回復增加的生命值
     def set_stack(self, stacks,target):
         # 先儲存原本的stack
@@ -472,13 +426,8 @@ class MaxHPmultiplier(StatusEffect):
                 target['max_hp'] /= self.multiplier
                 # 如果超出生命值最大值，則變為最大值
                 target['hp'] = min(target['hp'], target['max_hp'])
-        # battle log
-        # XX效果的層數變為XX
-        target['battle_log'].append(
-            f"{self.name} 的層數變為 {self.stacks}。"
-        )
-        target['battle_log'].append(
-            f"{target['profession'].name} 的最大生命值變為 {target['max_hp']}。")
+
+
 
         
 class Burn(StatusEffect):
@@ -503,17 +452,13 @@ class Burn(StatusEffect):
 
     def on_apply(self, target):
         super().on_apply(target)
-        target['battle_log'].append(
-            f"{target['profession'].name} 被點燃，每回合受到傷害。"
-        )
+
 
     def on_tick(self, target):
         dmg = self.dmg * self.stacks
         dmg = min(dmg, self.dmg * self.max_stack)
         target['hp'] = max(0, target['hp'] - dmg)
-        target['battle_log'].append(
-            f"{target['profession'].name} 受到燃燒 {dmg} 點傷害 (剩餘HP={target['hp']})"
-        )
+
 
 
 class Poison(StatusEffect):
@@ -537,17 +482,13 @@ class Poison(StatusEffect):
 
     def on_apply(self, target):
         super().on_apply(target)
-        target['battle_log'].append(
-            f"{target['profession'].name} 被中毒，每回合受到傷害。"
-        )
+
 
     def on_tick(self, target):
         dmg = self.dmg * self.stacks
         dmg = min(dmg, self.dmg * self.max_stack)
         target['hp'] = max(0, target['hp'] - dmg)
-        target['battle_log'].append(
-            f"{target['profession'].name} 受到中毒 {dmg} 點傷害 (剩餘HP={target['hp']})"
-        )
+
      
 class Freeze(StatusEffect):
     """
@@ -592,14 +533,10 @@ class ImmuneDamage(StatusEffect):
 
     def on_apply(self, target):
         super().on_apply(target)
-        target['battle_log'].append(
-            f"{target['profession'].name} 進入免疫傷害狀態。"
-        )
+
 
     def on_remove(self, target):
-        target['battle_log'].append(
-            f"{target['profession'].name} 免疫傷害狀態已結束。"
-        )
+
         super().on_remove(target)
 
 
@@ -616,14 +553,10 @@ class ImmuneControl(StatusEffect):
 
     def on_apply(self, target):
         super().on_apply(target)
-        target['battle_log'].append(
-            f"{target['profession'].name} 進入免疫控制狀態。"
-        )
+
 
     def on_remove(self, target):
-        target['battle_log'].append(
-            f"{target['profession'].name} 免疫控制狀態已結束。"
-        )
+
         super().on_remove(target)
 
 
@@ -650,17 +583,13 @@ class BleedEffect(StatusEffect):
 
     def on_apply(self, target):
         super().on_apply(target)
-        target['battle_log'].append(
-            f"{target['profession'].name} 被流血，每回合受到傷害。"
-        )
+
 
     def on_tick(self, target):
         dmg = self.dmg * self.stacks
         dmg = min(dmg, self.dmg * self.max_stack)
         target['hp'] = max(0, target['hp'] - dmg)
-        target['battle_log'].append(
-            f"{target['profession'].name} 受到流血 {dmg} 點傷害 (剩餘HP={target['hp']})"
-        )
+
 
 
 class Stun(StatusEffect):
@@ -677,15 +606,11 @@ class Stun(StatusEffect):
     def on_apply(self, target):
         super().on_apply(target)
         target["skip_turn"] = True
-        target['battle_log'].append(
-            f"{target['profession'].name} 被眩暈，將跳過行動。"
-        )
+
 
     def on_remove(self, target):
         target["skip_turn"] = False
-        target['battle_log'].append(
-            f"{target['profession'].name} 的眩暈效果已結束。"
-        )
+
         super().on_remove(target)
 
 
@@ -703,15 +628,11 @@ class Paralysis(StatusEffect):
     def on_apply(self, target):
         super().on_apply(target)
         target["skip_turn"] = True
-        target['battle_log'].append(
-            f"{target['profession'].name} 麻痺，將跳過行動。"
-        )
+
 
     def on_remove(self, target):
         target["skip_turn"] = False
-        target['battle_log'].append(
-            f"{target['profession'].name} 的麻痺效果已結束。"
-        )
+
         super().on_remove(target)
 
 
@@ -751,17 +672,13 @@ class CustomizeDoT(StatusEffect):
 
     def on_apply(self, target):
         super().on_apply(target)
-        target['battle_log'].append(
-            f"{target['profession'].name} 獲得了 {self.name} 效果。"
-        )
+
 
     def on_tick(self, target):
         dmg = random.randint(1, 10)
         dmg = min(dmg, 10)
         target['hp'] = max(0, target['hp'] - dmg)
-        target['battle_log'].append(
-            f"{target['profession'].name} 受到 {self.name} {dmg} 點傷害 (剩餘HP={target['hp']})"
-        )
+
 
 class Track(StatusEffect):
     """
@@ -789,9 +706,7 @@ class Track(StatusEffect):
 
     def on_apply(self, target):
         super().on_apply(target)
-        target['battle_log'].append(
-            f"{target['profession'].name} 獲得了 {self.name} 效果。"
-        )
+
 
     def on_tick(self, target):
         # just to check

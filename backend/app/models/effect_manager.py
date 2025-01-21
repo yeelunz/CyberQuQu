@@ -8,15 +8,16 @@ from .status_effects import (
 from .effect_mapping import EFFECT_MAPPING, EFFECT_VECTOR_LENGTH
 
 class EffectManager:
-    def __init__(self, target):
+    def __init__(self, target,env):
         """
         初始化 EffectManager。
         :param target: 被管理的角色（玩家或敵人）
         """
         self.target = target
+        self.env = env  # 保存 env
         self.active_effects = {}  # key: effect id, value: list of StatusEffect instances
 
-    def add_effect(self, effect: StatusEffect):
+    def add_effect(self, effect: StatusEffect,battle_log):
         """
         添加一個狀態效果到目標。
         :param effect: 要添加的狀態效果實例
@@ -44,11 +45,10 @@ class EffectManager:
                     fin_stacks = min(existing.stacks+effect.stacks, existing.max_stack)
                     # 更新stack
                     existing.stacks = fin_stacks
+                    self.env.add_event(type="text",text=f"{self.target['profession'].name} 的 {effect.name} 效果已存在，堆疊數增加 {effect.stacks}。")
                     # 更新duration
                     existing.duration = min(max(existing.duration, effect.duration), existing.max_duration)
-                    self.target['battle_log'].append(
-                        f"{self.target['profession'].name} 的 {effect.name} 效果已存在，持續回合更新為 {existing.duration}。"
-                    )
+                    self.env.add_event(type="text",text=f"{self.target['profession'].name} 的 {effect.name} 效果已存在，持續回合更新為 {existing.duration}。")
                 else:
                     self.active_effects[effect_id].append(effect)
                     effect.on_apply(self.target)
@@ -57,9 +57,8 @@ class EffectManager:
                 if existing_effects:
                     existing = existing_effects[0]
                     existing.duration = min(max(existing.duration, effect.duration), existing.max_duration)
-                    self.target['battle_log'].append(
-                        f"{self.target['profession'].name} 的 {effect.name} 效果已存在，持續回合更新為 {existing.duration}。"
-                    )
+
+                    self.env.add_event(type="text",text=f"{self.target['profession'].name} 的 {effect.name} 效果已存在，持續回合更新為 {existing.duration}。")
                 else:
                     self.active_effects[effect_id].append(effect)
                     effect.on_apply(self.target)
@@ -78,9 +77,8 @@ class EffectManager:
                 # 不可堆疊，檢查是否已存在
                 if existing_effects:
                     existing = existing_effects[0]
-                    self.target['battle_log'].append(
-                        f"{self.target['profession'].name} 的 {effect.name} 效果已存在，本次效果無效。"
-                    )
+
+                    self.env.add_event(type="text",text=f"{self.target['profession'].name} 的 {effect.name} 效果已存在，本次效果無效。")
                 else:
                     self.active_effects[effect_id].append(effect)
                     effect.on_apply(self.target)
@@ -97,10 +95,8 @@ class EffectManager:
                             # add stacks and stack check
                             added_stacks = min(effect.stacks, e.max_stack - e.stacks)
                             e.stacks += added_stacks
-                         
-                            self.target['battle_log'].append(
-                                f"{self.target['profession'].name} 的 {effect.name} track 效果已存在。"
-                            )
+
+                            self.env.add_event(type="text",text=f"{self.target['profession'].name} 的 {effect.name} track 效果已存在，堆疊數增加 {added_stacks}。")
                     else:
                         self.active_effects[effect_id].append(effect)
                         effect.on_apply(self.target)
@@ -113,9 +109,8 @@ class EffectManager:
                     for e in existing_effects:
                         # refresh duration
                         e.duration = max(e.duration, effect.duration)
-                        self.target['battle_log'].append(
-                            f"{self.target['profession'].name} 的 {effect.name} track 效果已存在。"
-                        )
+
+                        self.env.add_event(type="text",text=f"{self.target['profession'].name} 的 {effect.name} track 效果已存在。")
                 else:
                     self.active_effects[effect_id].append(effect)
                     effect.on_apply(self.target)
@@ -130,9 +125,7 @@ class EffectManager:
                             added_stacks = min(effect.stacks, e.max_stack - e.stacks)
                             e.update(self.target,e.stacks,added_stacks)
 
-                            self.target['battle_log'].append(
-                                f"{self.target['profession'].name} 的 {effect.name} 效果已存在，堆疊數增加 {added_stacks}。"
-                            )
+                            self.env.add_event(type="text",text=f"{self.target['profession'].name} 的 {effect.name} 效果已存在，堆疊數增加 {added_stacks}。")
                     else:
                         self.active_effects[effect_id].append(effect)
                         effect.on_apply(self.target)
@@ -143,20 +136,17 @@ class EffectManager:
                 same_source = any(e.source == effect.source for e in existing_effects)
                 if same_source:
                     for e in existing_effects:
-                        self.target['battle_log'].append(
-                            f"{self.target['profession'].name} 的 {effect.name}效果已存在。"
-                        )
+
+                        self.env.add_event(type="text",text=f"{self.target['profession'].name} 的 {effect.name} 效果已存在。")
                 else:
                     self.active_effects[effect_id].append(effect)
                     effect.on_apply(self.target)
             
         else:
-            # 處理未知類型的效果，避免錯誤
-            self.target['battle_log'].append(
-                f"{self.target['profession'].name} 嘗試添加未知類型的效果: {effect.name}。"
-            )
 
-    def tick_effects(self):
+            self.env.add_event(type="text",text=f"{self.target['profession'].name} 嘗試添加未知類型的效果: {effect.name}。")
+
+    def tick_effects(self, battle_log):
         """
         每回合調用，處理所有活躍效果的效果和持續時間減少。
         """
@@ -197,7 +187,7 @@ class EffectManager:
                     result.append(effect)
         return result
 
-    def remove_all_effects(self, effect_name: str):
+    def remove_all_effects(self, effect_name: str, battle_log):
         """
         移除所有指定名稱的效果。
         """
@@ -206,13 +196,10 @@ class EffectManager:
                 if effect.name == effect_name:
                     effect.on_remove(self.target)
                     self.active_effects[effect_id].remove(effect)
-                    self.target['battle_log'].append(
-                        f"{self.target['profession'].name} 的 {effect.name} 效果已被移除。"
-                    )
             if not self.active_effects[effect_id]:
                 del self.active_effects[effect_id]
 
-    def set_effect_stack(self, effect_name: int, tar, stacks: int, sources: str = None):
+    def set_effect_stack(self, effect_name: int, tar, stacks: int, sources: str = None,battle_log=None):
         """
         設置指定效果的堆疊數。正數增加堆疊，負數減少堆疊。
         
@@ -242,8 +229,29 @@ class EffectManager:
                 elif not sources:
                     if effect.name == effect_name:
                         effect.set_stack(stacks, tar)
-                
-
+    
+    def get_effect_vector(self):
+        """
+        將當前所有的效果導出為向量，包括同名效果。
+        格式為：[effect id, effect_stack, effect_max_stack, effect_duration, effect_multiplier] * 當前effect數量
+        當effect是 'buff' 類型時，包含 multiplier；否則，effect_multiplier 填 0。
+        """
+        effect_vector = []
+        for effect_id, effects in self.active_effects.items():
+            for effect in effects:
+                eff_id = effect.id
+                stacks = effect.stacks
+                max_stack = effect.max_stack
+                duration = effect.duration
+                # 檢查是否為 'buff' 類型且具有 multiplier 屬性
+                if effect.type == 'buff' and hasattr(effect, 'multiplier'):
+                    multiplier = effect.multiplier
+                else:
+                    multiplier = 0
+                # 將效果資訊添加到向量中
+                effect_vector.extend([eff_id, stacks, max_stack, duration, multiplier])
+        return effect_vector
+        
 
     def export_obs(self):
         """

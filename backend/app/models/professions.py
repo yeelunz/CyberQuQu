@@ -3,13 +3,14 @@
 from .status_effects import (
     Burn, Poison, Freeze, 
     DamageMultiplier, DefenseMultiplier, HealMultiplier,HealthPointRecover,Paralysis,
-     ImmuneDamage, ImmuneControl, BleedEffect
+     ImmuneDamage, ImmuneControl, BleedEffect,Track
 )
 import random
 from .skills import SkillManager, sm
 
 from .profession_var import *
 
+from .battle_event import BattleEvent
 import math
 
 class BattleProfession:
@@ -35,14 +36,39 @@ class BattleProfession:
             ok_skills.append(self.profession_id*3 +2)
         # return is real skill id
         return ok_skills
-        
+    def damage_taken(self, user, targets, env,dmg):
+        """
+            自身受到傷害時的特效
+        """
+        pass
     def passive(self, user, targets, env):
+        """
+         這邊只處理文字部分，如要動畫則在該profession中實作
+        """
         pass
 
+    def on_turn_start(self, user, targets, env, id):
+        """
+        當回合開始時的效果
+            self: 使用者
+            targets: 目標
+            env: 環境
+            id : 技能id(如果是被動技能則為-1，否則為該技能的id)
+        """
+        pass
+    def on_turn_end(self,  user, targets, env, id):
+        """
+        當回合開始時的效果
+            self: 使用者
+            targets: 目標
+            env: 環境
+            id : 技能id(如果是被動技能則為-1，否則為該技能的id)
+        """
+        pass
+    def on_attack_end(self, user, targets, env):
+        pass
     def apply_skill(self, skill_id, user, targets, env):
-        env.battle_log.append(
-            f"{self.name} 使用了技能 {sm.get_skill_name(skill_id)}。"
-        )
+        env.add_event(user = user, event = BattleEvent(type="skill",appendix={"skill_id":skill_id}))
         # check cooldown
         # get skill id's cooldown
         cooldowns_skill_id = skill_id - self.profession_id * 3
@@ -51,10 +77,9 @@ class BattleProfession:
             # set cooldown
             local_skill_id = skill_id - self.profession_id * 3
             user["cooldowns"][local_skill_id] = sm.get_skill_cooldown(skill_id)
+            env.add_event(event = BattleEvent(type="text",text=f"{self.name} 的技能「{sm.get_skill_name(skill_id)}」進入冷卻 {sm.get_skill_cooldown(skill_id)} 回合。"))
         else:
-            env.battle_log.append(
-                f"{self.name} 的技能「{sm.get_skill_name(skill_id)}」還在冷卻中。"
-            )
+            env.add_event(event = BattleEvent(type="text",text=f"{self.name} 的技能「{sm.get_skill_name(skill_id)}」還在冷卻中。"))
             return -1
 
 class Paladin(BattleProfession):
@@ -72,11 +97,11 @@ class Paladin(BattleProfession):
 
     def passive(self, user, targets, env):
         # 被動技能：15%機率回復最大血量的15%，超出部分造成100%回復傷害
+        super().passive(user, targets, env)
+        
         if random.random() < PALADIN_VAR['PALADIN_PASSIVE_TRIGGER_RATE']:
             heal_amount = int(self.max_hp * 0.15)
-            env.battle_log.append(
-                f"{self.name} 聖光觸發，恢復了血量。"
-            )
+            env.add_event(event = BattleEvent(type="text",text=f"{self.name} 聖光觸發，恢復了血量。"))
             env.deal_healing(user, heal_amount,rate = 1,heal_damage = True,target = targets[0]) 
 
     def apply_skill(self, skill_id, user, targets, env):
@@ -92,10 +117,8 @@ class Paladin(BattleProfession):
             user["is_defending"] = True
             heal_amount = 15
             env.deal_healing(user, heal_amount,rate= 1,heal_damage = True,target = targets[0])
-            # 設置技能冷卻
-            env.battle_log.append(
-                f"{self.name} 的技能「堅守防禦」進入冷卻 3 回合。"
-            )
+
+
         elif skill_id == 2:
             # 技能 2 => 恢復血量，第一次50, 第二次35, 第三次及以後15
             times_healed = user.get("times_healed", 0)
@@ -128,10 +151,10 @@ class Mage(BattleProfession):
                 Burn(duration=3, stacks=1),
                 Freeze(duration=3, stacks=1)
             ])
+            env.add_event(event = BattleEvent(type="text",text=f"{self.name} 的被動技能「魔力充盈」觸發，對 {target['profession'].name} 施加了額外的 {extra_status.name}。"))
             env.apply_status(target, extra_status)
-            env.battle_log.append(
-                f"{self.name} 的被動技能「魔力充盈」觸發，對 {target['profession'].name} 施加了額外的 {extra_status.name}。"
-            )
+ 
+            
     
     def apply_skill(self, skill_id, user, targets, env):
         super().apply_skill(skill_id, user, targets, env)
@@ -189,9 +212,7 @@ class Assassin(BattleProfession):
             dmg = 40 * self.baseAtk
             dmg = self.passive(targets,dmg)
             if random.random() < 0.35:
-                env.battle_log.append(
-                    f"致命暗殺擊中要害！"
-                )
+                env.add_event(event = BattleEvent(type="text",text=f"擊中要害！"))
                 dmg *= 2
             env.deal_damage(user, targets[0], dmg, can_be_blocked=True)
            
@@ -207,14 +228,9 @@ class Assassin(BattleProfession):
                                 total_layers += eff.stacks
                     dmg =  15 * total_layers
                     dmg = self.passive(targets,dmg)
-                    env.battle_log.append(
-                        f"毒爆引爆對敵人造成傷害！"
-                        )
+
                     env.deal_damage(user, target, dmg, can_be_blocked=True)
                     heal_amount = 15 * total_layers
-                    env.battle_log.append(
-                        f"毒爆引爆回復自身血量！"
-                        )
                     env.deal_healing(user, heal_amount)
                     target["effect_manager"].remove_all_effects("中毒")
         elif skill_id == 8:
@@ -245,9 +261,7 @@ class Archer(BattleProfession):
             # but not exceed 0.5
             prob = min(prob, 0.50)
         if random.random() < prob:
-            env.battle_log.append(
-                f"{self.name} 的被動技能「鷹眼」觸發，攻擊造成兩倍傷害！"
-            )
+            env.add_event(event = BattleEvent(type="text",text=f"被動技能「鷹眼」觸發，攻擊造成兩倍傷害！"))
             return dmg * 2
         return dmg
 
@@ -268,16 +282,14 @@ class Archer(BattleProfession):
             if choice == 'buff':
                 dmg_multiplier = 3.5
                 dmg_buff = DamageMultiplier(multiplier=dmg_multiplier, duration=2, stackable=False,source=skill_id)
-                env.battle_log.append(
-                    f"{self.name} 補充成功。"
-                )
+
+                env.add_event(event = BattleEvent(type="text",text=f"箭矢補充成功。"))
                 env.apply_status(user, dmg_buff)
             else:
                 def_multiplier = 0.5
                 def_debuff = DefenseMultiplier(multiplier=def_multiplier, duration=1, stackable=False,source=skill_id)
-                env.battle_log.append(
-                    f"{self.name} 補充失敗。"
-                )
+
+                env.add_event(event = BattleEvent(type="text",text=f"箭矢補充失敗。"))
                 env.apply_status(user, def_debuff)
                 
         elif skill_id == 11:
@@ -304,8 +316,7 @@ class Berserker(BattleProfession):
         if user["hp"] < (user["max_hp"] * 0.5):
             loss_hp = user["max_hp"] - user["hp"]
             dmg += loss_hp * 0.3
-            env.battle_log.append(
-                f"{self.name} 的被動技能「狂暴」觸發，攻擊時增加了 {int(loss_hp * 0.35)} 點傷害。")
+            env.add_event(event = BattleEvent(type="text",text=f"{self.name} 的被動技能「狂暴」觸發，攻擊時增加了 {int(loss_hp * 0.35)} 點傷害。"))
         return dmg
 
     def apply_skill(self, skill_id, user, targets, env):
@@ -317,9 +328,8 @@ class Berserker(BattleProfession):
             env.deal_damage(user, targets[0], dmg, can_be_blocked=True)
             # 自身反噬
             heal = dmg * 0.15
-            
-            env.battle_log.append(
-                f"{self.name} 受到反噬。")
+    
+            env.add_event(event = BattleEvent(type="text",text=f"{self.name} 受到反噬。"))
             env.deal_healing(user, heal, self_mutilation = True)
             
         elif skill_id == 13:
@@ -328,14 +338,10 @@ class Berserker(BattleProfession):
                 env.deal_healing(user, 150,self_mutilation = True)
                 heal_effect = HealthPointRecover(hp_recover=40, duration=5, stackable=False,source=skill_id,env=env)
                 env.apply_status(user, heal_effect)
+            else: 
+                env.add_event(event = BattleEvent(type="text",text=f"{self.name} 嘗試使用「熱血」，但血量不足。"))
 
-                # 怒吼進入五回合冷卻
-                env.battle_log.append(
-                    f"「熱血」進入 5 回合的冷卻。")    
-            else:
-                env.battle_log.append(
-                    f"{self.name} 嘗試使用「熱血」，但血量不足。"
-                )
+
                 
         elif skill_id == 14:
             # 技能 14 => 犧牲30點血量，接下來2回合免控，並提升35%防禦力。
@@ -346,9 +352,7 @@ class Berserker(BattleProfession):
                 def_buff = DefenseMultiplier(multiplier=1.35, duration=2, stackable=False,source=skill_id)
                 env.apply_status(user, def_buff)
             else:
-                env.battle_log.append(
-                    f"{self.name} 嘗試使用「血怒」，但血量不足。"
-                )
+                env.add_event(event = BattleEvent(type="text",text=f"{self.name} 嘗試使用「血怒」，但血量不足。"))
 
 class DragonGod(BattleProfession):
     def __init__(self):
@@ -366,6 +370,16 @@ class DragonGod(BattleProfession):
     def passive(self, user, targets, env):
         # 在env中的passive 實作
         pass
+    def on_turn_start(self, user, targets, env,id):
+        env.add_event(event = BattleEvent(type="text",text=f"{self.name} 的被動技能「龍血」觸發！"))
+        
+        deffect = DefenseMultiplier(multiplier=1.05,duration=99,stacks=1,source=self.default_passive_id,stackable=True,max_stack=99)
+        heffect = DamageMultiplier(multiplier=1.05,duration=99,stacks=1,source=self.default_passive_id,stackable=True,max_stack=99)
+        # hpeffect = MaxHPmultiplier(multiplier=1.02,duration=99,stacks=1,source=passive_id,stackable=True,max_stack=99)
+        track = Track(name="龍神buff",duration=99,stacks=1,source=self.default_passive_id,stackable=True,max_stack=99)
+        env.apply_status(user,deffect)
+        env.apply_status(user,heffect)
+        env.apply_status(user,track)
 
     def apply_skill(self, skill_id, user, targets, env):
         super().apply_skill(skill_id, user, targets, env)
@@ -403,9 +417,8 @@ class DragonGod(BattleProfession):
                 damage = consume_stack * 35
                 # 消耗了X層龍神狀態
                 env.deal_damage(user, targets[0], damage, can_be_blocked=True)
-                env.battle_log.append(
-                    f"「神龍燎原」消耗了 {consume_stack} 層龍神狀態。"
-                )
+
+                env.add_event(event = BattleEvent(type="text",text=f"「神龍燎原」消耗了 {consume_stack} 層龍神狀態。"))
                 # 1 2 and 12 and 999
                 # 1: DamageMultiplier
                 # 2: DefenseMultiplier
@@ -417,9 +430,8 @@ class DragonGod(BattleProfession):
                 dragon_soul_effect.stacks = consume_stack
 
             else:
-                env.battle_log.append(
-                    f"{self.name} 嘗試使用「荒龍燎原」，但沒有龍神狀態。"
-                )
+                env.add_event(event = BattleEvent(type="text",text=f"{self.name} 嘗試使用「荒龍燎原」，但沒有龍神狀態。"))
+
 
 class BloodGod(BattleProfession):
     def __init__(self):
@@ -438,9 +450,8 @@ class BloodGod(BattleProfession):
     def passive(self, user, targets, env):
         if random.random() < 0.25:
             env.apply_status(targets[0], BleedEffect(duration=5, stacks=1))
-            env.battle_log.append(
-                f"{self.name} 的被動技能「血神」觸發！"
-            )
+            env.add_event(event = BattleEvent(type="text",text=f"{self.name} 的被動技能「出血」觸發，對 {targets[0]['profession'].name} 造成了流血狀態。"))
+
         
     def apply_skill(self, skill_id, user, targets, env):
         super().apply_skill(skill_id, user, targets, env)
@@ -467,9 +478,8 @@ class BloodGod(BattleProfession):
                 self.passive(user, targets, env)
                 
             else:
-                env.battle_log.append(
-                    f"{self.name} 嘗試使用「飲血」，但目標沒有流血狀態。"
-                )
+                env.add_event(event = BattleEvent(type="text",text=f"{self.name} 嘗試使用「飲血」，但目標沒有流血狀態。"))
+                
         elif skill_id == 20:
             # 技能 20 => 赤紅之災：隨機對敵方疊加3~5層流血狀態
             target =targets[0]
@@ -490,9 +500,24 @@ class SteadfastWarrior(BattleProfession):
         )
     # 
     def passive(self, user, targets, env):
-        # 已在env 中實作
+        # 已在on_turn_start 中實作
         pass
     
+    def on_turn_start(self, user, targets, env , id):
+        heal = int(self.max_hp - user["hp"] * 0.1)
+        env.add_event(event = BattleEvent(type="text",text=f"{self.name} 的被動技能「堅韌壁壘」觸發。"))
+        self.dealing_healing(user, heal)
+
+    
+    def on_turn_end(self, user, targets, env, id):
+        if id == 23 :
+            if user["last_attacker"] :
+                    dmg = user["last_damage_taken"] * 3
+                    env.deal_damage(user, user["last_attacker"], dmg, can_be_blocked=True)
+            else :
+                env.add_event(event = BattleEvent(type="text",text=f"{self.name} 的被動技能「絕地反擊」沒有對象反擊。"))
+
+        
     def apply_skill(self, skill_id, user, targets, env):
         super().apply_skill(skill_id, user, targets, env)
         
@@ -537,9 +562,8 @@ class Devour(BattleProfession):
             # 吞裂", "造成65點傷害，50%機率使用失敗。
             dmg = 65 * self.baseAtk
             if random.random() < 0.5:
-                env.battle_log.append(
-                    f"{self.name} 的技能「吞裂」失敗。"
-                )
+                env.add_event(event = BattleEvent(type="text",text=f"{self.name} 的技能「吞裂」使用失敗。"))
+
             else:
                 env.deal_damage(user, targets[0], dmg, can_be_blocked=True)
             self.passive(user, dmg, env)
@@ -570,8 +594,14 @@ class Ranger(BattleProfession):
         )
 
     def passive(self, user, targets, env):
-        # 已在env 中 deal damage 實作
+        # 已在 damege_taken 中實作
         pass
+    def damage_taken(self, user, target, env, dmg):
+        if random.random() < 0.25:
+
+            env.add_event(event = BattleEvent(type="text",text=f"{self.name} 的被動技能「冷箭」觸發！"))
+            env.deal_damage(user, target, 35, can_be_blocked=True)
+    
     def apply_skill(self, skill_id, user, targets, env):
         super().apply_skill(skill_id, user, targets, env)
         
@@ -594,9 +624,8 @@ class Ranger(BattleProfession):
                 immune_damage = ImmuneDamage(duration=1, stackable=False)
                 env.apply_status(user, immune_damage)
             else:
-                env.battle_log.append(
-                    f"{self.name} 嘗試使用「荒原」，但血量不足。"
-                )
+                env.add_event(event = BattleEvent(type="text",text=f"{self.name} 嘗試使用「荒原」，但血量不足。"))
+
 
 class ElementalMage(BattleProfession):
     def __init__(self):
@@ -614,11 +643,22 @@ class ElementalMage(BattleProfession):
         # 元素之力：攻擊時30%造成(麻痺、冰凍、燃燒)其中之一
         if random.random() < 0.3:
             effect = random.choice([Burn(duration=3, stacks=1), Freeze(duration=3, stacks=1), Paralysis(duration=2)])
-            env.battle_log.append(
-                f"{self.name} 攻擊時爆發了「元素之力」。"
-            )
-            env.apply_status(targets[0], effect)
 
+            env.add_event(event = BattleEvent(type="text",text=f"{self.name} 的被動技能「元素之力」觸發！"))
+            env.apply_status(targets[0], effect)
+    
+    def on_turn_end(self, user, targets, env,id):
+        super().on_turn_end(user, targets, env, id)
+        pass
+    
+    def damage_taken(self, user, target, env, dmg):
+        # if 自身有雷霆護甲
+        if user["effect_manager"].get_effects("雷霆護甲"):
+            # 30% 機率直接麻痺敵人
+            if random.random() < 0.3:
+                env.add_event(event = BattleEvent(type="text",text=f"{self.name} 的被動技能「雷霆護甲」觸發！"))
+                env.apply_status(target, Paralysis(duration=2))
+    
     def apply_skill(self, skill_id, user, targets, env):
         super().apply_skill(skill_id, user, targets, env)
         
@@ -629,7 +669,10 @@ class ElementalMage(BattleProfession):
             # 雷霆護甲", "2 回合內，受到傷害時有 30% 機率直接麻痺敵人，並增加 50% 防禦力，回復最大生命的 5% ", 'effect'))
             heal = user["max_hp"] * 0.05
             env.deal_healing(user, heal)
-            # 護甲麻痺部分在env中process_passives_end_of_turn實作
+            # 
+            teff = Track(name = "雷霆護甲",duration=2,stacks=1,source=skill_id,stackable=False,max_stack=99)
+            # add effect
+            env.apply_status(user,teff)
 
         elif skill_id == 31:
             # 技能 31 => 凍燒雷：造成55點傷害，每層麻痺、冰凍、燃燒，額外造成20點傷害
@@ -674,9 +717,7 @@ class HuangShen(BattleProfession):
         bonus = user.get("skills_used", {}).get(33, 0) // 2
         if bonus > 0:
             for i in range(bonus):
-                env.battle_log.append(
-                    f"{self.name} 的被動技能「枯萎之刃」觸發，造成了追打傷害。"
-                )
+                env.add_event(event = BattleEvent(type="text",text=f"{self.name} 的被動技能「枯萎之刃」觸發！"))
                 env.deal_damage(user, targets[0], int(targets[0]["hp"] * 0.05), can_be_blocked=True)
     
     def apply_skill(self, skill_id, user, targets, env):
@@ -742,9 +783,7 @@ class GodOfStar(BattleProfession):
         bounous_damage = 5 * buff_effect_count
         bounous_heal = 5 * buff_effect_count
         # battle log "能量聚於天啟星盤，攻擊時額外造成了 {bounous_damage} 點傷害，並回復了 {bounous_heal} 點生命值。"
-        env.battle_log.append(
-            f"能量聚於天啟星盤，攻擊時會額外造成 {bounous_damage} 點傷害，並會回復 {bounous_heal} 點生命值。"
-        )
+        env.add_event(event = BattleEvent(type="text",text=f"{self.name} 的被動技能「天啟星盤」觸發！"))
         return bounous_damage, bounous_heal
 #  sm.add_skill(Skill(36, "光輝流星", "對敵方單體造成 15 點傷害，並隨機為自身附加以下一種增益效果，持續 3 回合：攻擊力提升 5%，防禦力提升 5%，治癒效果提升 5%。", 'damage'))
 # sm.add_skill(Skill(37, "災厄隕星", "為自身恢復 15 點生命值，並隨機為敵方附加以下一種減益效果，持續 3 回合：攻擊力降低 5%，防禦力降低 5%，治癒效果降低 5%。", 'damage'))
@@ -772,9 +811,7 @@ class GodOfStar(BattleProfession):
             # 技能 38 => 對敵方單體造成 45 點傷害
             dmg *=1.5
             heal *=1.5
-            env.battle_log.append(
-            f"「虛擬創星圖」強化了天啟星盤的力量，增加天啟星盤的加成效果。"
-            )
+            env.add_event(event = BattleEvent(type="text",text=f"{self.name} 的技能「虛擬創星圖」強化了天啟星盤的力量，增加了傷害和回復。"))
             dmg += 50 * self.baseAtk
             env.deal_damage(user, targets[0], dmg, can_be_blocked=True)
             env.deal_healing(user, heal)

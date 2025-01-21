@@ -49,6 +49,7 @@ const EVENT_TEXT_CLASS_MAP = {
   other: "log-other",
   text: "log-text",
 };
+
 /* 
   ================
   初始化戰鬥UI
@@ -80,6 +81,7 @@ function initBattleView() {
         <button class="speed-btn" data-speed="500">2x</button>
         <button class="speed-btn" data-speed="333">3x</button>
         <button class="speed-btn" data-speed="200">5x</button>
+        <button class="speed-btn" data-speed="100">10x</button>
         <button id="pause-btn">暫停</button>
         <button id="skip-all-btn">跳過全部</button>
         <button id="replay-btn" disabled>Replay</button>
@@ -94,7 +96,6 @@ function initBattleView() {
   const leftPanel = document.createElement("div");
   leftPanel.id = "left-panel";
   leftPanel.classList.add("character-panel");
-  // 注意: 我們加一個 .status-effects-layer 來放狀態子元素
   leftPanel.innerHTML = `
     <div class="avatar-container">
       <img id="left-avatar" class="avatar-image" src="" alt="Left Avatar"/>
@@ -116,7 +117,7 @@ function initBattleView() {
     <div class="effects-list" id="left-effects"></div>
     <div class="skills-list" id="left-skills"></div>
 
-    <!-- 此容器專門放"多個"狀態特效層 (燃燒,冰凍...都可同存) -->
+    <!-- 狀態特效容器 (燃燒、冰凍...等粒子會加在這) -->
     <div class="status-effects-layer" id="left-status-effects-layer"></div>
   `;
 
@@ -282,7 +283,7 @@ function handleBattleEvent(event) {
     addTextLog(event.text, cls);
   }
 
-  // 2) 本回合區 (不顯示 turn_start, turn_end 也可以；視需求)
+  // 2) 本回合區
   if (event.type !== "turn_start" && event.text) {
     addTurnBroadcastLine(event.text, EVENT_TEXT_CLASS_MAP[event.type]);
   }
@@ -292,12 +293,11 @@ function handleBattleEvent(event) {
       clearTurnBroadcast();
       addTurnBroadcastLine("【回合開始】", "log-turn");
       break;
-
     case "turn_end":
       addTurnBroadcastLine("【回合結束】", "log-turn");
       break;
 
-    // (A) 自傷 -> event.user 面板: 紅光+震動 + 浮動傷害
+    // (A) 自傷
     case "self_mutilation":
       if (event.appendix?.amount) {
         showFloatingNumber(
@@ -309,7 +309,7 @@ function handleBattleEvent(event) {
       }
       break;
 
-    // (B) 傷害 -> event.target 面板: 紅光+震動 + 浮動傷害
+    // (B) 傷害
     case "damage":
       if (event.appendix?.amount) {
         showFloatingNumber(
@@ -321,7 +321,7 @@ function handleBattleEvent(event) {
       }
       break;
 
-    // (C) 治癒 -> event.target 面板: 綠光+閃 + 浮動治癒
+    // (C) 治癒
     case "heal":
       if (event.appendix?.amount) {
         showFloatingNumber(
@@ -333,7 +333,7 @@ function handleBattleEvent(event) {
       }
       break;
 
-    // (D) skill -> 在 user 對應的 skill icon 做動畫
+    // (D) skill
     case "skill":
       if (event.appendix?.relatively_skill_id !== undefined) {
         animateSkillIcon(event.user, event.appendix.relatively_skill_id);
@@ -356,19 +356,16 @@ function handleBattleEvent(event) {
       break;
   }
 
-  // 若是 refresh_status -> 更新面板
+  // (E) 刷新面板
   if (event.type === "refresh_status" && event.appendix) {
     updateStatusBars(event.appendix);
   }
 }
 
-/* 使用技能 -> 對應 skill icon 做動畫(放大/閃爍) */
+/* 使用技能 -> skill icon 動畫 */
 function animateSkillIcon(side, skillId) {
-  // skillId 可能是 0,1,2
   const container = document.getElementById(`${side}-skills`);
   if (!container) return;
-  // 在 buildSkillHTML 時，可以給每個 skill icon 加 data-skill-index="0"
-  // 這裡就能 select
   const icon = container.querySelector(`[data-skill-index="${skillId}"]`);
   if (!icon) return;
 
@@ -386,7 +383,7 @@ function addTurnBroadcastLine(msg, className = "") {
   if (!tb) return;
   const p = document.createElement("p");
   if (className) p.classList.add(className);
-  p.textContent = msg; // or innerHTML
+  p.textContent = msg;
   tb.appendChild(p);
   tb.scrollTop = tb.scrollHeight;
 }
@@ -419,8 +416,7 @@ function updateStatusBars(appendix) {
     }
   }
 
-  // 2) 更新 左方
-  const lPanel = document.getElementById("left-panel");
+  // 2) 左方
   if (appendix.left) {
     const hp = parseInt(appendix.left.hp, 10);
     const maxHp = parseInt(appendix.left.max_hp, 10);
@@ -431,10 +427,7 @@ function updateStatusBars(appendix) {
     if (leftHpElem) leftHpElem.textContent = hp;
     if (leftMaxHpElem) leftMaxHpElem.textContent = maxHp;
     if (leftHpFill) {
-      let pct = 0;
-      if (maxHp > 0) {
-        pct = (hp / maxHp) * 100;
-      }
+      let pct = maxHp > 0 ? (hp / maxHp) * 100 : 0;
       leftHpFill.style.width = Math.max(0, Math.min(100, pct)) + "%";
     }
 
@@ -442,19 +435,17 @@ function updateStatusBars(appendix) {
     const leftAvatar = document.getElementById("left-avatar");
     const leftNameElem = document.getElementById("left-profession-name");
     if (appendix.global.left_profession && leftAvatar) {
-      const professionName = appendix.global.left_profession; // 後端給
+      const professionName = appendix.global.left_profession;
       leftNameElem.textContent = professionName;
       const avatarUrl = `/static/images/${professionName}.png`;
       leftAvatar.src = avatarUrl;
-
-      // 如果載入失敗 -> 預設圖 + Debug
       leftAvatar.onerror = () => {
         console.warn("角色圖載入失敗:", avatarUrl);
         leftAvatar.src = "/static/images/default_avatar.png";
       };
     }
 
-    // 攻/防/治 multiplier
+    // 攻/防/治
     if (appendix.left.multiplier) {
       const atkVal = document.getElementById("left-atk-val");
       const defVal = document.getElementById("left-def-val");
@@ -483,12 +474,12 @@ function updateStatusBars(appendix) {
       leftSkills.innerHTML = buildSkillsHTML(prof, appendix.left.cooldowns);
     }
 
-    // 檢查是否有 buff -> 加 "buff-glow"
+    // buff-glow
+    const lPanel = document.getElementById("left-panel");
     toggleBuffGlow(lPanel, appendix.left.effects);
   }
 
-  // 3) 更新 右方
-  const rPanel = document.getElementById("right-panel");
+  // 3) 右方
   if (appendix.right) {
     const hp = parseInt(appendix.right.hp, 10);
     const maxHp = parseInt(appendix.right.max_hp, 10);
@@ -499,10 +490,7 @@ function updateStatusBars(appendix) {
     if (rightHpElem) rightHpElem.textContent = hp;
     if (rightMaxHpElem) rightMaxHpElem.textContent = maxHp;
     if (rightHpFill) {
-      let pct = 0;
-      if (maxHp > 0) {
-        pct = (hp / maxHp) * 100;
-      }
+      let pct = maxHp > 0 ? (hp / maxHp) * 100 : 0;
       rightHpFill.style.width = Math.max(0, Math.min(100, pct)) + "%";
     }
 
@@ -549,18 +537,13 @@ function updateStatusBars(appendix) {
       rightSkills.innerHTML = buildSkillsHTML(prof, appendix.right.cooldowns);
     }
 
-    // buff glow
+    // buff-glow
+    const rPanel = document.getElementById("right-panel");
     toggleBuffGlow(rPanel, appendix.right.effects);
   }
 }
 
-/* 
-  ================
-  UI / 動畫 / 效果
-  ================
-*/
-
-// 效果列表 -> 產生HTML
+/* 效果列表 -> HTML */
 function parseEffects(effectVector) {
   if (!effectVector || effectVector.length === 0) {
     return `<div class="no-effects">無狀態</div>`;
@@ -571,7 +554,7 @@ function parseEffects(effectVector) {
     const stacks = effectVector[i + 1];
     const maxStacks = effectVector[i + 2];
     const duration = effectVector[i + 3];
-    const multiplier = effectVector[i + 4]; // 用來判斷 <1 or >=1
+    const multiplier = effectVector[i + 4];
 
     const effData = EFFECT_DATA[effId] || {
       name: `效果ID:${effId}`,
@@ -579,27 +562,25 @@ function parseEffects(effectVector) {
     };
     const effName = effData.name;
     let baseClass = getEffectColorClass(effData.type);
-    // 追加您想要的特殊處理
+
+    // 客製化攻/防/治 buff 的外框顏色
     if (effId === 1) {
-      // 攻擊力變更 buff
       baseClass =
         multiplier < 1 ? "badge-buff-attack-lower" : "badge-buff-attack";
     } else if (effId === 2) {
-      // 防禦力變更 buff
       baseClass =
         multiplier < 1 ? "badge-buff-defense-lower" : "badge-buff-defense";
     } else if (effId === 3) {
-      // 治癒力變更 buff
       baseClass = multiplier < 1 ? "badge-buff-heal-lower" : "badge-buff-heal";
     }
 
     htmlStr += `
-        <div class="effect-badge ${baseClass}">
-          <span class="eff-name">${effName}</span>
-          <span class="eff-stack">(${stacks}/${maxStacks})</span>
-          <span class="eff-duration">${duration}T</span>
-        </div>
-      `;
+      <div class="effect-badge ${baseClass}">
+        <span class="eff-name">${effName}</span>
+        <span class="eff-stack">(${stacks}/${maxStacks})</span>
+        <span class="eff-duration">${duration}T</span>
+      </div>
+    `;
   }
   return htmlStr;
 }
@@ -622,18 +603,12 @@ function getEffectColorClass(effType) {
   }
 }
 
-// 生成技能列表HTML(帶冷卻)
+/* 生成技能列表HTML(帶冷卻) */
 function buildSkillsHTML(professionName, cooldowns) {
   // cooldowns 範例: { "0": 2, "1": 0, "2": 5 }
-  // 也假設有被動 skillIndex = "passive"？
   let htmlStr = "";
-  // debug 輸出cooldowns
-  console.log("professionName: ", professionName);
-  console.log(cooldowns);
-
-  // 再處理一般技能(0~N)
   for (let i in cooldowns) {
-    if (i === "passive") continue; // 跳過被動
+    if (i === "passive") continue; // 假如你有被動
     const skillIndex = parseInt(i, 10);
     const skillUrl = `/static/images/${professionName}_skill_${skillIndex}.png`;
     const cdVal = cooldowns[i];
@@ -642,22 +617,6 @@ function buildSkillsHTML(professionName, cooldowns) {
   return htmlStr;
 }
 
-function createSkillIcon(imgUrl, cooldown, isPassive = false, skillIndex = 0) {
-  const disableStyle =
-    cooldown > 0 ? 'style="pointer-events: none; opacity:0.5;"' : "";
-
-  return `
-    <div class="skill-icon-container" ${disableStyle}>
-      <img class="skill-icon"
-           data-skill-index="${skillIndex}"
-           src="${imgUrl}"
-           alt="skill_${skillIndex}"
-           onerror="this.src='/static/images/skill_default.png'; console.warn('技能圖載入失敗:', '${imgUrl}');" />
-      ${cooldown > 0 ? `<div class="skill-cd-overlay">${cooldown}</div>` : ``}
-      ${isPassive ? `<div class="skill-passive-label">被動</div>` : ``}
-    </div>
-  `;
-}
 function createSkillIcon(imgUrl, cooldown, isPassive = false, skillIndex = 0) {
   const disableStyle =
     cooldown > 0 ? 'style="pointer-events: none; opacity:0.5;"' : "";
@@ -675,94 +634,61 @@ function createSkillIcon(imgUrl, cooldown, isPassive = false, skillIndex = 0) {
     `;
 }
 
-// 若有任一 buff 效果 -> 加 "buff-glow"
+/* 同時存在多個 buff 時，輪流顯示外框Glow */
 function toggleBuffGlow(panel, effectVector) {
-    // 1) 先清掉舊的 Glow class
-    panel.classList.remove(
-      "buff-glow",              
-      "buff-glow-attack",
-      "buff-glow-attack-lower",
-      "buff-glow-defense",
-      "buff-glow-defense-lower",
-      "buff-glow-heal",
-      "buff-glow-heal-lower"
-    );
-  
-    // 2) 清除上次 setInterval (若有)
-    if (panel.buffGlowInterval) {
-      clearInterval(panel.buffGlowInterval);
-      delete panel.buffGlowInterval;
-    }
-  
-    // 3) 準備一個陣列來存「所有對應的 glow class」
-    const glowClasses = [];
-  
-    // 逐一檢查 effectVector ([effId, stacks, maxStacks, duration, multiplier])
-    for (let i = 0; i < effectVector.length; i += 5) {
-      const effId = effectVector[i];
-      const multiplier = effectVector[i + 4];
-  
-      // 假設 effId=1 => 攻擊力, effId=2 => 防禦力, effId=3 => 治癒力
-      switch (effId) {
-        case 1: // 攻擊力
-          glowClasses.push(
-            multiplier >= 1 ? "buff-glow-attack" : "buff-glow-attack-lower"
-          );
-          break;
-        case 2: // 防禦力
-          glowClasses.push(
-            multiplier >= 1 ? "buff-glow-defense" : "buff-glow-defense-lower"
-          );
-          break;
-        case 3: // 治癒力
-          glowClasses.push(
-            multiplier >= 1 ? "buff-glow-heal" : "buff-glow-heal-lower"
-          );
-          break;
-        // 其他 buff 是否需要也交替光環？視您需求自行加
-      }
-    }
-  
-    // 如果沒找到任何 glow class 就結束
-    if (glowClasses.length === 0) {
-      return;
-    }
-  
-    // 如果只有一種光環，直接加
-    if (glowClasses.length === 1) {
-      panel.classList.add(glowClasses[0]);
-      return;
-    }
-  
-    // ====== 核心：多種 buff => 輪流顯示 ======
-
-    let idx = 0; // 隨機開始
-    // 先加上第一種
-    panel.classList.add(glowClasses[idx]);
-  
-    // 用 setInterval 每隔 1 秒 (1000 ms) 換下一個
-    panel.buffGlowInterval = setInterval(() => {
-      // 先移除舊的
-      panel.classList.remove(glowClasses[idx]);
-      // 前進
-      idx = (idx + 1) % glowClasses.length;
-      // 加新的
-      panel.classList.add(glowClasses[idx]);
-    }, 500); // 您可自行調整速度(毫秒)
+  // 1) 先清掉舊的 Glow
+  panel.classList.remove(
+    "buff-glow-attack",
+    "buff-glow-attack-lower",
+    "buff-glow-defense",
+    "buff-glow-defense-lower",
+    "buff-glow-heal",
+    "buff-glow-heal-lower"
+  );
+  // 2) 清除舊 interval
+  if (panel.buffGlowInterval) {
+    clearInterval(panel.buffGlowInterval);
+    delete panel.buffGlowInterval;
   }
-  
 
-// 中間大字提示
-function showCenterNotice(msg, extraClass = "") {
-  const animationArea = document.getElementById("animation-area");
-  if (!animationArea) return;
-  const div = document.createElement("div");
-  div.className = `center-notice ${extraClass}`;
-  div.textContent = msg;
-  animationArea.appendChild(div);
-  setTimeout(() => {
-    if (div.parentNode) div.parentNode.removeChild(div);
-  }, 1500);
+  // 3) 收集所有需要輪流顯示的 glow class
+  const glowClasses = [];
+  for (let i = 0; i < effectVector.length; i += 5) {
+    const effId = effectVector[i];
+    const multiplier = effectVector[i + 4];
+    switch (effId) {
+      case 1:
+        glowClasses.push(
+          multiplier >= 1 ? "buff-glow-attack" : "buff-glow-attack-lower"
+        );
+        break;
+      case 2:
+        glowClasses.push(
+          multiplier >= 1 ? "buff-glow-defense" : "buff-glow-defense-lower"
+        );
+        break;
+      case 3:
+        glowClasses.push(
+          multiplier >= 1 ? "buff-glow-heal" : "buff-glow-heal-lower"
+        );
+        break;
+    }
+  }
+  if (glowClasses.length === 0) return;
+
+  if (glowClasses.length === 1) {
+    // 只有1種光環
+    panel.classList.add(glowClasses[0]);
+  } else {
+    // 多種 => 輪播
+    let idx = 0;
+    panel.classList.add(glowClasses[idx]);
+    panel.buffGlowInterval = setInterval(() => {
+      panel.classList.remove(glowClasses[idx]);
+      idx = (idx + 1) % glowClasses.length;
+      panel.classList.add(glowClasses[idx]);
+    }, 500);
+  }
 }
 
 // 新增文字播報
@@ -776,8 +702,7 @@ function addTextLog(msg, className = "") {
   textLog.scrollTop = textLog.scrollHeight;
 }
 
-// 顯示浮動數字 (ex: -100, +50)
-// 浮動數字(大字+粗體)
+// 浮動數字
 function showFloatingNumber(panelId, text, floatClass) {
   const panel = document.getElementById(panelId);
   if (!panel) return;
@@ -795,24 +720,11 @@ function showFloatingNumber(panelId, text, floatClass) {
 function redGlowAndShake(panelId) {
   const panel = document.getElementById(panelId);
   if (!panel) return;
-
-  // 檢查原本是否有 buff-glow
-  const hadBuffGlow = panel.classList.contains("buff-glow");
-  if (hadBuffGlow) {
-    panel.classList.remove("buff-glow");
-  }
-
-  // 播動畫
-  panel.style.zIndex = "999"; // 讓它在最上層
+  panel.style.zIndex = "999";
   panel.classList.add("red-glow", "shake");
   setTimeout(() => {
     panel.classList.remove("red-glow", "shake");
     panel.style.zIndex = "";
-
-    // 播完再加回 buff-glow
-    if (hadBuffGlow) {
-      panel.classList.add("buff-glow");
-    }
   }, 500);
 }
 
@@ -820,38 +732,25 @@ function redGlowAndShake(panelId) {
 function greenGlow(panelId) {
   const panel = document.getElementById(panelId);
   if (!panel) return;
-
-  const hadBuffGlow = panel.classList.contains("buff-glow");
-  if (hadBuffGlow) {
-    panel.classList.remove("buff-glow");
-  }
-
   panel.style.zIndex = "999";
   panel.classList.add("heal-effect");
   setTimeout(() => {
     panel.classList.remove("heal-effect");
     panel.style.zIndex = "";
-    if (hadBuffGlow) {
-      panel.classList.add("buff-glow");
+  }, 800);
+}
+
+/* 取得effectName對應的type */
+function getEffectTypeByName(effectName) {
+  for (let key in EFFECT_DATA) {
+    if (EFFECT_DATA[key].name === effectName) {
+      return EFFECT_DATA[key].type;
     }
-  }, 800);
+  }
+  return null;
 }
 
-// 技能動畫 (示例：微晃動 + 閃光)
-function skillAnimation(panelId) {
-  const panel = document.getElementById(panelId);
-  if (!panel) return;
-  // 加個class
-  panel.style.zIndex = "999";
-  panel.classList.add("skill-cast");
-  setTimeout(() => {
-    panel.classList.remove("skill-cast");
-  }, 800);
-}
-
-/* 狀態: 燃燒/中毒/冰凍/暈眩 => Apply/Remove */
-
-
+/* 移除特效 */
 function handleEffectRemove(event) {
   const effectType = getEffectTypeByName(event.appendix.effect_name);
   if (!effectType) return;
@@ -864,36 +763,87 @@ function handleEffectRemove(event) {
   }
 }
 
-// 根據狀態中文名 => type
-function getEffectTypeByName(effectName) {
-  // 在 EFFECT_DATA 裡反查
-  for (let key in EFFECT_DATA) {
-    if (EFFECT_DATA[key].name === effectName) {
-      return EFFECT_DATA[key].type;
-    }
-  }
-  return null;
-}
-
+/* 新增 or tick 特效 -> 這裡我們加了多粒子! */
 function handleEffectAddOrTick(event) {
-  // ex: effect_name="燃燒" => type="burning"
   const effectType = getEffectTypeByName(event.appendix.effect_name);
   if (!effectType) return;
 
   const layer = document.getElementById(`${event.user}-status-effects-layer`);
   if (!layer) return;
 
-  // 檢查是否已經有該特效的子元素
+  // 檢查是否已經有該特效
   let effDiv = layer.querySelector(`.${effectType}-effect`);
   if (!effDiv) {
-    // 沒有 -> 建立一個
+    // 沒有 -> 建立
     effDiv = document.createElement("div");
     effDiv.className = `status-effect-layer ${effectType}-effect`;
     layer.appendChild(effDiv);
+
+    // === 多粒子示範 ===
+    const particleCount = 12; // 粒子數量可自行調整
+    // 根據不同效果，產生不同 class
+    if (effectType === "burning") {
+        // 清除之前的燃燒效果（如果有的話）
+        effDiv.innerHTML = '';
+      
+        // 添加燃燒火焰容器
+        const burningEffect = document.createElement("div");
+        burningEffect.className = "burning-effect";
+        effDiv.appendChild(burningEffect);
+      
+        // 添加燃燒火焰
+
+      
+        // 添加火星粒子
+        const sparkCount = 30; // 增加火星數量
+        for (let i = 0; i < sparkCount; i++) {
+          const spark = document.createElement("span");
+          spark.className = "spark";
+          // 隨機水平位置
+          spark.style.left = Math.random() * 100 + "%";
+          // 起始位置在火焰上方
+          spark.style.bottom = Math.random() * -10 + "%";
+          // 隨機延遲，讓火星不會同步飛出
+          spark.style.animationDelay = Math.random() * 2 + "s"; // 增加延遲範圍
+          // 隨機大小
+          spark.style.width = spark.style.height = (2 + Math.random() * 3) + "px";
+          // 隨機顏色
+          const colors = ['#FFD700', '#FFA500', '#FF4500', '#FF6347'];
+          spark.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+          // 隨機水平偏移
+          spark.style.setProperty('--rand-x', Math.random() * 2 - 1); // -1 到 1 之間
+          burningEffect.appendChild(spark);
+        }
+      } else if (effectType === "poison") {
+      for (let i = 0; i < particleCount; i++) {
+        const bubble = document.createElement("span");
+        bubble.className = "poison-bubble";
+        bubble.style.top = Math.random() * 100 + "%";
+        bubble.style.left = Math.random() * 100 + "%";
+        effDiv.appendChild(bubble);
+      }
+    } else if (effectType === "bleeding") {
+      for (let i = 0; i < particleCount; i++) {
+        const drop = document.createElement("span");
+        drop.className = "bleed-drop";
+        drop.style.top = Math.random() * 100 + "%";
+        drop.style.left = Math.random() * 100 + "%";
+        effDiv.appendChild(drop);
+      }
+    } else if (effectType === "frozen") {
+      for (let i = 0; i < particleCount; i++) {
+        const shard = document.createElement("span");
+        shard.className = "ice-shard";
+        shard.style.top = Math.random() * 100 + "%";
+        shard.style.left = Math.random() * 100 + "%";
+        effDiv.appendChild(shard);
+      }
+    }
+    // 其他效果也可類似做
   }
 
-  // 如果是 tick，保持不動就好
-  // (若你想在 tick 時加一次閃動，可再加)
+  // 如果是 tick，你可以再加其他特效閃動...
+  // (目前先不做，保留)
 }
 
 /* 

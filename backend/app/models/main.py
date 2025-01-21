@@ -112,7 +112,11 @@ def computer_vs_computer(skill_mgr, professions):
         print("電腦(右)贏了!")
     else:
         print("平手或回合耗盡")
-    input("按Enter返回主選單...")
+    
+
+    return env.battle_log
+    
+
 
 #---------------------------------------
 # (6) AI VS 電腦

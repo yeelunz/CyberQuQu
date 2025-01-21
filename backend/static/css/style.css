@@ -2,420 +2,1231 @@
 
 /* 重置一些預設樣式 */
 * {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
 
 body {
-    font-family: "Microsoft JhengHei", sans-serif;
-    background-color: #f0f2f5;
-    color: #333;
+  font-family: "Microsoft JhengHei", sans-serif;
+  background-color: #f0f2f5;
+  color: #333;
 }
 
 header {
-    display: flex;
-    align-items: center;
-    padding: 10px 30px;
-    background: #2c3e50;
-    color: #fff;
-    gap: 20px;
+  display: flex;
+  align-items: center;
+  padding: 10px 30px;
+  background: #2c3e50;
+  color: #fff;
+  gap: 20px;
 }
 
 header #skip-round-btn {
-    margin-left: auto;
-    padding: 8px 16px;
-    cursor: pointer;
-    background-color: #e74c3c;
-    border: none;
-    border-radius: 4px;
-    color: #fff;
-    font-weight: bold;
-    transition: background-color 0.3s;
+  margin-left: auto;
+  padding: 8px 16px;
+  cursor: pointer;
+  background-color: #e74c3c;
+  border: none;
+  border-radius: 4px;
+  color: #fff;
+  font-weight: bold;
+  transition: background-color 0.3s;
 }
 
 header #skip-round-btn:hover {
-    background-color: #c0392b;
+  background-color: #c0392b;
 }
 
 .container {
-    display: flex;
-    height: calc(100vh - 50px);
+  display: flex;
+  height: calc(100vh - 50px);
 }
 
 /* 左側選單 */
 .sidebar {
-    width: 220px;
-    background: #34495e;
-    padding: 20px;
+  width: 220px;
+  background: #34495e;
+  padding: 20px;
 }
 
 .sidebar ul {
-    list-style: none;
+  list-style: none;
 }
 
 .sidebar li {
-    margin-bottom: 15px;
+  margin-bottom: 15px;
 }
 
 .sidebar a {
-    text-decoration: none;
-    color: #ecf0f1;
-    font-weight: 500;
-    display: block;
-    padding: 10px 15px;
-    border-radius: 4px;
-    transition: background 0.3s, color 0.3s;
+  text-decoration: none;
+  color: #ecf0f1;
+  font-weight: 500;
+  display: block;
+  padding: 10px 15px;
+  border-radius: 4px;
+  transition: background 0.3s, color 0.3s;
 }
 
 .sidebar a:hover {
-    background: #3d566e;
-    color: #fff;
+  background: #3d566e;
+  color: #fff;
 }
 
 /* 右側主要內容 */
 .main-content {
-    flex: 1;
-    padding: 30px;
-    overflow-y: auto;
-    background-color: #fff;
-    box-shadow: inset 0 0 10px rgba(0,0,0,0.05);
+  flex: 1;
+  padding: 30px;
+  overflow-y: auto;
+  background-color: #fff;
+  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.05);
 }
 
 .main-content h1 {
-    margin-bottom: 20px;
-    color: #2c3e50;
-    text-align: center;
+  margin-bottom: 20px;
+  color: #2c3e50;
+  text-align: center;
 }
 
 #content-area {
-    margin-top: 10px;
+  margin-top: 10px;
 }
 
 /* 職業卡片的樣式 */
 .profession-card {
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    padding: 20px;
-    margin-bottom: 20px;
-    background-color: #fafafa;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-    display: flex;
-    align-items: flex-start;
-    gap: 20px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 20px;
+  background-color: #fafafa;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
 }
 
 .profession-image {
-    width: 150px;
-    height: 150px;
-    object-fit: cover;
-    border-radius: 10px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  width: 150px;
+  height: 150px;
+  object-fit: cover;
+  border-radius: 10px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
 
 .profession-details {
-    flex: 1;
+  flex: 1;
 }
 
 .profession-name {
-    font-size: 1.5em;
-    color: #2c3e50;
-    margin-bottom: 10px;
+  font-size: 1.5em;
+  color: #2c3e50;
+  margin-bottom: 10px;
 }
 
 .profession-name .hp {
-    font-size: 0.9em;
-    color: #e74c3c;
+  font-size: 0.9em;
+  color: #e74c3c;
 }
 
 .profession-details p {
-    font-size: 1em;
-    margin: 5px 0;
+  font-size: 1em;
+  margin: 5px 0;
 }
 
 .profession-details .attack {
-    color: #de2713;
-    font-weight: bold;
+  color: #de2713;
+  font-weight: bold;
 }
 
 .profession-details .defense {
-    color: #27ae60;
-    font-weight: bold;
+  color: #27ae60;
+  font-weight: bold;
 }
 
 /* 被動技 */
 .passive h3 {
-    font-size: 1.1em;
-    color: #8e44ad; /* 你想要的顏色 */
-    margin-top: 15px;
-    margin-bottom: 5px;
+  font-size: 1.1em;
+  color: #8e44ad; /* 你想要的顏色 */
+  margin-top: 15px;
+  margin-bottom: 5px;
 }
 
 /* 被動技能描述區 */
 .passive p {
-    font-size: 0.95em;
-    color: #34495e;
+  font-size: 0.95em;
+  color: #34495e;
 }
 
 .passive-container {
-    display: flex;
-    align-items: center;
-    gap: 10px; /* 圖片與描述之間的間距 */
+  display: flex;
+  align-items: center;
+  gap: 10px; /* 圖片與描述之間的間距 */
 }
 
 .passive-container img {
-    width: 50px; /* 調整圖片大小 */
-    height: 50px;
-    border-radius: 5px;
+  width: 50px; /* 調整圖片大小 */
+  height: 50px;
+  border-radius: 5px;
 }
 
 /* 技能區 */
 .skills h3 {
-    font-size: 1.1em;
-    color: #e67e22;
-    margin-top: 15px;
-    margin-bottom: 10px;
+  font-size: 1.1em;
+  color: #e67e22;
+  margin-top: 15px;
+  margin-bottom: 10px;
 }
 
 .skills ul {
-    list-style-type: none;
-    padding: 0;
+  list-style-type: none;
+  padding: 0;
 }
 
 /* 每個技能項目之間用下方虛線分隔 */
 .skills li {
-    display: flex;
-    flex-direction: row;  /* 圖片+文字 */
-    align-items: flex-start; /* 垂直頂對齊 */
-    gap: 10px; /* 圖片與文字之間的間距 */
-    margin-bottom: 15px;
-    padding-bottom: 15px;
-    border-bottom: 1px dashed #ccc;
+  display: flex;
+  flex-direction: row; /* 圖片+文字 */
+  align-items: flex-start; /* 垂直頂對齊 */
+  gap: 10px; /* 圖片與文字之間的間距 */
+  margin-bottom: 15px;
+  padding-bottom: 15px;
+  border-bottom: 1px dashed #ccc;
 }
 
 /* 技能圖片 */
 .skills li img.skill-image {
-    width: 40px;
-    height: 40px;
-    flex-shrink: 0; /* 防止圖片縮小 */
-    border-radius: 5px;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0; /* 防止圖片縮小 */
+  border-radius: 5px;
 }
 
 .skills li div {
-    flex: 1; 
-    display: flex;
-    flex-direction: column;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
 /* 技能名稱、類型一起放在同一行，不要固定寬度 */
 .skills li div .skill-name {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px; 
-    color: #d35400; /* 特殊顏色 */
-    font-weight: bold;
-    /* 移除原本的 width: 100px; */
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #d35400; /* 特殊顏色 */
+  font-weight: bold;
+  /* 移除原本的 width: 100px; */
 }
 
 /* 技能描述 */
 .skills li div p {
-    margin-top: 5px; 
-    color: #34495e; 
-    line-height: 1.4em;
+  margin-top: 5px;
+  color: #34495e;
+  line-height: 1.4em;
 }
 
 /* 冷卻回合：淡藍色 + 粗體 */
 .skill-cooldown {
-    color: #3498db;
-    font-weight: bold;
+  color: #3498db;
+  font-weight: bold;
 }
 
 /* 技能類型的彩色方塊 */
 .skill-type {
-    display: inline-block;
-    padding: 2px 8px;
-    border-radius: 12px;
-    font-size: 0.85em;
-    font-weight: bold;
-    color: #fff;
-    min-height: 20px; 
-    white-space: nowrap; 
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.85em;
+  font-weight: bold;
+  color: #fff;
+  min-height: 20px;
+  white-space: nowrap;
 }
 
 /* 根據技能類型設置背景顏色 */
 .skill-type.damage {
-    background-color: #e74c3c; /* 紅色 */
+  background-color: #e74c3c; /* 紅色 */
 }
 
 .skill-type.heal {
-    background-color: #27ae60; /* 綠色 */
+  background-color: #27ae60; /* 綠色 */
 }
 
 .skill-type.effect {
-    background-color: #8e44ad; /* 紫色 */
+  background-color: #8e44ad; /* 紫色 */
 }
 
 .skill-type.buff {
-    background-color: #f1c40f; /* 黃色 */
+  background-color: #f1c40f; /* 黃色 */
 }
 
 .skill-type.debuff {
-    background-color: #d35400; /* 橙色 */
+  background-color: #d35400; /* 橙色 */
 }
 
 .skill-type.unknown {
-    background-color: #7f8c8d; /* 灰色 */
+  background-color: #7f8c8d; /* 灰色 */
 }
 
 /* 數值顯示用的額外顏色 (傷害/治癒/buff...) */
 .damage-text {
-    color: #c0392b;
-    font-weight: bold;
+  color: #c0392b;
+  font-weight: bold;
 }
 
 .heal-text {
-    color: #27ae60;
-    font-weight: bold;
+  color: #27ae60;
+  font-weight: bold;
 }
 
 .buff-text {
-    color: #f1c40f;
-    font-weight: bold;
+  color: #f1c40f;
+  font-weight: bold;
 }
 
 .passive-text {
-    color: #8e44ad;
-    font-weight: bold;
+  color: #8e44ad;
+  font-weight: bold;
 }
 
 /* 無圖片的提示樣式 */
 .no-image {
-    width: 150px;
-    height: 150px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background-color: #eee;
-    border-radius: 10px;
-    color: #999;
-    font-style: italic;
-    font-size: 0.9em;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  width: 150px;
+  height: 150px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #eee;
+  border-radius: 10px;
+  color: #999;
+  font-style: italic;
+  font-size: 0.9em;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
 
 /* 無圖片的技能提示樣式 */
 .no-image.skill {
-    width: 40px;
-    height: 40px;
+  width: 40px;
+  height: 40px;
 }
 
 /* 響應式設計 */
 @media (max-width: 768px) {
-    .container {
-        flex-direction: column;
-    }
+  .container {
+    flex-direction: column;
+  }
 
-    .sidebar {
-        width: 100%;
-    }
+  .sidebar {
+    width: 100%;
+  }
 
-    .profession-card {
-        flex-direction: column;
-        align-items: center;
-    }
+  .profession-card {
+    flex-direction: column;
+    align-items: center;
+  }
 
-    .profession-image {
-        width: 100px;
-        height: 100px;
-    }
+  .profession-image {
+    width: 100px;
+    height: 100px;
+  }
 
-    .passive-container img {
-        width: 40px;
-        height: 40px;
-        border-radius: 5px;
+  .passive-container img {
+    width: 40px;
+    height: 40px;
+    border-radius: 5px;
+  }
 
-    }
+  .skills li img.skill-image {
+    width: 30px;
+    height: 30px;
+    border-radius: 5px;
+  }
 
-    .skills li img.skill-image {
-        width: 30px;
-        height: 30px;
-        border-radius: 5px;
-    }
-
-    .skills li {
-        flex-direction: column; /* 小螢幕時讓技能圖片、描述縱向排列 */
-        align-items: flex-start;
-    }
+  .skills li {
+    flex-direction: column; /* 小螢幕時讓技能圖片、描述縱向排列 */
+    align-items: flex-start;
+  }
 }
 
 .probability-text {
-    color: #9b59b6; /* 紫色 */
-    font-weight: bold;
+  color: #9b59b6; /* 紫色 */
+  font-weight: bold;
 }
 
 /* 持續回合文字 - 黃色 */
 .duration-text {
-    color: #f1c40f; /* 黃色 */
-    font-weight: bold;
+  color: #f1c40f; /* 黃色 */
+  font-weight: bold;
 }
 
 /* 扣除生命值文字 - 紅色 */
 .deduct-health-text {
-    color: #e74c3c; /* 紅色 */
-    font-weight: bold;
+  color: #e74c3c; /* 紅色 */
+  font-weight: bold;
 }
 
 /* 暈眩回合數 - 黃色 */
 .stun-duration-text {
-    color: #f1c40f; /* 黃色 */
-    font-weight: bold;
+  color: #f1c40f; /* 黃色 */
+  font-weight: bold;
 }
 
 /* 多次傷害次數 - 深紅色 */
 .multiplier-text {
-    color: #c0392b; /* 深紅色 */
-    font-weight: bold;
+  color: #c0392b; /* 深紅色 */
+  font-weight: bold;
 }
 
 /* 增益/減益效果 - 黃色 */
 .effect-text {
-    color: #f1c40f; /* 黃色 */
-    font-weight: bold;
+  color: #f1c40f; /* 黃色 */
+  font-weight: bold;
 }
 
 /* 異常狀態 */
 
 /* 冰凍 - 藍色 */
 .frozen-text {
-    color: #3498db;
-    font-weight: bold;
+  color: #3498db;
+  font-weight: bold;
 }
 
 /* 中毒 - 綠色 */
 .poisoned-text {
-    color: #2ecc71;
-    font-weight: bold;
+  color: #2ecc71;
+  font-weight: bold;
 }
 
 /* 流血 - 紅色 */
 .bleeding-text {
-    color: #e74c3c;
-    font-weight: bold;
+  color: #e74c3c;
+  font-weight: bold;
 }
 
 /* 燃燒 - 橙色 */
 .burning-text {
-    color: #ef3939;
-    font-weight: bold;
+  color: #ef3939;
+  font-weight: bold;
 }
 
 .paralyzed-text {
-    color: #e0d431;
-    font-weight: bold;
+  color: #e0d431;
+  font-weight: bold;
 }
 
 /* 通用異常狀態文字 */
 .status-text {
-    font-weight: bold;
-    /* 可以根據需要設定默認顏色 */
+  font-weight: bold;
+  /* 可以根據需要設定默認顏色 */
+}
+
+/* ========================
+   全域
+   ======================== */
+body {
+  font-family: "Microsoft JhengHei", sans-serif;
+}
+
+/* ====== battle-container 主容器 ====== */
+#battle-container {
+  display: flex;
+  flex-direction: column;
+  margin-top: 20px;
+  background-color: #f9f9f9;
+  border: 2px solid #ccc;
+  border-radius: 8px;
+  min-height: 600px;
+  position: relative;
+  overflow: hidden; /* 讓一些動畫不會跑出容器 */
+}
+
+/* ========================
+     (1) 上方控制區
+     ======================== */
+#battle-top-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: linear-gradient(45deg, #fff, #eee);
+  padding: 10px 15px;
+  border-bottom: 2px solid #ccc;
+}
+
+/* 回合指示 */
+#round-indicator {
+  font-weight: bold;
+  font-size: 1rem;
+  color: #333;
+}
+
+/* 速度控制容器 */
+#speed-control-panel {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+/* 速度按鈕 */
+.speed-btn,
+#pause-btn,
+#replay-btn {
+  background-color: #fff;
+  border: 1px solid #aaa;
+  border-radius: 4px;
+  padding: 3px 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+.speed-btn:hover,
+#pause-btn:hover,
+#replay-btn:hover {
+  background-color: #ddd;
+}
+#replay-btn:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+/* ========================
+     (2) 中間戰鬥主區
+     ======================== */
+#battle-main {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-evenly;
+  padding: 15px;
+}
+
+/* 左右角色面板 */
+.character-panel {
+  width: 280px;
+  min-width: 240px;
+  background-color: #fff;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  padding: 10px;
+  position: relative;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* 預設情況下，無 buff-glow */
+.character-panel.buff-glow {
+  animation: buffPulse 2s infinite;
+  box-shadow: 0 0 15px rgba(255, 255, 0, 0.4);
+}
+@keyframes buffPulse {
+  0% {
+    box-shadow: 0 0 10px rgba(255, 255, 0, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 15px rgba(255, 255, 0, 0.7);
+  }
+  100% {
+    box-shadow: 0 0 10px rgba(255, 255, 0, 0.2);
+  }
+}
+
+/* ========================
+     (3) 角色頭像/職業
+     ======================== */
+.avatar-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.avatar-image {
+  width: 80px;
+  height: 80px;
+  object-fit: cover;
+  border: 2px solid #ddd;
+  border-radius: 50%;
+  margin-bottom: 5px;
+}
+.profession-name {
+  font-weight: bold;
+  font-size: 1.1rem;
+  color: #2c3e50;
+}
+
+/* ========================
+     (4) HP Bar
+     ======================== */
+.hp-bar-container {
+  width: 100%;
+  margin-top: 10px;
+}
+.hp-text {
+  text-align: center;
+  font-weight: bold;
+  margin-bottom: 4px;
+}
+.hp-bar {
+  width: 100%;
+  height: 20px;
+  background: #ddd;
+  border-radius: 10px;
+  overflow: hidden;
+}
+.hp-fill {
+  height: 100%;
+  width: 0%;
+  background-color: #e74c3c;
+  transition: width 0.5s;
+}
+
+/* ========================
+     (5) 攻/防/治 顯示
+     ======================== */
+.stats-line {
+  display: flex;
+  gap: 8px;
+  margin: 8px 0;
+  justify-content: center;
+}
+
+.stat-item {
+  background: #f3f3f3;
+  border-radius: 4px;
+  padding: 3px 6px;
+  display: flex;
+  align-items: center;
+}
+.stat-icon {
+  margin-right: 4px;
+  font-size: 0.9rem;
+}
+.stat-atk {
+  color: #e74c3c;
+}
+.stat-def {
+  color: #3498db;
+}
+.stat-heal {
+  color: #2ecc71;
+}
+
+/* ========================
+     (6) 效果 (多顏色)
+     ======================== */
+.effects-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  justify-content: center;
+  margin-top: 10px;
+}
+
+.no-effects {
+  font-size: 0.9rem;
+  color: #999;
+}
+
+.effect-badge {
+  padding: 3px 6px;
+  border-radius: 15px;
+  font-size: 0.8rem;
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.badge-buff {
+  background-color: #27ae60; /* 綠 */
+}
+.badge-dot {
+  background-color: #e74c3c; /* 紅 */
+}
+.badge-control {
+  background-color: #8e44ad; /* 紫 */
+}
+.badge-special {
+  background-color: #f1c40f; /* 黃 */
+  color: #333;
+}
+.badge-track {
+  background-color: #2c3e50; /* 深藍 */
+}
+.badge-other {
+  background-color: #7f8c8d; /* 灰 */
+}
+
+.eff-name {
+  font-weight: bold;
+}
+.eff-stack,
+.eff-duration {
+  font-size: 0.7rem;
+}
+
+/* ========================
+     (7) 技能列表 + 冷卻
+     ======================== */
+.skills-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 10px;
+  justify-content: center;
+}
+.skill-icon-container {
+  position: relative;
+  width: 40px;
+  height: 40px;
+}
+.skill-icon {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+.skill-cd-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  color: #fff;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+}
+.skill-passive-label {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  background-color: rgba(52, 152, 219, 0.8);
+  font-size: 0.6rem;
+  color: #fff;
+  border-top-right-radius: 4px;
+  padding: 0 2px;
+}
+
+/* ========================
+     (8) 中間動畫區
+     ======================== */
+#animation-area {
+  flex: 1;
+  height: 300px;
+  border: 2px solid #ccc;
+  margin: 0 10px;
+  border-radius: 6px;
+  background: #fafafa;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 中間大字提示 */
+.center-notice {
+  position: absolute;
+  font-size: 1.5rem;
+  color: #e74c3c;
+  font-weight: bold;
+  animation: fadeOut 1.5s forwards;
+}
+@keyframes fadeOut {
+  0% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+.turn-start {
+  color: #2980b9;
+}
+.turn-end {
+  color: #c0392b;
+}
+.big-end {
+  font-size: 2rem;
+  color: #e74c3c;
+  animation: none; /* 保留在畫面 */
+}
+
+/* 技能特效(微晃動+閃) */
+.skill-cast {
+  animation: skillCastAnim 0.8s;
+}
+@keyframes skillCastAnim {
+  0%,
+  100% {
+    transform: scale(1);
+    box-shadow: none;
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 0 10px rgba(255, 255, 0, 0.6);
+  }
+}
+
+/* ========================
+     (9) 下方文字播報
+     ======================== */
+#battle-bottom {
+  background: #fff;
+  border-top: 1px solid #ccc;
+  padding: 10px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.text-log {
+  width: 100%;
+}
+
+.text-log p {
+  margin-bottom: 6px;
+  line-height: 1.4;
+}
+
+/* 事件文字顏色 */
+.log-damage {
+  color: #e74c3c;
+  font-weight: bold;
+}
+.log-heal {
+  color: #2ecc71;
+  font-weight: bold;
+}
+.log-skill {
+  color: #e67e22;
+  font-weight: bold;
+}
+.log-status {
+  color: #8e44ad;
+}
+.log-status-fail {
+  color: #aaa;
+  font-style: italic;
+}
+.log-skip {
+  color: #f1c40f;
+}
+.log-turn {
+  color: #3498db;
+  font-weight: bold;
+}
+.log-other {
+  color: #7f8c8d;
+}
+.log-end {
+  color: #c0392b;
+  font-weight: bold;
+}
+.log-text {
+  color: #2c3e50;
+}
+
+@keyframes floatUp {
+  0% {
+    transform: translate(-50%, 0);
+    opacity: 1;
+  }
+  50% {
+    transform: translate(-50%, -20px);
+  }
+  100% {
+    transform: translate(-50%, -40px);
+    opacity: 0;
+  }
+}
+
+/* 讓浮動數字能相對於 parent 定位 */
+.character-panel {
+  position: relative;
+}
+
+/* =========================
+     ScrollBar 微調
+     ========================= */
+#battle-bottom::-webkit-scrollbar {
+  width: 8px;
+}
+#battle-bottom::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+#battle-bottom::-webkit-scrollbar-thumb {
+  background: #ccc;
+}
+
+/* ==== 中間區: 本回合事件 ==== */
+#turn-broadcast {
+  width: 300px;
+  min-height: 300px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background: #fafafa;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+#turn-broadcast h3 {
+  margin-bottom: 6px;
+  color: #333;
+  font-size: 1.1rem;
+}
+
+#turn-broadcast-log {
+  flex: 1;
+  width: 100%;
+  overflow-y: auto;
+}
+#turn-broadcast-log p {
+  margin-bottom: 5px;
+}
+
+/* ==== 紅光 + 震動 ==== */
+.red-glow {
+  box-shadow: 0 0 10px rgba(255, 0, 0, 0.7);
+}
+.shake {
+  animation: shakeAnim 0.5s;
+}
+@keyframes shakeAnim {
+  0% {
+    transform: translate(0, 0);
+  }
+  20% {
+    transform: translate(-5px, 0);
+  }
+  40% {
+    transform: translate(5px, 0);
+  }
+  60% {
+    transform: translate(-5px, 0);
+  }
+  80% {
+    transform: translate(5px, 0);
+  }
+  100% {
+    transform: translate(0, 0);
+  }
+}
+
+/* ==== 治癒綠光 ==== */
+.heal-effect {
+  box-shadow: 0 0 15px rgba(46, 204, 113, 0.8);
+  animation: healPulse 0.8s;
+}
+@keyframes healPulse {
+  0%,
+  100% {
+    box-shadow: 0 0 10px rgba(46, 204, 113, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 15px rgba(46, 204, 113, 0.7);
+  }
+}
+
+/* ==== 浮動數字 ==== */
+.floating-number {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 1.2rem;
+  font-weight: bold;
+  animation: floatUp 1s forwards;
+}
+.float-damage {
+  color: #e74c3c;
+}
+.float-heal {
+  color: #2ecc71;
+}
+
+@keyframes floatUp {
+  0% {
+    transform: translate(-50%, 0);
+    opacity: 1;
+  }
+  50% {
+    transform: translate(-50%, -15px);
+  }
+  100% {
+    transform: translate(-50%, -30px);
+    opacity: 0;
+  }
+}
+
+/* 1) 狀態特效容器：在 .character-panel 內已有 <div class="status-effects-layer"> */
+.status-effects-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  overflow: hidden; /* 防止滾動 */
+  z-index: 2; /* 高於角色底板, 但低於浮動傷害 */
+}
+
+/* 每種特效是一個子元素: .burning-effect, .frozen-effect, .poison-effect... 
+     這些 class 會並存於 .status-effects-layer 下，以同時顯示。
+     可以用粒子、漸層或動畫 keyframes 達到炫麗效果 
+  */
+
+/* =============== 
+     燃燒 (火花粒子)
+     =============== */
+.burning-effect {
+  position: absolute;
+  top: -5px;
+  left: -5px;
+  right: -5px;
+  bottom: -5px; /* 稍微比框大一點 */
+  pointer-events: none;
+  overflow: hidden; /* 防止子元素飄出 */
+}
+
+.burning-effect::before {
+  content: "";
+  position: absolute;
+  width: 200%;
+  height: 200%;
+  left: -50%; /* 讓中心在面板中央 */
+  top: 100%; /* 從下方開始往上 */
+  background-image: radial-gradient(
+    circle,
+    rgba(255, 140, 0, 0.4) 10%,
+    rgba(255, 0, 0, 0) 70%
+  );
+  animation: burningSparks 2s infinite linear;
+  opacity: 0.8;
+}
+
+@keyframes burningSparks {
+  0% {
+    top: 100%;
+  }
+  100% {
+    top: -50%; /* 向上飄 */
+  }
+}
+
+/* ===============
+     中毒 (綠泡泡)
+     =============== */
+.poison-effect {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(
+      circle at 30% 30%,
+      rgba(0, 255, 0, 0.15) 10%,
+      transparent 80%
+    ),
+    radial-gradient(
+      circle at 70% 70%,
+      rgba(0, 255, 0, 0.15) 10%,
+      transparent 80%
+    );
+  animation: poisonAnim 1.5s infinite;
+}
+@keyframes poisonAnim {
+  0% {
+    transform: scale(1) translate(0, 0);
+  }
+  50% {
+    transform: scale(1.05) translate(-2%, -2%);
+  }
+  100% {
+    transform: scale(1) translate(0, 0);
+  }
+}
+
+/* ===============
+     冰凍 (寒霧)
+     =============== */
+.frozen-effect {
+  pointer-events: none;
+  position: absolute;
+  top: -5px;
+  left: -5px;
+  right: -5px;
+  bottom: -5px;
+  overflow: hidden;
+}
+
+.frozen-effect::before {
+  content: "";
+  position: absolute;
+  width: 120%;
+  height: 120%;
+  left: -10%;
+  top: -10%;
+  background: radial-gradient(
+    circle,
+    rgba(173, 216, 230, 0.3) 10%,
+    rgba(255, 255, 255, 0) 60%
+  );
+  animation: iceCrack 2s infinite ease-in-out;
+}
+
+@keyframes iceCrack {
+  0% {
+    transform: rotate(0deg);
+    opacity: 0.4;
+  }
+  50% {
+    transform: rotate(15deg);
+    opacity: 0.6;
+  }
+  100% {
+    transform: rotate(0deg);
+    opacity: 0.4;
+  }
+}
+
+/* ===============
+     暈眩 (金色閃)
+     =============== */
+.stunned-effect {
+  pointer-events: none;
+  position: absolute;
+  top: -5px;
+  left: -5px;
+  right: -5px;
+  bottom: -5px;
+  overflow: hidden;
+}
+
+.stunned-effect::before {
+  content: "";
+  position: absolute;
+  width: 200%;
+  height: 200%;
+  top: -50%;
+  left: -50%;
+  background: repeating-linear-gradient(
+    45deg,
+    rgba(255, 255, 0, 0.3) 0px,
+    rgba(255, 255, 0, 0.3) 5px,
+    rgba(0, 0, 0, 0) 10px,
+    rgba(0, 0, 0, 0) 15px
+  );
+  animation: electricArc 1s infinite linear;
+}
+
+@keyframes electricArc {
+  0% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: rotate(15deg);
+  }
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
+/* ===============
+     Buff glow (若你原本有 buff-glow)
+     =============== */
+
+/* 2) 傷害 / 治癒: 浮動數字 加大加粗 */
+.floating-number {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  animation: floatUp 1.2s forwards;
+  z-index: 999; /* 保證在特效之上 */
+  font-size: 1.5rem; /* 加大 */
+  font-weight: 900; /* 粗體 */
+}
+.float-damage {
+  color: #e74c3c;
+}
+.float-heal {
+  color: #2ecc71;
+}
+@keyframes floatUp {
+  0% {
+    transform: translate(-50%, 0);
+    opacity: 1;
+  }
+  50% {
+    transform: translate(-50%, -10px);
+  }
+  100% {
+    transform: translate(-50%, -30px);
+    opacity: 0;
+  }
+}
+
+/* 紅光 + shake 
+     不要覆蓋 buff glow, 
+     用外層陰影 + inner陰影
+  */
+.red-glow {
+  box-shadow: 0 0 10px rgba(255, 0, 0, 0.7), inset 0 0 5px rgba(255, 0, 0, 0.5);
+  z-index: 3;
+}
+.shake {
+  animation: shakeAnim 0.5s;
+}
+@keyframes shakeAnim {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  20% {
+    transform: translate(-5px, 0);
+  }
+  40% {
+    transform: translate(5px, 0);
+  }
+  60% {
+    transform: translate(-5px, 0);
+  }
+  80% {
+    transform: translate(5px, 0);
+  }
+}
+
+/* 綠色治癒閃 */
+.heal-effect {
+  box-shadow: 0 0 10px rgba(46, 204, 113, 0.8);
+  animation: healPulse 0.8s;
+}
+@keyframes healPulse {
+  0%,
+  100% {
+    box-shadow: 0 0 5px rgba(46, 204, 113, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 15px rgba(46, 204, 113, 0.6);
+  }
+}
+
+/* 3) 技能 icon 動畫 (放大閃) */
+.skill-activated {
+  animation: skillActivateAnim 0.8s;
+}
+@keyframes skillActivateAnim {
+  0% {
+    transform: scale(1);
+    box-shadow: none;
+  }
+  50% {
+    transform: scale(1.2);
+    box-shadow: 0 0 8px rgba(255, 255, 0, 0.7);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: none;
+  }
 }

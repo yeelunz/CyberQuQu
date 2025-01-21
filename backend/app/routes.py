@@ -53,8 +53,8 @@ def api_computer_vs_computer():
     """
     (5) 電腦 VS 電腦
     """
-    computer_vs_computer(skill_mgr, professions)
-    return jsonify({"result": "電腦 VS 電腦對戰結束（請查看後端日誌）"})
+    battle_log = computer_vs_computer(skill_mgr, professions)
+    return jsonify({"battle_log": battle_log})
     
 @main_routes.route("/api/version_test", methods=["GET"])
 def api_version_test():

@@ -250,9 +250,18 @@ document.addEventListener("DOMContentLoaded", () => {
     menuTestRandom.addEventListener("click", (e) => {
         e.preventDefault();
         fetch("/api/computer_vs_computer")
-        // show it will finish in backend
-        alert("在後端 查看。");
-        
+          .then(res => res.json())
+          .then(data => {
+             console.log(data);
+              const battleLog = data.battle_log;
+              // 1) 建立戰鬥UI
+              initBattleView();
+              // 2) 開始戰鬥
+              startBattle(battleLog);
+          })
+          .catch(err => {
+              console.error("取得 battle_log 錯誤:", err);
+          });
     });
 
 });

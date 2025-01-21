@@ -62,7 +62,13 @@ class StatusEffect:
 
     def on_tick(self, target):
         """每回合執行的邏輯"""
-        pass
+        # if buff / dot / track
+        if self.type == 'dot':
+            pass
+        elif self.type == 'buff':
+            pass
+        elif self.type == 'track':
+            pass
 
     def on_remove(self, target):
         """當效果被移除時執行的邏輯"""
@@ -427,9 +433,7 @@ class MaxHPmultiplier(StatusEffect):
                 # 如果超出生命值最大值，則變為最大值
                 target['hp'] = min(target['hp'], target['max_hp'])
 
-
-
-        
+ 
 class Burn(StatusEffect):
     """
         你只被允許使用(且必須)使用
@@ -592,26 +596,26 @@ class BleedEffect(StatusEffect):
 
 
 
-class Stun(StatusEffect):
-    def __init__(self, duration: int = 1, stackable: bool = False):
-        super().__init__(
-            name='眩暈',
-            duration=duration,
-            stackable=False,
-            max_stack=1,
-            type='control',
-            id=10
-        )
+# class Stun(StatusEffect):
+#     def __init__(self, duration: int = 1, stackable: bool = False):
+#         super().__init__(
+#             name='眩暈',
+#             duration=duration,
+#             stackable=False,
+#             max_stack=1,
+#             type='control',
+#             id=10
+#         )
 
-    def on_apply(self, target):
-        super().on_apply(target)
-        target["skip_turn"] = True
+#     def on_apply(self, target):
+#         super().on_apply(target)
+#         target["skip_turn"] = True
 
 
-    def on_remove(self, target):
-        target["skip_turn"] = False
+#     def on_remove(self, target):
+#         target["skip_turn"] = False
 
-        super().on_remove(target)
+#         super().on_remove(target)
 
 
 class Paralysis(StatusEffect):
@@ -730,7 +734,7 @@ EFFECT_NAME_MAPPING = {
     7: "免疫傷害",
     8: "免疫控制",
     9: "流血",
-    10: "眩暈",
+    10: "麻痺",
     11: "回血",
     12: "最大生命值變更",
     13: "追蹤",

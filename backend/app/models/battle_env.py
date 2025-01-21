@@ -4,7 +4,7 @@ import gymnasium
 import numpy as np
 from .status_effects import (
     Burn, Poison, Freeze, DamageMultiplier, DefenseMultiplier, HealMultiplier,
-    ImmuneDamage, ImmuneControl, BleedEffect, Stun, StatusEffect, HealthPointRecover, MaxHPmultiplier, Track, Paralysis,
+    ImmuneDamage, ImmuneControl, BleedEffect, StatusEffect, HealthPointRecover, MaxHPmultiplier, Track, Paralysis,
     EFFECT_NAME_MAPPING
 )
 
@@ -151,6 +151,9 @@ class BattleEnv(MultiAgentEnv):
             - status_tick: 異常狀態持續
             - status_remove: 異常狀態移除
             - status_set 異常狀態設置stack
+            - status_duration_update: 異常狀態持續時間更新
+            - status_apply_fail: 異常狀態施加失敗
+            - status_stack_update: 異常狀態堆疊更新
             - skip_turn: 跳過行動
             - skill: 技能事件
             - text : 純文字事件
@@ -168,6 +171,9 @@ class BattleEnv(MultiAgentEnv):
 
         - text: str, 純文字事件的文字(這個會自動生成，但當指定時)，選擇"text" 時需要自己填寫"
         """
+        if not self.show_battle_log:
+            return
+        
         if not event:
             raise ValueError("event is None")
         
@@ -191,7 +197,7 @@ class BattleEnv(MultiAgentEnv):
                 # 2. 啟用傷害數字動畫，數字在event.applendix["amount"] (在前端js處理)
                 self.battle_log.append(event)
                 # 3. 啟用狀態刷新動畫
-                self.battle_log.append(BattleEvent(type="refresh_status"))
+                self.add_event(event=BattleEvent(type="refresh_status"))
                 
             case "heal":
                 # f"{user['profession'].name} 恢復了 {heal_amount} 點生命值
@@ -200,9 +206,16 @@ class BattleEnv(MultiAgentEnv):
                 # 動畫格式為：
                 # 1. event.user 使用治療動畫 (在前端js處理)
                 # 2. 啟用治療數字動畫，數字在event.applendix["amount"] (在前端js處理)
+                # chane right to left
+                # TODO 這邊不知道為啥邏輯相反了 但是先這樣處理
+                t = event.user
+                event.user = event.target
+                event.target = t
+                
+                
                 self.battle_log.append(event)
                 # 3. 啟用狀態刷新動畫
-                self.battle_log.append(BattleEvent(type="refresh_status"))
+                self.add_event(event=BattleEvent(type="refresh_status"))
             
             case "self_mutilation":
                 # 文字格式為：【{user['profession'].name}】 自傷 {event.appendix["amount"]} 點生命值
@@ -213,25 +226,83 @@ class BattleEnv(MultiAgentEnv):
                 # 2. 啟用傷害數字動畫，數字在event.applendix["amount"] (在前端js處理)
                 self.battle_log.append(event)
                 # 3. 啟用狀態刷新動畫
-                self.battle_log.append(BattleEvent(type="refresh_status"))
+                
+                self.add_event(event=BattleEvent(type="refresh_status"))
 
             case "status_apply":
-                # 處理異常狀態施加事件
-                # 文字和動畫可根據需求實現
-                # 例如：
-                pass
-
+                # 文字格式為：user 被施加了 {event.appendix["effect_name"]} 狀態
+                if event.text is None:
+                    event.text = f"{user['profession'].name} 被施加了 {event.appendix['effect_name']} 狀態"
+                # 動畫格式為： 無
+                self.battle_log.append(event)
+                
+                self.add_event(event=BattleEvent(type="refresh_status"))
+                
+                  
             case "status_tick":
-                # 處理異常狀態持續事件
-                pass
+                # 額外處理異常狀態持續事件
+                # 需要status type
+                # 公用部分：user 的 effect_name 持續中
+                # 如果是Dot類型，則顯示持續傷害
+                if event.appendix["effect_type"] == "dot":
+                    # 文字格式為 user 的 {event.appendix["effect_name"]} 持續中，造成 {event.appendix["amount"]} 點傷害
+                    if event.text is None:
+                        event.text = f"{user['profession'].name} 的 {event.appendix['effect_name']} 持續中，造成 {event.appendix['amount']} 點傷害"
+                    # 動畫格式為： event.target 使用受傷動畫 (在前端js處理)
+                    self.battle_log.append(event)
+                else:
+                    # 文字格式為 user 的 {event.appendix["effect_name"]} 持續中
+                    if event.text is None:
+                        event.text = f"{user['profession'].name} 的 {event.appendix['effect_name']} 持續中"
+                    # 動畫格式為：無
+                    self.battle_log.append(event)
+                    
+                self.add_event(event=BattleEvent(type="refresh_status"))
+                
+            case "status_apply_fail":
+                # 處理異常狀態施加失敗事件
+                # 文字格式為 user 被施加 {event.appendix["effect_name"]} 狀態失敗
+                if event.text is None:
+                    event.text = f"{user['profession'].name} 被施加 {event.appendix['effect_name']} 狀態失敗"
+                self.battle_log.append(event)
+                # 無動畫
+                self.add_event(event=BattleEvent(type="refresh_status"))
                 
             case "status_remove":
                 # 處理異常狀態移除事件
-                pass
+                # 文字格式為 user 的 {event.appendix["effect_name"]} 狀態被移除
+                if event.text is None:
+                    event.text = f"{user['profession'].name} 的 {event.appendix['effect_name']} 狀態被移除"
+                self.battle_log.append(event)
+                # 無動畫
+                self.add_event(event=BattleEvent(type="refresh_status"))
+                
+            case "status_duration_update":
+                # 處理異常狀態持續時間更新事件
+                # 文字格式為 user 的 {event.appendix["effect_name"]} 狀態剩餘回合數更新為 {event.appendix["duration"]}
+                if event.text is None:
+                    event.text = f"{user['profession'].name} 的 {event.appendix['effect_name']} 狀態剩餘回合數更新為 {event.appendix['duration']}"
+                    
+                self.battle_log.append(event)
+                
+                self.add_event(event=BattleEvent(type="refresh_status"))
+            case "status_stack_update":
+                # 處理異常狀態堆疊更新事件
+                # 文字格式為 user 的 {event.appendix["effect_name"]} 效果堆疊數量更新為 {event.appendix["stack"]}
+                if event.text is None:
+                    event.text = f"{user['profession'].name} 的 {event.appendix['effect_name']} 效果堆疊數量更新為 {event.appendix['stacks']}"
+                #  動畫格式為： 不顯示動畫
+                self.battle_log.append(event) 
+                
+                self.add_event(event=BattleEvent(type="refresh_status"))
                 
             case "status_set":
+                
                 # 處理異常狀態堆疊設置事件
-                pass
+                self.battle_log.append(event)
+                
+                self.add_event(event=BattleEvent(type="refresh_status"))
+                
                 
             case "skip_turn":
                 # 文字格式為： 【{user['profession'].name}】，因 {event.applendix["effect_name"]} 跳過行動
@@ -260,30 +331,37 @@ class BattleEnv(MultiAgentEnv):
                 # 將以下dict加入 event.appendix 以刷新前端的數字
                 # 註：left = player, right = enemy
                 
-                # 構建 appendix 字典
+                # 構建 appendix 字典 
+                # copy cooldowns
+                pla = self.player_team[0]["cooldowns"].copy()
+                ene = self.enemy_team[0]["cooldowns"].copy()
+ 
+                
                 appendix = {
                     "global": {
-                        "round": self.round_count
+                        "round": self.round_count , "max_rounds": self.max_rounds,"left_profession": self.player_team[0]["profession"].name, "right_profession": self.enemy_team[0]["profession"].name,"damage_coefficient": self.damage_coefficient
                     },
                     "left": {
                         "hp": self.player_team[0]["hp"],
                         "max_hp": self.player_team[0]["max_hp"],
-                        "effects": self.player_team[0].effect_manager.get_effect_vector(),
+                        "effects": self.player_team[0]["effect_manager"].get_effect_vector(),
                         "multiplier": {
                             "damage": self.player_team[0]["damage_multiplier"],
                             "defend": self.player_team[0]["defend_multiplier"],
                             "heal": self.player_team[0]["heal_multiplier"]
-                        }
+                        },
+                        "cooldowns": pla
                     },
                     "right": {
                         "hp": self.enemy_team[0]["hp"],
                         "max_hp": self.enemy_team[0]["max_hp"],
-                        "effects": self.enemy_team[0].effect_manager.get_effect_vector(),
+                        "effects": self.enemy_team[0]["effect_manager"].get_effect_vector(),
                         "multiplier": {
                             "damage": self.enemy_team[0]["damage_multiplier"],
                             "defend": self.enemy_team[0]["defend_multiplier"],
                             "heal": self.enemy_team[0]["heal_multiplier"]
-                        }
+                        },
+                        "cooldowns": ene
                     }
                 }
                 
@@ -296,11 +374,14 @@ class BattleEnv(MultiAgentEnv):
             
             case "turn_start":
                 # add refresh_status
-                self.battle_log.append(BattleEvent(type="refresh_status"))
+                self.battle_log.append(event)
+                self.add_event(event=BattleEvent(type="refresh_status"))
                 
             case "turn_end":
                 # add refresh_status
-                self.battle_log.append(BattleEvent(type="refresh_status"))
+                self.battle_log.append(event)
+                self.add_event(event=BattleEvent(type="refresh_status"))
+
             
             case "other":
                 # 處理其他事件類型
@@ -778,7 +859,7 @@ class BattleEnv(MultiAgentEnv):
         if heal_damage and target:
             dmg = int(extra_heal * rate)  
             if extra_heal > 0:
-                self.add_event(BattleEvent(type="text",text=f"{user['profession'].name} 治療溢出造成傷害！"))
+                self.add_event(event = BattleEvent(type="text",text=f"{user['profession'].name} 治療溢出造成傷害！"))
                 self.deal_damage(user, target, dmg, can_be_blocked=False)
         # 最後如果 self_mutilation 為 True，則對自己造成治療量的傷害(但不會低於最低血量)
         if self_mutilation:
@@ -793,13 +874,13 @@ class BattleEnv(MultiAgentEnv):
         """
         設置特定status_id 的stack
         """
-        target["effect_manager"].set_effect_stack(status_name,target,stacks,source,self.battle_log)
+        target["effect_manager"].set_effect_stack(status_name,target,stacks,source)
         
     def apply_status(self, target, status_effect):
         """
         應用異常狀態
         """
-        target["effect_manager"].add_effect(status_effect,self.battle_log)
+        target["effect_manager"].add_effect(status_effect)
 
     def _handle_status_end_of_turn(self):
         """
@@ -809,7 +890,7 @@ class BattleEnv(MultiAgentEnv):
         for m in alist:
             if m["hp"] <= 0:
                 continue
-            m["effect_manager"].tick_effects(self.battle_log)
+            m["effect_manager"].tick_effects()
 
         # 重置一次性buff
         for m in alist:
@@ -828,27 +909,34 @@ class BattleEnv(MultiAgentEnv):
         處理每回合開始時的被動技能
         """
         for member in self.player_team:
-            left =  member
+
+            left = member
         for member in self.enemy_team:
-            right =  member
-        left.on_turn_start(left,right,self,-1)
-        right.on_turn_start(right,left,self,-1)
+
+            right = member
+        left["profession"].on_turn_start(left,right,self,-1)
+        right["profession"].on_turn_start(right,left,self,-1)
         
     def _process_passives_end_of_turn(self,mSkill = None,eSkill = None):
         """
         # take all  on turn end skill
         """ 
+        left_skill = None
+        right_skill = None
         # 我方處理       
-        for i, m in mSkill:
-            left = self.player_team[i]
+        for i, m in mSkill:   
             left_skill = m     
 
         for i, e in eSkill:
-            right = self.enemy_team[i]
             right_skill = e
-        
-        left.on_turn_end(left,right,self,left_skill)
-        right.on_turn_end(right,left,self,right_skill)
+            
+        left = self.player_team[0]
+        right = self.enemy_team[0]
+        if left_skill != None:
+            left["profession"].on_turn_end(left,right,self,left_skill)
+        if right_skill != None:
+            right["profession"].on_turn_end(right,left,self,right_skill)
+
                  
     def _select_targets(self, team):
         """
@@ -891,15 +979,18 @@ class BattleEnv(MultiAgentEnv):
         return 0
 
     def _print_round_header(self):
+        self.add_event(event=BattleEvent(type="turn_start"))
         if self.show_battle_log:
             print(f"\n---\n回合 {self.round_count} :\n")
 
     def _print_round_footer(self):
         if self.show_battle_log:
             for line in self.battle_log:
-                print(line.type, line.text)
-            self.battle_log = []
-            print("回合結束\n---")
+                pass
+                # print(line.type, line.text)
+            # self.battle_log = []
+        self.add_event(event=BattleEvent(type="turn_end"))
+        print("回合結束\n---")
 
     def _print_teams_hp(self):
         if not self.show_battle_log:
@@ -955,6 +1046,7 @@ class BattleEnv(MultiAgentEnv):
             for skill_id in m["cooldowns"]:
                 if m["cooldowns"][skill_id] > 0:
                     m["cooldowns"][skill_id] -= 1
+
 
     def _check_both_defeated(self):
         """

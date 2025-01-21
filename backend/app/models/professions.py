@@ -68,16 +68,19 @@ class BattleProfession:
     def on_attack_end(self, user, targets, env):
         pass
     def apply_skill(self, skill_id, user, targets, env):
-        env.add_event(user = user, event = BattleEvent(type="skill",appendix={"skill_id":skill_id}))
+        cooldowns_skill_id = skill_id - self.profession_id * 3
+        env.add_event(user = user, event = BattleEvent(type="skill",appendix={"skill_id":skill_id,"relatively_skill_id":cooldowns_skill_id}))
         # check cooldown
         # get skill id's cooldown
-        cooldowns_skill_id = skill_id - self.profession_id * 3
         
         if skill_id in self.get_available_skill_ids(user["cooldowns"]):
             # set cooldown
             local_skill_id = skill_id - self.profession_id * 3
             user["cooldowns"][local_skill_id] = sm.get_skill_cooldown(skill_id)
-            env.add_event(event = BattleEvent(type="text",text=f"{self.name} 的技能「{sm.get_skill_name(skill_id)}」進入冷卻 {sm.get_skill_cooldown(skill_id)} 回合。"))
+            if sm.get_skill_cooldown(skill_id) > 0:
+                env.add_event(event = BattleEvent(type="text",text=f"{self.name} 的技能「{sm.get_skill_name(skill_id)}」進入冷卻 {sm.get_skill_cooldown(skill_id)} 回合。"))
+            
+            return -1
         else:
             env.add_event(event = BattleEvent(type="text",text=f"{self.name} 的技能「{sm.get_skill_name(skill_id)}」還在冷卻中。"))
             return -1
@@ -377,8 +380,8 @@ class DragonGod(BattleProfession):
         heffect = DamageMultiplier(multiplier=1.05,duration=99,stacks=1,source=self.default_passive_id,stackable=True,max_stack=99)
         # hpeffect = MaxHPmultiplier(multiplier=1.02,duration=99,stacks=1,source=passive_id,stackable=True,max_stack=99)
         track = Track(name="龍神buff",duration=99,stacks=1,source=self.default_passive_id,stackable=True,max_stack=99)
-        env.apply_status(user,deffect)
         env.apply_status(user,heffect)
+        env.apply_status(user,deffect)
         env.apply_status(user,track)
 
     def apply_skill(self, skill_id, user, targets, env):
@@ -506,7 +509,7 @@ class SteadfastWarrior(BattleProfession):
     def on_turn_start(self, user, targets, env , id):
         heal = int(self.max_hp - user["hp"] * 0.1)
         env.add_event(event = BattleEvent(type="text",text=f"{self.name} 的被動技能「堅韌壁壘」觸發。"))
-        self.dealing_healing(user, heal)
+        env.deal_healing(user, heal)
 
     
     def on_turn_end(self, user, targets, env, id):

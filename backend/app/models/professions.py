@@ -799,8 +799,8 @@ class GodOfStar(BattleProfession):
             dmg += 25 * self.baseAtk
             env.deal_damage(user, targets[0], dmg, can_be_blocked=True)
             # 隨機為自身附加以下一種增益效果，持續 3 回合：攻擊力提升 5%，防禦力提升 5%，治癒效果提升 5%。
-            buff = random.choice([DamageMultiplier(multiplier=1.05, duration=3, stackable=False,source=skill_id), DefenseMultiplier(multiplier=1.05, duration=3, stackable=False,source=skill_id), HealMultiplier(multiplier=1.05, duration=3, stackable=False,source=skill_id)])
-            env.apply_status(user, buff)
+            buff = random.choice([DamageMultiplier(multiplier=0.95, duration=3, stackable=False,source=skill_id), DefenseMultiplier(multiplier=0.95, duration=3, stackable=False,source=skill_id), HealMultiplier(multiplier=0.95, duration=3, stackable=False,source=skill_id)])
+            env.apply_status(targets[0], buff)
             env.deal_healing(user, heal)
         elif skill_id == 37:
             # 技能 37 => 為自身恢復 15 點生命值
@@ -808,8 +808,8 @@ class GodOfStar(BattleProfession):
             env.deal_damage(user, targets[0], dmg, can_be_blocked=True)
             env.deal_healing(user, heal)
             # 隨機為敵方附加以下一種減益效果，持續 3 回合：攻擊力降低 5%，防禦力降低 5%，治癒效果降低 5%。
-            debuff = random.choice([DamageMultiplier(multiplier=0.95, duration=3, stackable=False,source=skill_id), DefenseMultiplier(multiplier=0.95, duration=3, stackable=False,source=skill_id), HealMultiplier(multiplier=0.95, duration=3, stackable=False,source=skill_id)])
-            env.apply_status(targets[0], debuff)
+            buff = random.choice([DamageMultiplier(multiplier=1.05, duration=3, stackable=False,source=skill_id), DefenseMultiplier(multiplier=1.05, duration=3, stackable=False,source=skill_id), HealMultiplier(multiplier=1.05, duration=3, stackable=False,source=skill_id)])
+            env.apply_status(targets[0], buff)
         elif skill_id == 38:
             # 技能 38 => 對敵方單體造成 45 點傷害
             dmg *=1.5

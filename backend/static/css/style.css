@@ -762,27 +762,63 @@ header #skip-round-btn:hover {
   }
 }
 
+@keyframes buffPulseRedLower {
+    0%,
+    100% {
+      box-shadow: 0 0 10px rgba(67, 4, 4, 0.15),
+        inset 0 0 5px rgba(49, 5, 5, 0.15);
+    }
+    50% {
+      box-shadow: 0 0 15px rgba(75, 53, 53, 0.35),
+        inset 0 0 10px rgba(78, 48, 48, 0.3);
+    }
+  }
+  @keyframes buffPulseBlueLower {
+    0%,
+    100% {
+      box-shadow: 0 0 10px rgba(4, 23, 52, 0.15),
+        inset 0 0 5px rgba(4, 22, 49, 0.15);
+    }
+    50% {
+      box-shadow: 0 0 15px rgba(127, 142, 163, 0.35),
+        inset 0 0 10px rgba(100, 123, 156, 0.3);
+    }
+  }
+  @keyframes buffPulseGreenLower {
+    0%,
+    100% {
+      box-shadow: 0 0 10px rgba(17, 82, 17, 0.15),
+        inset 0 0 5px rgba(18, 107, 18, 0.15);
+    }
+    50% {
+      box-shadow: 0 0 15px rgba(125, 161, 125, 0.35),
+        inset 0 0 10px rgba(134, 184, 134, 0.3);
+    }
+  }
+
+
+
 /* 攻防治 buff glow */
 .buff-glow-attack {
   animation: buffPulseRed 2s infinite;
 }
 .buff-glow-attack-lower {
-  animation: buffPulseRed 2s infinite;
-  opacity: 0.7;
+  animation: buffPulseRedLower 2s infinite;
+
 }
 .buff-glow-defense {
   animation: buffPulseBlue 2s infinite;
 }
 .buff-glow-defense-lower {
-  animation: buffPulseBlue 2s infinite;
-  opacity: 0.7;
+  animation: buffPulseBlueLower 2s infinite;
+
 }
 .buff-glow-heal {
   animation: buffPulseGreen 2s infinite;
 }
 .buff-glow-heal-lower {
-  animation: buffPulseGreen 2s infinite;
-  opacity: 0.7;
+  animation: buffPulseGreenLower 2s infinite;
+
 }
 
 /* 攻防治 BADGE 顏色 */

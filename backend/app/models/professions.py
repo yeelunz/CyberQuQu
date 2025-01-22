@@ -1,9 +1,9 @@
 # professions.py
 
 from .status_effects import (
-    Burn, Poison, Freeze, 
-    DamageMultiplier, DefenseMultiplier, HealMultiplier,HealthPointRecover,Paralysis,
-     ImmuneDamage, ImmuneControl, BleedEffect,Track
+    Burn, Poison, Freeze,
+    DamageMultiplier, DefenseMultiplier, HealMultiplier, HealthPointRecover, Paralysis,
+    ImmuneDamage, ImmuneControl, BleedEffect, Track
 )
 import random
 from .skills import SkillManager, sm
@@ -13,8 +13,9 @@ from .profession_var import *
 from .battle_event import BattleEvent
 import math
 
+
 class BattleProfession:
-    def __init__(self, profession_id, name, base_hp, passive_name,passive_desc="", baseAtk=1.0, baseDef=1.0):
+    def __init__(self, profession_id, name, base_hp, passive_name, passive_desc="", baseAtk=1.0, baseDef=1.0):
         self.profession_id = profession_id
         self.name = name
         self.base_hp = base_hp
@@ -23,24 +24,26 @@ class BattleProfession:
         self.passive_desc = passive_desc
         self.baseAtk = baseAtk
         self.baseDef = baseDef
-        self.default_passive_id = (profession_id *-1 )-1
+        self.default_passive_id = (profession_id * -1)-1
 
-    def get_available_skill_ids(self,cooldowns:dict):
+    def get_available_skill_ids(self, cooldowns: dict):
         # get cooldowns
         ok_skills = []
         if cooldowns[0] == 0:
-            ok_skills.append(self.profession_id* 3)
+            ok_skills.append(self.profession_id * 3)
         if cooldowns[1] == 0:
-            ok_skills.append(self.profession_id*3 +1)
+            ok_skills.append(self.profession_id*3 + 1)
         if cooldowns[2] == 0:
-            ok_skills.append(self.profession_id*3 +2)
+            ok_skills.append(self.profession_id*3 + 2)
         # return is real skill id
         return ok_skills
-    def damage_taken(self, user, targets, env,dmg):
+
+    def damage_taken(self, user, targets, env, dmg):
         """
             自身受到傷害時的特效
         """
         pass
+
     def passive(self, user, targets, env):
         """
          這邊只處理文字部分，如要動畫則在該profession中實作
@@ -56,6 +59,7 @@ class BattleProfession:
             id : 技能id(如果是被動技能則為-1，否則為該技能的id)
         """
         pass
+
     def on_turn_end(self,  user, targets, env, id):
         """
         當回合開始時的效果
@@ -65,168 +69,178 @@ class BattleProfession:
             id : 技能id(如果是被動技能則為-1，否則為該技能的id)
         """
         pass
+
     def on_attack_end(self, user, targets, env):
         pass
+
     def apply_skill(self, skill_id, user, targets, env):
         cooldowns_skill_id = skill_id - self.profession_id * 3
-        env.add_event(user = user, event = BattleEvent(type="skill",appendix={"skill_id":skill_id,"relatively_skill_id":cooldowns_skill_id}))
+        env.add_event(user=user, event=BattleEvent(type="skill", appendix={
+                      "skill_id": skill_id, "relatively_skill_id": cooldowns_skill_id}))
         # check cooldown
         # get skill id's cooldown
-        
+
         if skill_id in self.get_available_skill_ids(user["cooldowns"]):
             # set cooldown
             local_skill_id = skill_id - self.profession_id * 3
             user["cooldowns"][local_skill_id] = sm.get_skill_cooldown(skill_id)
             if sm.get_skill_cooldown(skill_id) > 0:
-                env.add_event(event = BattleEvent(type="text",text=f"{self.name} 的技能「{sm.get_skill_name(skill_id)}」進入冷卻 {sm.get_skill_cooldown(skill_id)} 回合。"))
-            
+                env.add_event(event=BattleEvent(
+                    type="text", text=f"{self.name} 的技能「{sm.get_skill_name(skill_id)}」進入冷卻 {sm.get_skill_cooldown(skill_id)} 回合。"))
+
             return -1
         else:
-            env.add_event(event = BattleEvent(type="text",text=f"{self.name} 的技能「{sm.get_skill_name(skill_id)}」還在冷卻中。"))
+            env.add_event(event=BattleEvent(
+                type="text", text=f"{self.name} 的技能「{sm.get_skill_name(skill_id)}」還在冷卻中。"))
             return -1
+
 
 class Paladin(BattleProfession):
     def __init__(self):
         super().__init__(
             profession_id=0,
             name="聖騎士",
-            base_hp=PALADIN_VAR['PALADIN_BASE_HP'],
-            passive_name = "聖光",
-            passive_desc="攻擊時，30% 機率恢復最大血量的15%的生命值，回復超出最大生命時，對敵方造成50%的回復傷害",
-            baseAtk=PALADIN_VAR['PALADIN_BASE_ATK'],
-            baseDef=PALADIN_VAR['PALADIN_BASE_DEF']
+            base_hp=PALADIN_VAR['PALADIN_BASE_HP'][0],
+            passive_name="聖光",
+            passive_desc=f"攻擊時，{int(PALADIN_VAR['PALADIN_PASSIVE_TRIGGER_RATE'][0]*100)}% 機率恢復最大血量的 {int(PALADIN_VAR['PALADIN_PASSIVE_HEAL_RATE'][0]*100)}% 的生命值，回復超出最大生命時，對敵方造成 {int(PALADIN_VAR['PALADIN_PASSIVE_OVERHEADLINGE_RATE'][0]*100)}% 的回復傷害",
+            baseAtk=PALADIN_VAR['PALADIN_BASE_ATK'][0],
+            baseDef=PALADIN_VAR['PALADIN_BASE_DEF'][0]
         )
         self.heal_counts = {}
 
     def passive(self, user, targets, env):
         # 被動技能：15%機率回復最大血量的15%，超出部分造成100%回復傷害
         super().passive(user, targets, env)
-        
-        if random.random() < PALADIN_VAR['PALADIN_PASSIVE_TRIGGER_RATE']:
-            heal_amount = int(self.max_hp * 0.15)
-            env.add_event(event = BattleEvent(type="text",text=f"{self.name} 聖光觸發，恢復了血量。"))
-            env.deal_healing(user, heal_amount,rate = 1,heal_damage = True,target = targets[0]) 
+
+        if random.random() < PALADIN_VAR['PALADIN_PASSIVE_TRIGGER_RATE'][0]:
+            heal_amount = int(
+                self.max_hp * PALADIN_VAR['PALADIN_PASSIVE_HEAL_RATE'][0])
+            env.add_event(event=BattleEvent(
+                type="text", text=f"{self.name} 聖光觸發，恢復了血量。"))
+            env.deal_healing(
+                user, heal_amount, rate=PALADIN_VAR['PALADIN_PASSIVE_OVERHEADLINGE_RATE'][0], heal_damage=True, target=targets[0])
 
     def apply_skill(self, skill_id, user, targets, env):
         super().apply_skill(skill_id, user, targets, env)
         if skill_id == 0:
             # 技能 0 => 對單體造成40點傷害
-            dmg = 40 * self.baseAtk 
+            dmg = self.baseAtk * PALADIN_VAR['PALADIN_SKILL_0_DAMAGE'][0]
             env.deal_damage(user, targets[0], dmg, can_be_blocked=True)
             self.passive(user, targets, env)
 
-        elif skill_id == 1:  
+        elif skill_id == 1:
             # 技能 1 => 本回合迴避攻擊，回復10點血量。冷卻3回合。
             user["is_defending"] = True
-            heal_amount = 15
+            heal_amount = PALADIN_VAR['PALADIN_SKILL_1_HEAL'][0]
 
-            env.deal_healing(user, heal_amount,rate= 1,heal_damage = True,target = targets[0])
-
+            env.deal_healing(
+                user, heal_amount, rate=PALADIN_VAR['PALADIN_PASSIVE_OVERHEADLINGE_RATE'][0], heal_damage=True, target=targets[0])
 
         elif skill_id == 2:
             # 技能 2 => 恢復血量，第一次50, 第二次35, 第三次及以後15
             times_healed = user.get("times_healed", 0)
             if times_healed == 0:
-                heal_amount = 50
+                heal_amount = PALADIN_VAR['PALADIN_SKILL_2_FIRST_HEAL'][0]
             elif times_healed == 1:
-                heal_amount = 35
+                heal_amount = PALADIN_VAR['PALADIN_SKILL_2_SECOND_HEAL'][0]
             else:
-                heal_amount = 15
-                
-            env.deal_healing(user, heal_amount,rate=1,heal_damage = True,target = targets[0])
+                heal_amount = PALADIN_VAR['PALADIN_SKILL_2_MORE_HEAL'][0]
+
+            env.deal_healing(
+                user, heal_amount, rate=PALADIN_VAR['PALADIN_PASSIVE_OVERHEADLINGE_RATE'][0], heal_damage=True, target=targets[0])
             user["times_healed"] = times_healed + 1
+
 
 class Mage(BattleProfession):
     def __init__(self):
         super().__init__(
             profession_id=1,
             name="法師",
-            base_hp=249,
-            passive_name = "魔力充盈",
-            passive_desc="攻擊造成異常狀態時，50% 機率額外疊加一層異常狀態(燃燒或冰凍)。",
-            baseAtk=1.65,
-            baseDef=1.0
+            base_hp=MAGE_VAR['MAGE_BASE_HP'][0],
+            passive_name="魔力充盈",
+            passive_desc=f"攻擊造成異常狀態時，{int(MAGE_VAR['MAGE_PASSIVE_TRIGGER_RATE'][0]*100)}% 機率額外疊加一層異常狀態（燃燒或冰凍）。",
+            baseAtk=MAGE_VAR['MAGE_BASE_ATK'][0],
+            baseDef=MAGE_VAR['MAGE_BASE_DEF'][0]
         )
 
     def passive(self, user, targets, env):
-        # 被動技能：攻擊造成異常狀態時，15%機率額外疊加一層異常狀態(燃燒或凍結)
-        target = targets[0]
-        if random.random() < 0.5:
+        # 被動技能：攻擊造成異常狀態時，有機率額外疊加異常狀態
+        if random.random() < MAGE_VAR['MAGE_PASSIVE_TRIGGER_RATE'][0]:
             extra_status = random.choice([
                 Burn(duration=3, stacks=1),
                 Freeze(duration=3, stacks=1)
             ])
-            env.add_event(event = BattleEvent(type="text",text=f"{self.name} 的被動技能「魔力充盈」觸發，對 {target['profession'].name} 施加了額外的 {extra_status.name}。"))
+            target = targets[0]
+            env.add_event(event=BattleEvent(
+                type="text", text=f"{self.name} 的被動技能「魔力充盈」觸發，對 {target['profession'].name} 施加了額外的 {extra_status.name}。"))
             env.apply_status(target, extra_status)
- 
-            
-    
+
     def apply_skill(self, skill_id, user, targets, env):
         super().apply_skill(skill_id, user, targets, env)
-        if skill_id == 3:
-            # 技能 3 => 對單體造成35點傷害並疊加1層燃燒（最多3層），每層燃燒造成5點傷害
-            dmg = 35 * self.baseAtk 
+        if skill_id == 0:
+            # 技能 0：火焰之球
+            dmg = MAGE_VAR['MAGE_SKILL_0_DAMAGE'][0] * self.baseAtk
             env.deal_damage(user, targets[0], dmg, can_be_blocked=True)
             burn_effect = Burn(duration=3, stacks=1)
             env.apply_status(targets[0], burn_effect)
-            # 被動技能：15%機率額外疊加燃燒或凍結
             self.passive(user, targets, env)
-                
-        elif skill_id == 4:
-            # 技能 4 => 對單體造成35點傷害並疊加1層凍結（最多3層）
-            dmg = 35 * self.baseAtk 
+
+        elif skill_id == 1:
+            # 技能 1：冰霜箭
+            dmg = MAGE_VAR['MAGE_SKILL_1_DAMAGE'][0] * self.baseAtk
             env.deal_damage(user, targets[0], dmg, can_be_blocked=True)
             freeze_effect = Freeze(duration=3, stacks=1)
             env.apply_status(targets[0], freeze_effect)
             self.passive(user, targets, env)
-            
-        elif skill_id == 5:
-            # 技能 5 => 對敵方全體造成15點傷害，每層燃燒或是凍結增加25點傷害
-            base_dmg = 25 * self.baseAtk
-            target = targets[0]
-            # 計算燃燒或是凍結
-            total_layers = 0
-            for effects in target["effect_manager"].active_effects.values():
-                for eff in effects:
-                    if isinstance(eff, (Burn, Freeze)):
-                        total_layers += eff.stacks
-            dmg = base_dmg + 40 * total_layers
-            env.deal_damage(user, target, dmg, can_be_blocked=True)
-            # set burn and freeze stacks to 0
-            # remove burn and freeze
-            target["effect_manager"].remove_all_effects("燃燒")
-            target["effect_manager"].remove_all_effects("凍結")
+
+        elif skill_id == 2:
+            # 技能 2：全域爆破
+            base_dmg = MAGE_VAR['MAGE_SKILL_2_BASE_DAMAGE'][0] * self.baseAtk
+            total_layers = sum(
+                eff.stacks for effects in targets[0]["effect_manager"].active_effects.values()
+                for eff in effects if isinstance(eff, (Burn, Freeze))
+            )
+            dmg = base_dmg + \
+                MAGE_VAR['MAGE_SKILL_2_STATUS_MULTIPLIER'][0] * total_layers
+            env.deal_damage(user, targets[0], dmg, can_be_blocked=True)
+            targets[0]["effect_manager"].remove_all_effects("燃燒")
+            targets[0]["effect_manager"].remove_all_effects("凍結")
+
 
 class Assassin(BattleProfession):
     def __init__(self):
         super().__init__(
             profession_id=2,
             name="刺客",
-            base_hp=258,
-            passive_name = "刺殺",
-            passive_desc="攻擊時額外造成敵方當前5%生命值的傷害，並且 25% 機率對敵方造成中毒狀態。",
-            baseAtk=1.15,
-            baseDef=0.95
+            base_hp=ASSASSIN_VAR['ASSASSIN_BASE_HP'][0],
+            passive_name="刺殺",
+            passive_desc=f"攻擊時額外造成敵方當前 {int(ASSASSIN_VAR['ASSASSIN_PASSIVE_BONUS_DAMAGE_RATE'][0] * 100)}% 生命值的傷害，並且 {int(ASSASSIN_VAR['ASSASSIN_PASSIVE_TRIGGER_RATE'][0] * 100)}% 機率對敵方造成中毒狀態。",
+            baseAtk=ASSASSIN_VAR['ASSASSIN_BASE_ATK'][0],
+            baseDef=ASSASSIN_VAR['ASSASSIN_BASE_DEF'][0]
         )
-    def passive(self,targets,damage,env):
-        if random.random() < 0.25:  
-            env.add_event(event = BattleEvent(type="text",text=f"刺客對敵方造成額外中毒效果！"))
+
+    def passive(self, targets, damage, env):
+        # 被動技能：額外傷害和中毒效果
+        if random.random() < ASSASSIN_VAR['ASSASSIN_PASSIVE_TRIGGER_RATE'][0]:
+            env.add_event(event=BattleEvent(
+                type="text", text=f"刺客對敵方造成額外中毒效果！"))
             effect = Poison(duration=3, stacks=1)
             env.apply_status(targets[0], effect)
-        return  damage + int(targets[0]["hp"] * 0.05)
+        return damage + int(targets[0]["hp"] * ASSASSIN_VAR['ASSASSIN_PASSIVE_BONUS_DAMAGE_RATE'][0])
+
     def apply_skill(self, skill_id, user, targets, env):
         super().apply_skill(skill_id, user, targets, env)
-        if skill_id == 6:
-            # 技能 6 => 對單體造成45點傷害35%機率傷害翻倍
-            dmg = 40 * self.baseAtk
-            dmg = self.passive(targets,dmg,env)
-            if random.random() < 0.35:
-                env.add_event(event = BattleEvent(type="text",text=f"擊中要害！"))
+        if skill_id == 0:
+            # 技能 0：致命暗殺
+            dmg = ASSASSIN_VAR['ASSASSIN_SKILL_0_DAMAGE'][0] * self.baseAtk
+            dmg = self.passive(targets, dmg, env)
+            if random.random() < ASSASSIN_VAR['ASSASSIN_SKILL_0_CRIT_RATE'][0]:
+                env.add_event(event=BattleEvent(type="text", text=f"擊中要害！"))
                 dmg *= 2
             env.deal_damage(user, targets[0], dmg, can_be_blocked=True)
-           
-        elif skill_id == 7:
-            # 毒爆=>  引爆中毒的對象，每層造成10點傷害，並回復8點血量
+
+        elif skill_id == 1:
+            # 技能 1：毒爆
             target = targets[0]
             total_layers = 0
             for effects in target["effect_manager"].active_effects.values():
@@ -234,87 +248,111 @@ class Assassin(BattleProfession):
                     if isinstance(eff, Poison):
                         total_layers += eff.stacks
             if total_layers > 0:
-                env.add_event(event = BattleEvent(type="text",text=f"引爆了中毒效果！"))
-                # 回復8點血量
-                # 對敵方造成10點傷害
-                dmg = 10 * total_layers
-                dmg = self.passive(targets,dmg,env)
-                heal = 8*total_layers
+                env.add_event(event=BattleEvent(type="text", text=f"引爆了中毒效果！"))
+                dmg = ASSASSIN_VAR['ASSASSIN_SKILL_1_DAMAGE_PER_LAYER'][0] * total_layers
+                dmg = self.passive(targets, dmg, env)
+                heal = ASSASSIN_VAR['ASSASSIN_SKILL_1_HEAL_PER_LAYER'][0] * total_layers
                 env.deal_damage(user, target, dmg, can_be_blocked=True)
                 env.deal_healing(user, heal)
                 target["effect_manager"].remove_all_effects("中毒")
             else:
-                env.add_event(event = BattleEvent(type="text",text=f"無法引爆中毒效果，對方並未中毒。"))
+                env.add_event(event=BattleEvent(
+                    type="text", text=f"無法引爆中毒效果，對方並未中毒。"))
 
-        elif skill_id == 8:
-            # 對單體造成10點傷害並疊加中毒1~3層（最多5層），每層中毒造成3點傷害
-            # 45% 1層 35% 2層 20% 3層
-            add_stacks = random.choices([1, 2, 3], weights=[0.35, 0.45, 0.2], k=1)[0]
+        elif skill_id == 2:
+            # 技能 2：毒刃襲擊
+            dmg = ASSASSIN_VAR['ASSASSIN_SKILL_2_DAMAGE'][0] * self.baseAtk
+            dmg = self.passive(targets, dmg, env)
+            env.deal_damage(user, targets[0], dmg, can_be_blocked=True)
+
+            # 計算隨機疊加的中毒層數
+            weights = [
+                ASSASSIN_VAR['ASSASSIN_SKILL_2_POISON_STACKS_1_WEIGHT'][0],
+                ASSASSIN_VAR['ASSASSIN_SKILL_2_POISON_STACKS_2_WEIGHT'][0],
+                ASSASSIN_VAR['ASSASSIN_SKILL_2_POISON_STACKS_3_WEIGHT'][0],
+                ASSASSIN_VAR['ASSASSIN_SKILL_2_POISON_STACKS_4_WEIGHT'][0],
+                ASSASSIN_VAR['ASSASSIN_SKILL_2_POISON_STACKS_5_WEIGHT'][0]
+            ]
+            add_stacks = random.choices(
+                [1, 2, 3, 4, 5], weights=weights, k=1)[0]
             effect = Poison(duration=3, stacks=add_stacks)
             env.apply_status(targets[0], effect)
-        
+
+
 class Archer(BattleProfession):
     def __init__(self):
         super().__init__(
             profession_id=3,
             name="弓箭手",
-            base_hp=234,
-            passive_name = "鷹眼",
-            passive_desc="攻擊時15% 機率造成2倍傷害；敵方防禦基值越高時，額外增加鷹眼的觸發機率。",
-            baseAtk=1.15,
-            baseDef=1.03
+            base_hp=ARCHER_VAR['ARCHER_BASE_HP'][0],
+            passive_name="鷹眼",
+            passive_desc=f"攻擊時 {int(ARCHER_VAR['ARCHER_PASSIVE_BASE_TRIGGER_RATE'][0] * 100)}% 機率造成 2 倍傷害；敵方防禦基值越高時，額外增加觸發機率。",
+            baseAtk=ARCHER_VAR['ARCHER_BASE_ATK'][0],
+            baseDef=ARCHER_VAR['ARCHER_BASE_DEF'][0]
         )
-    
-    def passive(self, env , dmg,tar):
-        # 被動技能：攻擊時10%機率造成2倍傷害
-        t  = tar[0]
-        prob = 0.15
-        if t["profession"].baseDef > 1:
-            prob = 0.15 + (t["profession"].baseDef - 1) *2
-            # but not exceed 0.5
-            prob = min(prob, 0.50)
+
+    def passive(self, env, dmg, tar):
+        target = tar[0]
+        prob = ARCHER_VAR['ARCHER_PASSIVE_BASE_TRIGGER_RATE'][0]
+        if target["profession"].baseDef > 1:
+            prob += (target["profession"].baseDef - 1) * \
+                ARCHER_VAR['ARCHER_PASSIVE_TRIGGER_RATE_BONUS'][0]
+            prob = min(prob, ARCHER_VAR['ARCHER_PASSIVE_TRIGGER_RATE_MAX'][0])
         if random.random() < prob:
-            env.add_event(event = BattleEvent(type="text",text=f"被動技能「鷹眼」觸發，攻擊造成兩倍傷害！"))
+            env.add_event(event=BattleEvent(
+                type="text", text=f"被動技能「鷹眼」觸發，攻擊造成兩倍傷害！"))
             return dmg * 2
         return dmg
 
     def apply_skill(self, skill_id, user, targets, env):
         super().apply_skill(skill_id, user, targets, env)
-        if skill_id == 9:
-            # 技能 9 => 對單體造成50點傷害，使對方防禦力下降10%。
-            dmg = 10 * self.baseAtk 
-            dmg = self.passive(env, dmg,targets)
-            env.deal_damage(user, targets[0], dmg, can_be_blocked=True)
-            def_buff = DefenseMultiplier(multiplier=0.9, duration=2, stackable=False,source=skill_id)
-            env.apply_status(targets[0], def_buff)
-            
-            for i in range(4):
+        if skill_id == 0:
+            # 技能 0：五連矢
+            dmg = ARCHER_VAR['ARCHER_SKILL_0_DAMAGE'][0] * self.baseAtk
+            dmg /= 5 
+            for _ in range(5):
+                dmg = self.passive(env, dmg, targets)
                 env.deal_damage(user, targets[0], dmg, can_be_blocked=True)
-            # 降低對方防禦力25%，持續2回合
+                
+            def_buff = DefenseMultiplier(
+                multiplier=ARCHER_VAR['ARCHER_SKILL_0_DEFENSE_DEBUFF'][0],
+                duration=ARCHER_VAR['ARCHER_SKILL_0_DURATION'][0],
+                stackable=False,
+                source=skill_id
+            )
+            env.apply_status(targets[0], def_buff)
 
-
-        elif skill_id == 10:
-            # 技能 10 => 2回合間增加150%傷害，或是自身防禦力降低50%
-            choice = random.choice(['buff', 'damage'])
-            if choice == 'buff':
-                dmg_multiplier = 3.5
-                dmg_buff = DamageMultiplier(multiplier=dmg_multiplier, duration=2, stackable=False,source=skill_id)
-
-                env.add_event(event = BattleEvent(type="text",text=f"箭矢補充成功。"))
+        elif skill_id == 1:
+            # 技能 1：箭矢補充
+            if random.random() < ARCHER_VAR['ARCHER_SKILL_1_SUCESS_RATIO'][0]:
+                dmg_multiplier = ARCHER_VAR['ARCHER_SKILL_1_DAMAGE_MULTIPLIER'][0]
+                dmg_buff = DamageMultiplier(
+                    multiplier=dmg_multiplier,
+                    duration=ARCHER_VAR['ARCHER_SKILL_1_DURATION'][0],
+                    stackable=False,
+                    source=skill_id
+                )
+                env.add_event(event=BattleEvent(
+                    type="text", text=f"箭矢補充成功，攻擊力大幅提升！"))
                 env.apply_status(user, dmg_buff)
             else:
-                def_multiplier = 0.5
-                def_debuff = DefenseMultiplier(multiplier=def_multiplier, duration=1, stackable=False,source=skill_id)
-
-                env.add_event(event = BattleEvent(type="text",text=f"箭矢補充失敗。"))
+                def_multiplier = ARCHER_VAR['ARCHER_SKILL_1_DEFENSE_MULTIPLIER'][0]
+                def_debuff = DefenseMultiplier(
+                    multiplier=def_multiplier,
+                    duration=ARCHER_VAR['ARCHER_SKILL_1_DURATION'][0],
+                    stackable=False,
+                    source=skill_id
+                )
+                env.add_event(event=BattleEvent(
+                    type="text", text=f"箭矢補充失敗，防禦力下降！"))
                 env.apply_status(user, def_debuff)
-                
-        elif skill_id == 11:
-            # 技能 11 => 對單體造成30點傷害，並回復15點血量
-            dmg = 30 * self.baseAtk
-            dmg = self.passive(env, dmg,targets)
+
+        elif skill_id == 2:
+            # 技能 2：吸血箭
+            dmg = ARCHER_VAR['ARCHER_SKILL_2_DAMAGE'][0] * self.baseAtk
+            dmg = self.passive(env, dmg, targets)
             env.deal_damage(user, targets[0], dmg, can_be_blocked=True)
-            heal_amount = 15
+            heal_amount = ARCHER_VAR['ARCHER_SKILL_2_HEAL'][0]
             env.deal_healing(user, heal_amount)
 
 class Berserker(BattleProfession):
@@ -322,132 +360,146 @@ class Berserker(BattleProfession):
         super().__init__(
             profession_id=4,
             name="狂戰士",
-            base_hp=430,
-            passive_name = "狂暴",
-            passive_desc="若自身血量<50%時，攻擊增加失去生命值的30%的傷害。",
-            baseAtk=1.0,
-            baseDef=0.76
+            base_hp=BERSERKER_VAR['BERSERKER_BASE_HP'][0],
+            passive_name="狂暴",
+            passive_desc=f"若自身血量低於 {int(BERSERKER_VAR['BERSERKER_PASSIVE_EXTRA_DAMAGE_THRESHOLD'][0] * 100)}%，攻擊增加失去生命值的 {int(BERSERKER_VAR['BERSERKER_PASSIVE_EXTRA_DAMAGE_RATE'][0] * 100)}% 的傷害。",
+            baseAtk=BERSERKER_VAR['BERSERKER_BASE_ATK'][0],
+            baseDef=BERSERKER_VAR['BERSERKER_BASE_DEF'][0]
         )
 
     def passive(self, user, dmg, env):
-        if user["hp"] < (user["max_hp"] * 0.5):
+        if user["hp"] < (user["max_hp"] * BERSERKER_VAR['BERSERKER_PASSIVE_EXTRA_DAMAGE_THRESHOLD'][0]):
             loss_hp = user["max_hp"] - user["hp"]
-            dmg += loss_hp * 0.3
-            env.add_event(event = BattleEvent(type="text",text=f"{self.name} 的被動技能「狂暴」觸發，攻擊時增加了 {int(loss_hp * 0.35)} 點傷害。"))
+            dmg += loss_hp * BERSERKER_VAR['BERSERKER_PASSIVE_EXTRA_DAMAGE_RATE'][0]
+            env.add_event(event=BattleEvent(
+                type="text", text=f"{self.name} 的被動技能「狂暴」觸發，攻擊時增加了 {int(loss_hp * BERSERKER_VAR['BERSERKER_PASSIVE_EXTRA_DAMAGE_RATE'][0])} 點傷害。"))
         return dmg
 
     def apply_skill(self, skill_id, user, targets, env):
         super().apply_skill(skill_id, user, targets, env)
-        if skill_id == 12:
-            # 技能 12 => 對單體造成30點傷害，並自身反嗜15%造成的傷害。
-            dmg = 30 * self.baseAtk 
+        if skill_id == 12:  # 對應 BERSERKER_SKILL_0
+            dmg = BERSERKER_VAR['BERSERKER_SKILL_0_DAMAGE'][0] * self.baseAtk
             dmg = self.passive(user, dmg, env)
             env.deal_damage(user, targets[0], dmg, can_be_blocked=True)
-            # 自身反噬
-            heal = dmg * 0.15
-    
-            env.add_event(event = BattleEvent(type="text",text=f"{self.name} 受到反噬。"))
-            env.deal_healing(user, heal, self_mutilation = True)
-            
-        elif skill_id == 13:
-            # 技能 13 => 消耗150點血量，接下來5回合每回合回復40點生命值。冷卻5回合。
-            if user["hp"] > 150:
-                env.deal_healing(user, 150,self_mutilation = True)
-                heal_effect = HealthPointRecover(hp_recover=40, duration=5, stackable=False,source=skill_id,env=env)
+            self_mutilation = dmg * BERSERKER_VAR['BERSERKER_SKILL_0_SELF_MUTILATION_RATE'][0]
+            env.deal_healing(user, self_mutilation, self_mutilation=True)
+            env.add_event(event=BattleEvent(type="text", text=f"{self.name} 受到反噬，損失了 {int(self_mutilation)} 點生命值。"))
+
+        elif skill_id == 13:  # 對應 BERSERKER_SKILL_1
+            if user["hp"] > BERSERKER_VAR['BERSERKER_SKILL_1_HP_COST'][0]:
+                env.deal_healing(user, BERSERKER_VAR['BERSERKER_SKILL_1_HP_COST'][0], self_mutilation=True)
+                heal_effect = HealthPointRecover(
+                    hp_recover=BERSERKER_VAR['BERSERKER_SKILL_1_HEAL_PER_TURN'][0],
+                    duration=BERSERKER_VAR['BERSERKER_SKILL_1_DURATION'][0],
+                    stackable=False,
+                    source=skill_id,
+                    env=env
+                )
                 env.apply_status(user, heal_effect)
-            else: 
-                env.add_event(event = BattleEvent(type="text",text=f"{self.name} 嘗試使用「熱血」，但血量不足。"))
+            else:
+                env.add_event(event=BattleEvent(
+                    type="text", text=f"{self.name} 嘗試使用「熱血」，但血量不足。"))
 
-
-                
-        elif skill_id == 14:
-            # 技能 14 => 犧牲30點血量，接下來2回合免控，並提升35%防禦力。
-            if user["hp"] > 30:
-                env.deal_healing(user, 30,self_mutilation = True)
-                immune_control = ImmuneControl(duration=2, stackable=False)
+        elif skill_id == 14:  # 對應 BERSERKER_SKILL_2
+            if user["hp"] > BERSERKER_VAR['BERSERKER_SKILL_2_HP_COST'][0]:
+                env.deal_healing(user, BERSERKER_VAR['BERSERKER_SKILL_2_HP_COST'][0], self_mutilation=True)
+                immune_control = ImmuneControl(duration=BERSERKER_VAR['BERSERKER_SKILL_2_DURATION'][0], stackable=False)
                 env.apply_status(user, immune_control)
-                def_buff = DefenseMultiplier(multiplier=1.35, duration=2, stackable=False,source=skill_id)
+                def_buff = DefenseMultiplier(
+                    multiplier=BERSERKER_VAR['BERSERKER_SKILL_2_DEFENSE_BUFF'][0],
+                    duration=BERSERKER_VAR['BERSERKER_SKILL_2_DURATION'][0],
+                    stackable=False,
+                    source=skill_id
+                )
                 env.apply_status(user, def_buff)
             else:
-                env.add_event(event = BattleEvent(type="text",text=f"{self.name} 嘗試使用「血怒」，但血量不足。"))
+                env.add_event(event=BattleEvent(
+                    type="text", text=f"{self.name} 嘗試使用「血怒」，但血量不足。"))
+
 
 class DragonGod(BattleProfession):
     def __init__(self):
         super().__init__(
             profession_id=5,
             name="龍神",
-            base_hp=315,
-            passive_name = "龍血",
-            passive_desc="每回合疊加一個龍神狀態，龍神狀態每層增加 5% 攻擊力、增加 5% 防禦力",
-            baseAtk=1.05,
-            baseDef=1.05
+            base_hp=DRAGONGOD_VAR['DRAGONGOD_BASE_HP'][0],
+            passive_name="龍血",
+            passive_desc=f"每回合疊加一個龍神狀態，龍神狀態每層增加 {int((DRAGONGOD_VAR['DRAGONGOD_PASSIVE_ATK_MULTIPLIER'][0] - 1) * 100)}% 攻擊力、增加 {int((DRAGONGOD_VAR['DRAGONGOD_PASSIVE_DEF_MULTIPLIER'][0] - 1) * 100)}% 防禦力。",
+            baseAtk=DRAGONGOD_VAR['DRAGONGOD_BASE_ATK'][0],
+            baseDef=DRAGONGOD_VAR['DRAGONGOD_BASE_DEF'][0]
         )
-        self.dragon_soul_stacks = 0
 
-    def passive(self, user, targets, env):
-        # 在env中的passive 實作
-        pass
-    def on_turn_start(self, user, targets, env,id):
-        env.add_event(event = BattleEvent(type="text",text=f"{self.name} 的被動技能「龍血」觸發！"))
-        
-        deffect = DefenseMultiplier(multiplier=1.05,duration=99,stacks=1,source=self.default_passive_id,stackable=True,max_stack=99)
-        heffect = DamageMultiplier(multiplier=1.05,duration=99,stacks=1,source=self.default_passive_id,stackable=True,max_stack=99)
-        # hpeffect = MaxHPmultiplier(multiplier=1.02,duration=99,stacks=1,source=passive_id,stackable=True,max_stack=99)
-        track = Track(name="龍血",duration=99,stacks=1,source=self.default_passive_id,stackable=True,max_stack=99)
-        env.apply_status(user,heffect)
-        env.apply_status(user,deffect)
-        env.apply_status(user,track)
+    def on_turn_start(self, user, targets, env, id):
+        # 每回合觸發被動技能，疊加龍血狀態
+        env.add_event(event=BattleEvent(
+            type="text", text=f"{self.name} 的被動技能「龍血」觸發！"))
+
+        atk_buff = DamageMultiplier(
+            multiplier=DRAGONGOD_VAR['DRAGONGOD_PASSIVE_ATK_MULTIPLIER'][0],
+            duration=99,
+            stacks=1,
+            source=self.default_passive_id,
+            stackable=True,
+            max_stack=99
+        )
+        def_buff = DefenseMultiplier(
+            multiplier=DRAGONGOD_VAR['DRAGONGOD_PASSIVE_DEF_MULTIPLIER'][0],
+            duration=99,
+            stacks=1,
+            source=self.default_passive_id,
+            stackable=True,
+            max_stack=99
+        )
+        track = Track(
+            name="龍血",
+            duration=99,
+            stacks=1,
+            source=self.default_passive_id,
+            stackable=True,
+            max_stack=99
+        )
+        env.apply_status(user, atk_buff)
+        env.apply_status(user, def_buff)
+        env.apply_status(user, track)
 
     def apply_skill(self, skill_id, user, targets, env):
         super().apply_skill(skill_id, user, targets, env)
-        
-        if skill_id == 15:
-            # 技能 15 => 對單體造成25點傷害，每層龍血狀態增加5點傷害。
-            base_dmg = 30 * self.baseAtk 
-            # get name="龍血buff"的效果
+
+        if skill_id == 15:  # 對應 DRAGONGOD_SKILL_0
+            base_dmg = DRAGONGOD_VAR['DRAGONGOD_SKILL_0_BASE_DAMAGE'][0] * self.baseAtk
             dragon_soul_effect = user["effect_manager"].get_effects("龍血")[0]
-            # get stacks
-            if dragon_soul_effect:
-                stacks = dragon_soul_effect.stacks
-            else:
-                stacks = 0
-            dmg = base_dmg + stacks * 5
+            stacks = dragon_soul_effect.stacks if dragon_soul_effect else 0
+            bonus_dmg = stacks * DRAGONGOD_VAR['DRAGONGOD_SKILL_0_BONUS_DAMAGE_PER_STACK'][0]
+            dmg = base_dmg + bonus_dmg
             env.deal_damage(user, targets[0], dmg, can_be_blocked=True)
-            
-        elif skill_id == 16:
-            # 技能 16 => 回復100點血量，接下來3回合每回合扣除30點血量，冷卻4回合。
-            heal_amount = 120
+
+        elif skill_id == 16:  # 對應 DRAGONGOD_SKILL_1
+            heal_amount = DRAGONGOD_VAR['DRAGONGOD_SKILL_1_HEAL_AMOUNT'][0]
             env.deal_healing(user, heal_amount)
-            bleed_effect = HealthPointRecover(hp_recover=30, duration=3, stackable=False,source=skill_id,env=env,self_mutilation=True)
+            bleed_effect = HealthPointRecover(
+                hp_recover=DRAGONGOD_VAR['DRAGONGOD_SKILL_1_BLEED_PER_TURN'][0],
+                duration=DRAGONGOD_VAR['DRAGONGOD_SKILL_1_BLEED_DURATION'][0],
+                stackable=False,
+                source=skill_id,
+                env=env,
+                self_mutilation=True
+            )
             env.apply_status(user, bleed_effect)
-        elif skill_id == 17:
-            # 技能 17 => 消除一半的龍神狀態的層數，造成層數*25的傷害。
-            # get name="龍血buff"的效果
+
+        elif skill_id == 17:  # 對應 DRAGONGOD_SKILL_2
             dragon_soul_effect = user["effect_manager"].get_effects("龍血")[0]
-            # get stacks
-            if dragon_soul_effect:
-                stacks = dragon_soul_effect.stacks
-            else:
-                stacks = 0
-            if stacks // 2 > 0:
-                consume_stack = stacks // 2
-                damage = consume_stack * 35
-                # 消耗了X層龍神狀態
-                env.add_event(event = BattleEvent(type="text",text=f"「神龍燎原」消耗了 {consume_stack} 層龍神狀態。"))
+            stacks = dragon_soul_effect.stacks if dragon_soul_effect else 0
+            consume_ratio = DRAGONGOD_VAR['DRAGONGOD_SKILL_2_STACK_CONSUMPTION'][0]
+            consume_stack = int(stacks * consume_ratio)
+            if consume_stack > 0:
+                damage = consume_stack * DRAGONGOD_VAR['DRAGONGOD_SKILL_2_DAMAGE_PER_STACK'][0]
+                env.add_event(event=BattleEvent(
+                    type="text", text=f"「神龍燎原」消耗了 {consume_stack} 層龍神狀態。"))
                 env.deal_damage(user, targets[0], damage, can_be_blocked=True)
-
-                # 1 2 and 12 and 999
-                # 1: DamageMultiplier
-                # 2: DefenseMultiplier
-                # 12: Max HP Increase
-                # 999: DragonSoul Tracker
-                source = self.default_passive_id
-                env.set_status(user, "攻擊力" , consume_stack,source = source)
-                env.set_status(user, "防禦力" , consume_stack,source = source)
-                dragon_soul_effect.stacks = consume_stack
-
+                dragon_soul_effect.stacks -= consume_stack
             else:
-                env.add_event(event = BattleEvent(type="text",text=f"{self.name} 嘗試使用「荒龍燎原」，但沒有龍神狀態。"))
+                env.add_event(event=BattleEvent(
+                    type="text", text=f"{self.name} 嘗試使用「神龍燎原」，但沒有足夠的龍神狀態。"))
 
 
 class BloodGod(BattleProfession):
@@ -455,176 +507,163 @@ class BloodGod(BattleProfession):
         super().__init__(
             profession_id=6,
             name="血神",
-            base_hp=266,
-            passive_name = "血脈",
-            passive_desc="每回合會累積所受傷害至血脈裡面，所受傷害累積越多會降低血脈的強度。每受到最大血量的25%傷害，則自身攻擊力、防禦力、治癒力降低10%。",
-            baseAtk=1.8,
-            baseDef=1.8
- 
+            base_hp=BLOODGOD_VAR['BLOODGOD_BASE_HP'][0],
+            passive_name="血脈",
+            passive_desc=f"每回合會累積所受傷害至血脈裡面，所受傷害累積越多會降低血脈的強度。每受到最大血量的 {int(BLOODGOD_VAR['BLOODGOD_PASSIVE_DAMAGE_THRESHOLD'][0] * 100)}% 傷害，則自身攻擊力、防禦力、治癒力降低 {int((1 - BLOODGOD_VAR['BLOODGOD_PASSIVE_MULTIPLIER_REDUCTION'][0]) * 100)}%。",
+            baseAtk=BLOODGOD_VAR['BLOODGOD_BASE_ATK'][0],
+            baseDef=BLOODGOD_VAR['BLOODGOD_BASE_DEF'][0]
         )
         self.bleed_stacks = 0
 
     def passive(self, user, targets, env):
         pass
+
     def on_turn_end(self, user, targets, env, id):
         if 'total_accumulated_damage' in user['private_info']:
             user['private_info']['total_accumulated_damage'] += user['accumulated_damage']
         else:
             user['private_info']['total_accumulated_damage'] = user['accumulated_damage']
-        # 所受傷害累積越多會降低血脈的強度。每受到最大血量的25%傷害，則自身攻擊力、防禦力、治癒力降低10%。
-        stack = int (user['private_info']['total_accumulated_damage'] / (user['max_hp']*0.25))
+
+        # 每受到最大血量的指定比例傷害，降低攻擊、防禦、治癒力
+        threshold = user['max_hp'] * BLOODGOD_VAR['BLOODGOD_PASSIVE_DAMAGE_THRESHOLD'][0]
+        stack = int(user['private_info']['total_accumulated_damage'] / threshold)
 
         if stack > 0:
-            # check if has effect
-            if user["effect_manager"].has_effect("攻擊力",source=self.default_passive_id):
-                # 用 set_status 來更新數值
-                eff = user["effect_manager"].get_effects("攻擊力",source=self.default_passive_id)[0]
+            if user["effect_manager"].has_effect("攻擊力", source=self.default_passive_id):
+                eff = user["effect_manager"].get_effects("攻擊力", source=self.default_passive_id)[0]
                 if eff.stacks != stack:
-                    env.set_status(user, "攻擊力" , stack,source = self.default_passive_id)
-                    env.set_status(user, "防禦力" , stack,source = self.default_passive_id)
-                    env.set_status(user, "治癒力" , stack,source = self.default_passive_id)
-                
+                    env.set_status(user, "攻擊力", stack, source=self.default_passive_id)
+                    env.set_status(user, "防禦力", stack, source=self.default_passive_id)
+                    env.set_status(user, "治癒力", stack, source=self.default_passive_id)
             else:
-                # 初次施加buff
-                env.add_event(event = BattleEvent(type="text",text=f"{self.name} 血脈混濁，降低了自身的攻擊力、防禦力、治癒力。"))
-                atffect = DamageMultiplier(multiplier=0.9,duration=99,stacks=stack,source=self.default_passive_id,stackable=True,max_stack=99)
-                deffect = DefenseMultiplier(multiplier=0.9,duration=99,stacks=stack,source=self.default_passive_id,stackable=True,max_stack=99)
-                heffect = HealMultiplier(multiplier=0.9,duration=99,stacks=stack,source=self.default_passive_id,stackable=True,max_stack=99)
-                env.apply_status(user,atffect)
-                env.apply_status(user,deffect)
-                env.apply_status(user,heffect)
-        elif stack == 0 and user["effect_manager"].has_effect("攻擊力",source=self.default_passive_id):
-            # remove effect
-            user["effect_manager"].remove_all_effects("攻擊力",source=self.default_passive_id)
-            user["effect_manager"].remove_all_effects("防禦力",source=self.default_passive_id)
-            user["effect_manager"].remove_all_effects("治癒力",source=self.default_passive_id)
-  
+                env.add_event(event=BattleEvent(
+                    type="text", text=f"{self.name} 血脈混濁，降低了自身的攻擊力、防禦力、治癒力。"))
+                atffect = DamageMultiplier(
+                    multiplier=BLOODGOD_VAR['BLOODGOD_PASSIVE_MULTIPLIER_REDUCTION'][0],
+                    duration=99, stacks=stack,
+                    source=self.default_passive_id, stackable=True, max_stack=99
+                )
+                deffect = DefenseMultiplier(
+                    multiplier=BLOODGOD_VAR['BLOODGOD_PASSIVE_MULTIPLIER_REDUCTION'][0],
+                    duration=99, stacks=stack,
+                    source=self.default_passive_id, stackable=True, max_stack=99
+                )
+                heffect = HealMultiplier(
+                    multiplier=BLOODGOD_VAR['BLOODGOD_PASSIVE_MULTIPLIER_REDUCTION'][0],
+                    duration=99, stacks=stack,
+                    source=self.default_passive_id, stackable=True, max_stack=99
+                )
+                env.apply_status(user, atffect)
+                env.apply_status(user, deffect)
+                env.apply_status(user, heffect)
+        elif stack == 0 and user["effect_manager"].has_effect("攻擊力", source=self.default_passive_id):
+            user["effect_manager"].remove_all_effects("攻擊力", source=self.default_passive_id)
+            user["effect_manager"].remove_all_effects("防禦力", source=self.default_passive_id)
+            user["effect_manager"].remove_all_effects("治癒力", source=self.default_passive_id)
+
     def damage_taken(self, user, targets, env, dmg):
-        # check if has effect "轉生之印"
         if user["effect_manager"].has_effect("轉生之印"):
             eff = user["effect_manager"].get_effects("轉生之印")[0]
-            if eff.stacks > 0 and user["hp"]==0:
-                # 消耗當前15%生命值，2回合內，受到致死傷害時，則生命值回復最大血量的25%，但該次累積到血脈裡的傷害變為原本的500%。冷卻5回合
+            if eff.stacks > 0 and user["hp"] == 0:
                 eff.stacks -= 1
-                env.add_event(event = BattleEvent(type="text",text=f"{self.name} 的「轉生之印」觸發，神秘的力量使自身免於死亡。"))
-                user["hp"] = int(user["max_hp"] * 0.25)
-                
-                # 記錄傷害
-                user["private_info"]["total_accumulated_damage"] += dmg * 5
-                # remove 轉生之印
+                env.add_event(event=BattleEvent(
+                    type="text", text=f"{self.name} 的「轉生之印」觸發，神秘的力量使自身免於死亡。"))
+                user["hp"] = int(user["max_hp"] * BLOODGOD_VAR['BLOODGOD_SKILL_2_RESURRECT_HEAL_RATIO'][0])
+                user["private_info"]["total_accumulated_damage"] += dmg * BLOODGOD_VAR['BLOODGOD_SKILL_2_BLOOD_ACCUMULATION_MULTIPLIER'][0]
                 user["effect_manager"].remove_all_effects("轉生之印")
 
     def apply_skill(self, skill_id, user, targets, env):
         super().apply_skill(skill_id, user, targets, env)
-    
+
         if skill_id == 18:
-            # 技能 18 =>  造成60點傷害，對敵方疊加流血狀態，攻擊流血的敵人時恢復一定的生命力。
-            dmg = 55 * self.baseAtk
+            dmg = BLOODGOD_VAR['BLOODGOD_SKILL_0_DAMAGE'][0] * self.baseAtk
             env.deal_damage(user, targets[0], dmg, can_be_blocked=True)
-            bleed_effect = BleedEffect(duration=5, stacks=1)
+            bleed_effect = BleedEffect(duration=BLOODGOD_VAR['BLOODGOD_SKILL_0_BLEED_DURATION'][0], stacks=1)
             env.apply_status(targets[0], bleed_effect)
-            
-            # check target has bleed effect
+
             bleed_effects = targets[0]["effect_manager"].get_effects("流血")
             if bleed_effects:
-                # check the stacks
                 stack = bleed_effects[0].stacks
-                heal_amount = stack * 3
+                heal_amount = stack * BLOODGOD_VAR['BLOODGOD_SKILL_0_HEAL_PER_BLEED_STACK'][0]
                 env.deal_healing(user, heal_amount)
-                
+
         elif skill_id == 19:
-            # 技能 19 =>  血脈的累積傷害降低敵方當前流血層數的300%；恢復敵方流血層數500%的生命值，並使敵方流血層數翻倍
-            # get bleed stacks
             bleed_effects = targets[0]["effect_manager"].get_effects("流血")
             if bleed_effects:
                 stack = bleed_effects[0].stacks
-                # 最低只能降到0
-                user['private_info']['total_accumulated_damage'] = max(user['private_info']['total_accumulated_damage'] - stack * 3 , 0)
-                # total acc damage < maxhp * 0.25 =>完美的血脈
-                # total acc damage < maxhp * 0.5 =>精純的血脈
-                # total acc damage < maxhp * 0.75 =>上等的血脈
-                # total acc damage < maxhp * 1 =>普通的血脈
-                # else => 混濁的血脈
-                if user['private_info']['total_accumulated_damage'] < user['max_hp'] * 0.25:
-                    env.add_event(event = BattleEvent(type="text",text=f"{self.name} 發動血脈祭儀來純化血脈，現在擁有完美的血脈，並使敵方流血更加嚴重！"))
-                elif user['private_info']['total_accumulated_damage'] < user['max_hp'] * 0.5:
-                    env.add_event(event = BattleEvent(type="text",text=f"{self.name} 發動血脈祭儀來純化血脈，現在擁有精純的血脈，並使敵方流血更加嚴重！"))
-                elif user['private_info']['total_accumulated_damage'] < user['max_hp'] * 0.75:
-                    env.add_event(event = BattleEvent(type="text",text=f"{self.name} 發動血脈祭儀來純化血脈，現在擁有上等的血脈，並使敵方流血更加嚴重！"))
-                elif user['private_info']['total_accumulated_damage'] < user['max_hp']:
-                    env.add_event(event = BattleEvent(type="text",text=f"{self.name} 發動血脈祭儀來純化血脈，現在擁有普通的血脈，並使敵方流血更加嚴重！"))
-                else:
-                    env.add_event(event = BattleEvent(type="text",text=f"{self.name} 發動血脈祭儀來純化血脈，現在擁有混濁的血脈，並使敵方流血更加嚴重！"))
-                
-                # heal
-                heal_amount = stack * 5
+                user['private_info']['total_accumulated_damage'] = max(
+                    user['private_info']['total_accumulated_damage'] - stack * BLOODGOD_VAR['BLOODGOD_SKILL_1_BLEED_REDUCTION_MULTIPLIER'][0], 0)
+
+                env.add_event(event=BattleEvent(
+                    type="text", text=f"{self.name} 發動血脈祭儀，並使敵方流血更加嚴重！"))
+                heal_amount = stack * BLOODGOD_VAR['BLOODGOD_SKILL_1_HEAL_MULTIPLIER'][0]
                 env.deal_healing(user, heal_amount)
-                env.set_status(targets[0], "流血" ,stacks = stack*2)
-                
-            else:
-                env.add_event(event = BattleEvent(type="text",text=f"血脈祭儀沒有足夠的鮮血來啟動。"))
-                
+                env.set_status(targets[0], "流血", stacks=stack * BLOODGOD_VAR['BLOODGOD_SKILL_1_BLEED_STACK_MULTIPLIER'][0])
+
         elif skill_id == 20:
-            # 轉生：消耗當前15%生命值，2回合內，受到致死傷害時，則生命值回復到最大血量的25%，但該次累積到血脈裡的傷害變為原本的500%。冷卻5回合
-            env.add_event(event = BattleEvent(type="text",text=f"{self.name} 啟用了久遠的未知印記，神秘的力量開始聚於自身之上。"))
-            
-            env.deal_healing(user, int(user["hp"] * 0.15),self_mutilation = True)
-            eff = Track(name="轉生之印",duration=2,stacks=1,source=skill_id,stackable=False)
-            env.apply_status(user,eff)
-            # 剩下部分在 damage_taken 中實作
-            
-            
+            env.add_event(event=BattleEvent(
+                type="text", text=f"{self.name} 啟用了久遠的未知印記，神秘的力量開始聚於自身之上。"))
+            env.deal_healing(user, int(user["hp"] * BLOODGOD_VAR['BLOODGOD_SKILL_2_SELF_DAMAGE_RATIO'][0]), self_mutilation=True)
+            eff = Track(name="轉生之印", duration=BLOODGOD_VAR['BLOODGOD_SKILL_2_DURATION'][0], stacks=1,
+                        source=skill_id, stackable=False)
+            env.apply_status(user, eff)
+
+
 class SteadfastWarrior(BattleProfession):
     def __init__(self):
         super().__init__(
             profession_id=7,
             name="剛毅武士",
-            base_hp=294,
-            passive_name = "堅韌壁壘",
-            passive_desc="每回合開始時恢復已損生命值的10%。",
-            baseAtk=1.0,
-            baseDef=1.35
+            base_hp=STEADFASTWARRIOR_VAR['STEADFASTWARRIOR_BASE_HP'][0],
+            passive_name="堅韌壁壘",
+            passive_desc=f"每回合開始時恢復已損生命值的 {int(STEADFASTWARRIOR_VAR['STEADFASTWARRIOR_PASSIVE_HEAL_PERCENT'][0] * 100)}%。",
+            baseAtk=STEADFASTWARRIOR_VAR['STEADFASTWARRIOR_BASE_ATK'][0],
+            baseDef=STEADFASTWARRIOR_VAR['STEADFASTWARRIOR_BASE_DEF'][0]
         )
-    # 
+
     def passive(self, user, targets, env):
-        # 已在on_turn_start 中實作
         pass
-    
-    def on_turn_start(self, user, targets, env , id):
-        heal = int( (self.max_hp - user["hp"]) * 0.1)
-        env.add_event(event = BattleEvent(type="text",text=f"{self.name} 的被動技能「堅韌壁壘」觸發。"))
+
+    def on_turn_start(self, user, targets, env, id):
+        heal = int((self.max_hp - user["hp"]) * STEADFASTWARRIOR_VAR['STEADFASTWARRIOR_PASSIVE_HEAL_PERCENT'][0])
+        env.add_event(event=BattleEvent(
+            type="text", text=f"{self.name} 的被動技能「堅韌壁壘」觸發。"))
         env.deal_healing(user, heal)
 
-    
     def on_turn_end(self, user, targets, env, id):
-        if id == 23 :
-            if user["last_attacker"] :
-                    dmg = user["last_damage_taken"] * 3
-                    env.deal_damage(user, user["last_attacker"], dmg, can_be_blocked=True)
-            else :
-                env.add_event(event = BattleEvent(type="text",text=f"{self.name} 的被動技能「絕地反擊」沒有對象反擊。"))
+        if id == 23:
+            if user["last_attacker"]:
+                dmg = user["last_damage_taken"] * STEADFASTWARRIOR_VAR['STEADFASTWARRIOR_SKILL_2_DAMAGE_MULTIPLIER'][0]
+                env.deal_damage(user, user["last_attacker"], dmg, can_be_blocked=True)
+            else:
+                env.add_event(event=BattleEvent(
+                    type="text", text=f"{self.name} 的被動技能「絕地反擊」沒有對象反擊。"))
 
-        
     def apply_skill(self, skill_id, user, targets, env):
         super().apply_skill(skill_id, user, targets, env)
-        
+
         if skill_id == 21:
-            # 技能 21 => 對單體造成35點傷害，並降低其20%防禦力，持續2回合
-            dmg = 35 * self.baseAtk 
+            # 剛毅打擊
+            dmg = STEADFASTWARRIOR_VAR['STEADFASTWARRIOR_SKILL_0_DAMAGE'][0] * self.baseAtk
             env.deal_damage(user, targets[0], dmg, can_be_blocked=True)
-            def_buff = DefenseMultiplier(multiplier=0.8, duration=2, stackable=False,source=skill_id)
+            def_buff = DefenseMultiplier(
+                multiplier=STEADFASTWARRIOR_VAR['STEADFASTWARRIOR_SKILL_0_DEFENSE_DEBUFF'][0],
+                duration=STEADFASTWARRIOR_VAR['STEADFASTWARRIOR_SKILL_0_DURATION'][0],
+                stackable=False, source=skill_id)
             env.apply_status(targets[0], def_buff)
 
         elif skill_id == 22:
-            # 技能 22 => 本回合增加30%防禦力，並回復25點生命值
-            def_buff = DefenseMultiplier(multiplier=1.3, duration=1, stackable=False,source=skill_id)
+            # 不屈意志
+            def_buff = DefenseMultiplier(
+                multiplier=STEADFASTWARRIOR_VAR['STEADFASTWARRIOR_SKILL_1_DEFENSE_BUFF'][0],
+                duration=STEADFASTWARRIOR_VAR['STEADFASTWARRIOR_SKILL_1_DURATION'][0],
+                stackable=False, source=skill_id)
             env.apply_status(user, def_buff)
-            heal_amount = 25
+            heal_amount = STEADFASTWARRIOR_VAR['STEADFASTWARRIOR_SKILL_1_HEAL_AMOUNT'][0]
             actual_heal = env.deal_healing(user, heal_amount)
 
         elif skill_id == 23:
-            # 技能 23 => 對攻擊者立即造成其本次攻擊傷害的200%，此技能需冷卻3回合
-            # 已經在env _process_passives_end_of_turn中實作 
+            # 絕地反擊
             pass
 
 class Devour(BattleProfession):
@@ -632,94 +671,125 @@ class Devour(BattleProfession):
         super().__init__(
             profession_id=8,
             name="鯨吞",
-            base_hp=800,
-            passive_name = "巨鯨",
-            passive_desc="攻擊時會消耗 8% 當前生命值。",
-            baseAtk=1.0,
-            baseDef=1.0
+            base_hp=DEVOUR_VAR['DEVOUR_BASE_HP'][0],
+            passive_name="巨鯨",
+            passive_desc=f"攻擊時會消耗 {int(DEVOUR_VAR['DEVOUR_PASSIVE_SELF_DAMAGE_PERCENT'][0] * 100)}% 當前生命值。",
+            baseAtk=DEVOUR_VAR['DEVOUR_BASE_ATK'][0],
+            baseDef=DEVOUR_VAR['DEVOUR_BASE_DEF'][0]
         )
-    
-    def passive(self, user,dmg, env):
-        # 巨鯨：攻擊時會消耗5%當前生命值。
-        env.deal_healing(user, int(user["hp"] * 0.08),self_mutilation = True)
+
+    def passive(self, user, dmg, env):
+        # 巨鯨：攻擊時會消耗指定比例當前生命值
+        self_damage = int(user["hp"] * DEVOUR_VAR['DEVOUR_PASSIVE_SELF_DAMAGE_PERCENT'][0])
+        env.deal_healing(user, self_damage, self_mutilation=True)
 
     def apply_skill(self, skill_id, user, targets, env):
         super().apply_skill(skill_id, user, targets, env)
-        if skill_id == 24:
-            # 吞裂", "造成65點傷害，50%機率使用失敗。
-            dmg = 65 * self.baseAtk
-            if random.random() < 0.5:
-                env.add_event(event = BattleEvent(type="text",text=f"{self.name} 的技能「吞裂」使用失敗。"))
 
+        if skill_id == 24:
+            # 吞裂
+            dmg = DEVOUR_VAR['DEVOUR_SKILL_0_DAMAGE'][0] * self.baseAtk
+            if random.random() < DEVOUR_VAR['DEVOUR_SKILL_0_FAILURE_RATE'][0]:
+                env.add_event(event=BattleEvent(
+                    type="text", text=f"{self.name} 的技能「吞裂」使用失敗。"))
             else:
                 env.deal_damage(user, targets[0], dmg, can_be_blocked=True)
             self.passive(user, dmg, env)
 
         elif skill_id == 25:
-            # 巨口吞世", "當敵方當前血量比例較我方高時，對敵方造成已損血量15%的傷害，否則，造成當前血量10%的傷害。冷卻3回合。"
+            # 巨口吞世
             if targets[0]["hp"] > user["hp"]:
-                dmg = int(user["max_hp"] * 0.15) * self.baseAtk
+                dmg = int((user["max_hp"] - user["hp"]) * DEVOUR_VAR['DEVOUR_SKILL_1_LOST_HP_DAMAGE_MULTIPLIER'][0])
             else:
-                dmg = int(user["hp"] * 0.1) * self.baseAtk
-            env.deal_damage(user, targets[0], dmg, can_be_blocked=True)
+                dmg = int(user["hp"] * DEVOUR_VAR['DEVOUR_SKILL_1_CURRENT_HP_DAMAGE_MULTIPLIER'][0])
+            env.deal_damage(user, targets[0], dmg * self.baseAtk, can_be_blocked=True)
             self.passive(user, dmg, env)
+
         elif skill_id == 26:
-            # "堅硬皮膚", "提升25%防禦力，持續3回合。"
-            def_buff = DefenseMultiplier(multiplier=1.45, duration=3, stackable=False,source=skill_id)
+            # 堅硬皮膚
+            def_buff = DefenseMultiplier(
+                multiplier=DEVOUR_VAR['DEVOUR_SKILL_2_DEFENSE_MULTIPLIER'][0],
+                duration=DEVOUR_VAR['DEVOUR_SKILL_2_DURATION'][0],
+                stackable=False,
+                source=skill_id
+            )
             env.apply_status(user, def_buff)
-    
+
+
 class Ranger(BattleProfession):
     def __init__(self):
         super().__init__(
             profession_id=9,
             name="荒原遊俠",
-            base_hp=269,
-            passive_name = "冷箭",
-            passive_desc="冷箭：受到攻擊時，25% 機率反擊對敵方造成 35 點傷害。",
-            baseAtk=1.2,
-            baseDef=0.9
+            base_hp=RANGER_VAR['RANGER_BASE_HP'][0],
+            passive_name="冷箭",
+            passive_desc=f"冷箭：受到攻擊時，{int(RANGER_VAR['RANGER_PASSIVE_TRIGGER_RATE'][0] * 100)}% 機率反擊對敵方造成 {RANGER_VAR['RANGER_PASSIVE_DAMAGE'][0]} 點傷害。",
+            baseAtk=RANGER_VAR['RANGER_BASE_ATK'][0],
+            baseDef=RANGER_VAR['RANGER_BASE_DEF'][0]
         )
 
     def passive(self, user, targets, env):
-        # 已在 damege_taken 中實作
         pass
+
     def damage_taken(self, user, target, env, dmg):
-        if random.random() < 0.25:
-            env.add_event(event = BattleEvent(type="text",text=f"{self.name} 的被動技能「冷箭」觸發！"))
-            env.deal_damage(user, target, 35, can_be_blocked=True)
-        # 如果自身有埋伏效果
-        if user["effect_manager"].get_effects("埋伏") and random.random() < 0.25:
-            env.add_event(event = BattleEvent(type="text",text=f"{self.name} 埋伏成功，向敵人發動反擊！"))
-            env.deal_damage(user, target, dmg*0.5, can_be_blocked=True)
-            
-    
+        # 被動觸發反擊
+        if random.random() < RANGER_VAR['RANGER_PASSIVE_TRIGGER_RATE'][0]:
+            env.add_event(event=BattleEvent(
+                type="text", text=f"{self.name} 的被動技能「冷箭」觸發！"))
+            env.deal_damage(user, target, RANGER_VAR['RANGER_PASSIVE_DAMAGE'][0], can_be_blocked=True)
+
+        # 埋伏觸發反擊
+        if user["effect_manager"].get_effects("埋伏") and random.random() < RANGER_VAR['RANGER_SKILL_1_AMBUSH_TRIGGER_RATE'][0]:
+            env.add_event(event=BattleEvent(
+                type="text", text=f"{self.name} 埋伏成功，向敵人發動反擊！"))
+            env.deal_damage(user, target, dmg * RANGER_VAR['RANGER_SKILL_1_AMBUSH_DAMAGE_MULTIPLIER'][0], can_be_blocked=True)
+
     def apply_skill(self, skill_id, user, targets, env):
         super().apply_skill(skill_id, user, targets, env)
-        
+
         if skill_id == 27:
-            # 技能 27 => 續戰：造成35傷害，每次連續使用攻擊技能時多增加15點傷害。
+            # 續戰攻擊
             times_used = user.get("skills_used", {}).get(skill_id, 0)
-            dmg = (35 + (15 * times_used)) * self.baseAtk 
-            
+            dmg = (RANGER_VAR['RANGER_SKILL_0_DAMAGE'][0] + (RANGER_VAR['RANGER_SKILL_0_BONUS_DAMAGE_PER_USE'][0] * times_used)) * self.baseAtk
             env.deal_damage(user, targets[0], dmg, can_be_blocked=True)
             user["skills_used"][skill_id] = times_used + 1
+
         elif skill_id == 28:
-            # 技能 28 => 埋伏：3回合內，提升20%防禦。
-            def_buff = DefenseMultiplier(multiplier=1.2, duration=3, stackable=False,source=skill_id)
-            counter_track = Track(name="埋伏",duration=3,stacks=1,source=skill_id,stackable=False,max_stack=1)
+            # 埋伏防禦
+            def_buff = DefenseMultiplier(
+                multiplier=RANGER_VAR['RANGER_SKILL_1_DEFENSE_BUFF'][0],
+                duration=RANGER_VAR['RANGER_SKILL_1_DURATION'][0],
+                stackable=False,
+                source=skill_id
+            )
+            counter_track = Track(
+                name="埋伏",
+                duration=RANGER_VAR['RANGER_SKILL_1_DURATION'][0],
+                stacks=1,
+                source=skill_id,
+                stackable=False,
+                max_stack=1
+            )
             env.apply_status(user, counter_track)
             env.apply_status(user, def_buff)
 
         elif skill_id == 29:
-            # 技能 29 => 荒原：消耗15點生命力，免疫一回合的傷害。
-            if user["hp"] > 30:
-                env.deal_healing(user, 15,self_mutilation = True)
-                immune_damage = ImmuneDamage(duration=2, stackable=False)
-                immune_control = ImmuneControl(duration=2, stackable=False)
+            # 荒原抗性
+            if user["hp"] > RANGER_VAR['RANGER_SKILL_2_HP_COST'][0]:
+                env.deal_healing(user, RANGER_VAR['RANGER_SKILL_2_HP_COST'][0], self_mutilation=True)
+                immune_damage = ImmuneDamage(
+                    duration=RANGER_VAR['RANGER_SKILL_2_DURATION'][0],
+                    stackable=False
+                )
+                immune_control = ImmuneControl(
+                    duration=RANGER_VAR['RANGER_SKILL_2_DURATION'][0],
+                    stackable=False
+                )
                 env.apply_status(user, immune_damage)
                 env.apply_status(user, immune_control)
             else:
-                env.add_event(event = BattleEvent(type="text",text=f"{self.name} 嘗試使用「荒原」，但血量不足。"))
+                env.add_event(event=BattleEvent(
+                    type="text", text=f"{self.name} 嘗試使用「荒原」，但血量不足。"))
 
 
 class ElementalMage(BattleProfession):
@@ -727,187 +797,198 @@ class ElementalMage(BattleProfession):
         super().__init__(
             profession_id=10,
             name="元素法師",
-            base_hp=228,
-            passive_name = "元素之力",
-            passive_desc="攻擊時 30% 機率造成(麻痺、冰凍、燃燒)其中之一",
-            baseAtk=1.45,
-            baseDef=0.95
+            base_hp=ELEMENTALMAGE_VAR['ELEMENTALMAGE_BASE_HP'][0],
+            passive_name="元素之力",
+            passive_desc=f"攻擊時 {int(ELEMENTALMAGE_VAR['ELEMENTALMAGE_PASSIVE_TRIGGER_RATE'][0] * 100)}% 機率造成麻痺、冰凍、燃燒其中之一。",
+            baseAtk=ELEMENTALMAGE_VAR['ELEMENTALMAGE_BASE_ATK'][0],
+            baseDef=ELEMENTALMAGE_VAR['ELEMENTALMAGE_BASE_DEF'][0]
         )
 
     def passive(self, user, targets, env):
-        # 元素之力：攻擊時30%造成(麻痺、冰凍、燃燒)其中之一
-        if random.random() < 0.3:
+        if random.random() < ELEMENTALMAGE_VAR['ELEMENTALMAGE_PASSIVE_TRIGGER_RATE'][0]:
             effect = random.choice([Burn(duration=3, stacks=1), Freeze(duration=3, stacks=1), Paralysis(duration=2)])
-
-            env.add_event(event = BattleEvent(type="text",text=f"{self.name} 的被動技能「元素之力」觸發！"))
+            env.add_event(event=BattleEvent(
+                type="text", text=f"{self.name} 的被動技能「元素之力」觸發！"))
             env.apply_status(targets[0], effect)
-    
-    def on_turn_end(self, user, targets, env,id):
-        super().on_turn_end(user, targets, env, id)
-        pass
-    
+
     def damage_taken(self, user, target, env, dmg):
-        # if 自身有雷霆護甲
-        if user["effect_manager"].get_effects("雷霆護甲"):
-            # 30% 機率直接麻痺敵人
-            if random.random() < 0.3:
-                env.add_event(event = BattleEvent(type="text",text=f"{self.name} 的被動技能「雷霆護甲」觸發！"))
-                env.apply_status(target, Paralysis(duration=2))
-    
+        if user["effect_manager"].get_effects("雷霆護甲") and random.random() < ELEMENTALMAGE_VAR['ELEMENTALMAGE_SKILL_0_PARALYSIS_TRIGGER_RATE'][0]:
+            env.add_event(event=BattleEvent(
+                type="text", text=f"{self.name} 的被動技能「雷霆護甲」觸發！"))
+            env.apply_status(target, Paralysis(duration=2))
+
     def apply_skill(self, skill_id, user, targets, env):
         super().apply_skill(skill_id, user, targets, env)
-        
+
         if skill_id == 30:
-            # 技能 30 => 雷霆護甲：2回合內，受到傷害15%機率直接麻痺敵人。
-            def_buff = DefenseMultiplier(multiplier=1.5, duration=2, stackable=False,source=skill_id)
-            env.apply_status(user, def_buff)
-            # 雷霆護甲", "2 回合內，受到傷害時有 30% 機率直接麻痺敵人，並增加 50% 防禦力，回復最大生命的 5% ", 'effect'))
-            heal = user["max_hp"] * 0.05
+            # 雷霆護甲
+            def_buff = DefenseMultiplier(
+                multiplier=ELEMENTALMAGE_VAR['ELEMENTALMAGE_SKILL_0_DEFENSE_BUFF'][0],
+                duration=ELEMENTALMAGE_VAR['ELEMENTALMAGE_SKILL_0_DURATION'][0],
+                stackable=False,
+                source=skill_id
+            )
+            heal = user["max_hp"] * ELEMENTALMAGE_VAR['ELEMENTALMAGE_SKILL_0_HEAL_PERCENT'][0]
             env.deal_healing(user, heal)
-            # 
-            teff = Track(name = "雷霆護甲",duration=2,stacks=1,source=skill_id,stackable=False,max_stack=99)
-            # add effect
-            env.apply_status(user,teff)
+            track = Track(
+                name="雷霆護甲",
+                duration=ELEMENTALMAGE_VAR['ELEMENTALMAGE_SKILL_0_DURATION'][0],
+                stacks=1,
+                source=skill_id,
+                stackable=False,
+                max_stack=99
+            )
+            env.apply_status(user, def_buff)
+            env.apply_status(user, track)
 
         elif skill_id == 31:
-            # 技能 31 => 凍燒雷：造成55點傷害，每層麻痺、冰凍、燃燒，額外造成20點傷害
-            dmg = 55 * self.baseAtk 
-            target = targets[0]   
-   
-            # 計算所有異常狀態的堆疊數總和
+            # 凍燒雷
+            dmg = ELEMENTALMAGE_VAR['ELEMENTALMAGE_SKILL_1_DAMAGE'][0] * self.baseAtk
             total_layers = 0
-            for effects in target["effect_manager"].active_effects.values():
+            for effects in targets[0]["effect_manager"].active_effects.values():
                 for eff in effects:
                     if eff.name in ["麻痺", "凍結", "燃燒"]:
                         total_layers += eff.stacks
-            extra_dmg = 20 * total_layers + dmg  
-            env.deal_damage(user, target, extra_dmg, can_be_blocked=True)
+            extra_dmg = ELEMENTALMAGE_VAR['ELEMENTALMAGE_SKILL_1_ADDITIONAL_DAMAGE'][0] * total_layers + dmg
+            env.deal_damage(user, targets[0], extra_dmg, can_be_blocked=True)
             self.passive(user, targets, env)
 
         elif skill_id == 32:
-            # 技能 32 => 造成15傷害，50% 機率使敵方暈眩 1~3 回合。
-            dmg = 35 * self.baseAtk
+            # 雷擊術
+            dmg = ELEMENTALMAGE_VAR['ELEMENTALMAGE_SKILL_2_DAMAGE'][0] * self.baseAtk
             env.deal_damage(user, targets[0], dmg, can_be_blocked=True)
-            target = targets[0]
-            # 70% 2 25% 3 10% 4
-            para_duration = random.choices([2, 3, 4], weights=[0.6, 0.3, 0.1], k=1)[0]
-            if random.random() < 0.35:
+            if random.random() < ELEMENTALMAGE_VAR['ELEMENTALMAGE_SKILL_2_PARALYSIS_TRIGGER_RATE'][0]:
+                para_duration = random.choices(
+                    ELEMENTALMAGE_VAR['ELEMENTALMAGE_SKILL_2_PARALYSIS_DURATIONS'],
+                    weights=ELEMENTALMAGE_VAR['ELEMENTALMAGE_SKILL_2_PARALYSIS_DURATIONS_WEIGHTS'],
+                    k=1
+                )[0]
                 stun_effect = Paralysis(duration=para_duration)
-                env.apply_status(target, stun_effect)
+                env.apply_status(targets[0], stun_effect)
             self.passive(user, targets, env)
-       
+
+
+
 class HuangShen(BattleProfession):
     def __init__(self):
         super().__init__(
-            profession_id=11,  # 確保職業ID唯一
+            profession_id=11,
             name="荒神",
-            base_hp=230,
-            baseAtk=1.18,
-            baseDef=1.3,
+            base_hp=HUANGSHEN_VAR['HUANGSHEN_BASE_HP'][0],
+            baseAtk=HUANGSHEN_VAR['HUANGSHEN_BASE_ATK'][0],
+            baseDef=HUANGSHEN_VAR['HUANGSHEN_BASE_DEF'][0],
             passive_name="枯萎之刃",
-            passive_desc="隨著造成傷害次數增加，攻擊時額外進行隨機追打，每造成兩次傷害增加一次最高追打機會，追打造成敵方當前生命的5%血量；額外追打不會累積傷害次數。",
+            passive_desc="隨著造成傷害次數增加，攻擊時額外進行隨機追打，每造成兩次傷害增加一次最高追打機會，追打造成敵方當前生命的 5% 血量；額外追打不會累積傷害次數。",
         )
 
     def passive(self, user, targets, env):
-        bonus = user.get("skills_used", {}).get(33, 0) // 2
-        if bonus > 0:
-            for i in range(bonus):
-                env.add_event(event = BattleEvent(type="text",text=f"{self.name} 的被動技能「枯萎之刃」觸發！"))
-                env.deal_damage(user, targets[0], int(targets[0]["hp"] * 0.05), can_be_blocked=True)
-    
+        bonus_hits = user.get("skills_used", {}).get(33, 0) // HUANGSHEN_VAR['HUANGSHEN_PASSIVE_EXTRA_HIT_THRESHOLD'][0]
+        if bonus_hits > 0:
+            for _ in range(bonus_hits):
+                env.add_event(event=BattleEvent(
+                    type="text", text=f"{self.name} 的被動技能「枯萎之刃」觸發！"))
+                env.deal_damage(user, targets[0], int(
+                    targets[0]["hp"] * HUANGSHEN_VAR['HUANGSHEN_PASSIVE_EXTRA_HIT_DAMAGE_PERCENT'][0]), can_be_blocked=True)
+
     def apply_skill(self, skill_id, user, targets, env):
         super().apply_skill(skill_id, user, targets, env)
+
         if skill_id == 33:
-            # "枯骨的永恆", "隨機造成 1 ~ 3 次傷害。
+            # 枯骨
             user["skills_used"][skill_id] = user.get("skills_used", {}).get(skill_id, 0)
-            times = random.randint(1, 3)
+            times = random.randint(*HUANGSHEN_VAR['HUANGSHEN_SKILL_0_HIT_RANGE'])
             for i in range(times):
-                dmg = 30 * self.baseAtk * (1-i*0.25)
+                dmg = HUANGSHEN_VAR['HUANGSHEN_SKILL_0_DAMAGE'][0] * self.baseAtk * (1 - i * HUANGSHEN_VAR['HUANGSHEN_SKILL_0_DAMAGE_REDUCTION_PER_HIT'][0])
                 env.deal_damage(user, targets[0], dmg, can_be_blocked=True)
                 self.passive(user, targets, env)
                 user["skills_used"][skill_id] += 1
-                
+
         elif skill_id == 34:
-        #  技能 34 =>  荒神戰意：技能使用完，下次會切換效果，周而復始
-        #   第一次：增加自身25%攻擊力，持續3回合
-        # 	第二次：增加自身25%治癒力，持續3回合
-        # 	第三次：提升自身25%防禦力，持續3回合。
-            # 技能 34 => 對敵方全體造成15點傷害
+            # 荒原
             time_used = user.get("skills_used", {}).get(skill_id, 0)
             if time_used % 3 == 0:
-                atk_buff = DamageMultiplier(multiplier=1.25, duration=3, stackable=False,source=skill_id)
+                atk_buff = DamageMultiplier(
+                    multiplier=HUANGSHEN_VAR['HUANGSHEN_SKILL_1_ATK_BUFF'][0],
+                    duration=HUANGSHEN_VAR['HUANGSHEN_SKILL_1_BUFF_DURATION'][0],
+                    stackable=False, source=skill_id)
                 env.apply_status(user, atk_buff)
             elif time_used % 3 == 1:
-                heal_buff = HealMultiplier(multiplier=1.25, duration=3, stackable=False,source=skill_id)
+                heal_buff = HealMultiplier(
+                    multiplier=HUANGSHEN_VAR['HUANGSHEN_SKILL_1_HEAL_BUFF'][0],
+                    duration=HUANGSHEN_VAR['HUANGSHEN_SKILL_1_BUFF_DURATION'][0],
+                    stackable=False, source=skill_id)
                 env.apply_status(user, heal_buff)
             elif time_used % 3 == 2:
-                def_buff = DefenseMultiplier(multiplier=1.25, duration=3, stackable=False,source=skill_id)
+                def_buff = DefenseMultiplier(
+                    multiplier=HUANGSHEN_VAR['HUANGSHEN_SKILL_1_DEF_BUFF'][0],
+                    duration=HUANGSHEN_VAR['HUANGSHEN_SKILL_1_BUFF_DURATION'][0],
+                    stackable=False, source=skill_id)
                 env.apply_status(user, def_buff)
             user["skills_used"][skill_id] = time_used + 1
-        # ：造成90點傷害，自身生命值越低。會降低傷害並回復自身生命值
+
         elif skill_id == 35:
-            # 生命逆流", "回復造成傷害次數300%的血量，冷卻3回合", 'damage'),3)
-            heal_amount = user.get("skills_used", {}).get(33, 0) * 5
+            # 生命逆流
+            heal_amount = user.get("skills_used", {}).get(33, 0) * HUANGSHEN_VAR['HUANGSHEN_SKILL_2_HEAL_MULTIPLIER'][0]
             env.deal_healing(user, heal_amount)
-            
+
 class GodOfStar(BattleProfession):
     def __init__(self):
         super().__init__(
             profession_id=12,
             name="星神",
-            base_hp=295,
+            base_hp=GODOFSTAR_VAR['GODOFSTAR_BASE_HP'][0],
+            baseAtk=GODOFSTAR_VAR['GODOFSTAR_BASE_ATK'][0],
+            baseDef=GODOFSTAR_VAR['GODOFSTAR_BASE_DEF'][0],
             passive_name="天啟星盤",
-            passive_desc="星神在戰鬥中精通增益與減益效果的能量運用。每當場上有一層「能力值增益」或「減益」效果時，每回合會額外對敵方造成 5 點傷害 並恢復 5 點生命值。",
-            baseAtk=1.08,
-            baseDef=1.08
+            passive_desc="星神在戰鬥中精通增益與減益效果的能量運用。每當場上有一層「能力值增益」或「減益」效果時，每回合會額外對敵方造成 5 點傷害 並恢復 5 點生命值。"
         )
 
     def passive(self, user, targets, env):
-        # get all status types is 'buff'
         buff_effects = []
         for eff in user["effect_manager"].active_effects.values():
             for effect in eff:
                 if effect.type == "buff":
                     buff_effects.append(effect)
-        for  eff in targets[0]["effect_manager"].active_effects.values():
+        for eff in targets[0]["effect_manager"].active_effects.values():
             for effect in eff:
                 if effect.type == "buff":
                     buff_effects.append(effect)
-        # get len
         buff_effect_count = len(buff_effects)
-        bounous_damage = 5 * buff_effect_count
-        bounous_heal = 5 * buff_effect_count
-        # battle log "能量聚於天啟星盤，攻擊時額外造成了 {bounous_damage} 點傷害，並回復了 {bounous_heal} 點生命值。"
-        env.add_event(event = BattleEvent(type="text",text=f"{self.name} 的被動技能「天啟星盤」觸發！"))
-        return bounous_damage, bounous_heal
-#  sm.add_skill(Skill(36, "光輝流星", "對敵方單體造成 15 點傷害，並隨機為自身附加以下一種增益效果，持續 3 回合：攻擊力提升 5%，防禦力提升 5%，治癒效果提升 5%。", 'damage'))
-# sm.add_skill(Skill(37, "災厄隕星", "為自身恢復 15 點生命值，並隨機為敵方附加以下一種減益效果，持續 3 回合：攻擊力降低 5%，防禦力降低 5%，治癒效果降低 5%。", 'damage'))
-# sm.add_skill(Skill(38, "虛擬創星圖", "對敵方單體造成 45 點傷害。", 'damage'))
+        bonus_damage = GODOFSTAR_VAR['GODOFSTAR_PASSIVE_DAMAGE_PER_EFFECT'][0] * buff_effect_count
+        bonus_heal = GODOFSTAR_VAR['GODOFSTAR_PASSIVE_HEAL_PER_EFFECT'][0] * buff_effect_count
+        env.add_event(event=BattleEvent(
+            type="text", text=f"{self.name} 的被動技能「天啟星盤」觸發！"))
+        return bonus_damage, bonus_heal
+
     def apply_skill(self, skill_id, user, targets, env):
         super().apply_skill(skill_id, user, targets, env)
         dmg, heal = self.passive(user, targets, env)
         if skill_id == 36:
-            # 技能 36 => 對單體造成30點傷害
-            dmg += 25 * self.baseAtk
+            dmg += GODOFSTAR_VAR['GODOFSTAR_SKILL_0_DAMAGE'][0] * self.baseAtk
             env.deal_damage(user, targets[0], dmg, can_be_blocked=True)
-            # 隨機為自身附加以下一種增益效果，持續 3 回合：攻擊力提升 5%，防禦力提升 5%，治癒效果提升 5%。
-            buff = random.choice([DamageMultiplier(multiplier=0.95, duration=3, stackable=False,source=skill_id), DefenseMultiplier(multiplier=0.95, duration=3, stackable=False,source=skill_id), HealMultiplier(multiplier=0.95, duration=3, stackable=False,source=skill_id)])
+            buff = random.choice([
+                DamageMultiplier(multiplier=GODOFSTAR_VAR['GODOFSTAR_SKILL_1_BUFF_MULTIPLIER'][0], duration=GODOFSTAR_VAR['GODOFSTAR_SKILL_1_BUFF_DURATION'][0], stackable=False, source=skill_id),
+                DefenseMultiplier(multiplier=GODOFSTAR_VAR['GODOFSTAR_SKILL_1_BUFF_MULTIPLIER'][0], duration=GODOFSTAR_VAR['GODOFSTAR_SKILL_1_BUFF_DURATION'][0], stackable=False, source=skill_id),
+                HealMultiplier(multiplier=GODOFSTAR_VAR['GODOFSTAR_SKILL_1_BUFF_MULTIPLIER'][0], duration=GODOFSTAR_VAR['GODOFSTAR_SKILL_1_BUFF_DURATION'][0], stackable=False, source=skill_id)
+            ])
             env.apply_status(targets[0], buff)
-            
             env.deal_healing(user, heal)
+
         elif skill_id == 37:
-            # 技能 37 => 為自身恢復 15 點生命值
-            heal += 25
-            env.deal_damage(user, targets[0], dmg, can_be_blocked=True)
+            heal += GODOFSTAR_VAR['GODOFSTAR_SKILL_1_HEAL'][0]
             env.deal_healing(user, heal)
-            # 隨機為敵方附加以下一種減益效果，持續 3 回合：攻擊力降低 5%，防禦力降低 5%，治癒效果降低 5%。
-            buff = random.choice([DamageMultiplier(multiplier=1.05, duration=3, stackable=False,source=skill_id), DefenseMultiplier(multiplier=1.05, duration=3, stackable=False,source=skill_id), HealMultiplier(multiplier=1.05, duration=3, stackable=False,source=skill_id)])
-            env.apply_status(user, buff)
+            debuff = random.choice([
+                DamageMultiplier(multiplier=GODOFSTAR_VAR['GODOFSTAR_SKILL_0_DEBUFF_MULTIPLIER'][0], duration=GODOFSTAR_VAR['GODOFSTAR_SKILL_0_DEBUFF_DURATION'][0], stackable=False, source=skill_id),
+                DefenseMultiplier(multiplier=GODOFSTAR_VAR['GODOFSTAR_SKILL_0_DEBUFF_MULTIPLIER'][0], duration=GODOFSTAR_VAR['GODOFSTAR_SKILL_0_DEBUFF_DURATION'][0], stackable=False, source=skill_id),
+                HealMultiplier(multiplier=GODOFSTAR_VAR['GODOFSTAR_SKILL_0_DEBUFF_MULTIPLIER'][0], duration=GODOFSTAR_VAR['GODOFSTAR_SKILL_0_DEBUFF_DURATION'][0], stackable=False, source=skill_id)
+            ])
+            env.apply_status(user, debuff)
+
         elif skill_id == 38:
-            # 技能 38 => 對敵方單體造成 45 點傷害
-            dmg *=1.5
-            heal *=1.5
-            env.add_event(event = BattleEvent(type="text",text=f"{self.name} 的技能「虛擬創星圖」強化了天啟星盤的力量，增加了傷害和回復。"))
-            dmg += 50 * self.baseAtk
+            dmg *= GODOFSTAR_VAR['GODOFSTAR_SKILL_2_PASSIVE_MULTIPLIER'][0]
+            heal *= GODOFSTAR_VAR['GODOFSTAR_SKILL_2_PASSIVE_MULTIPLIER'][0]
+            env.add_event(event=BattleEvent(
+                type="text", text=f"{self.name} 的技能「虛擬創星圖」強化了天啟星盤的力量，增加了傷害和回復。"))
+            dmg += GODOFSTAR_VAR['GODOFSTAR_SKILL_2_DAMAGE'][0] * self.baseAtk
             env.deal_damage(user, targets[0], dmg, can_be_blocked=True)
             env.deal_healing(user, heal)

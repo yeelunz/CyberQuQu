@@ -569,7 +569,7 @@ class BattleEnv(MultiAgentEnv):
         def heal_player():
             for i, skill_id in player_heal_skills:
                 user = self.player_team[i]
-                targets = self._select_heal_targets(user)
+                targets = self.enemy_team
                 if targets:
                     user["profession"].apply_skill(skill_id, user, targets, self)
                 else:
@@ -580,7 +580,7 @@ class BattleEnv(MultiAgentEnv):
         def heal_enemy():
             for j, skill_id in enemy_heal_skills:
                 e = self.enemy_team[j]
-                targets = self._select_heal_targets(e)
+                targets = self.player_team
                 if targets:
                     e["profession"].apply_skill(skill_id, e, targets, self)
                 else:
@@ -794,8 +794,7 @@ class BattleEnv(MultiAgentEnv):
             # enemy not immune to control
             if random.random() < chance and not target["effect_manager"].has_effect('免疫控制'):
                 self.add_event(event=BattleEvent(type="text",text=f"{target['profession'].name} 被凍結，將跳過下一回合的行動。"))
-                # 移除所有凍結
-                target["effect_manager"].remove_all_effects('凍結')
+                target["skip_turn"] = True
 
         # 檢查目標是否免疫傷害
         if target["effect_manager"].has_effect('免疫傷害'):
@@ -811,7 +810,6 @@ class BattleEnv(MultiAgentEnv):
 
         # 處理防禦增減
         dmg = int(dmg / target.get("defend_multiplier", 1.0))
-        
         dmg = int(dmg/target['profession'].baseDef)
         
         dmg *= self.damage_coefficient  # 考慮戰鬥特性：傷害係數
@@ -824,15 +822,15 @@ class BattleEnv(MultiAgentEnv):
         target['accumulated_damage'] += dmg
         self.add_event(user=user,target=target,event=BattleEvent(type="damage",appendix={"amount":dmg}))
         
-        # 如果職業是荒原遊俠
-        # 進行冷箭判定冷箭：受到攻擊時，20%機率反擊45點傷害。
+        # process damage taken event
         target["profession"].damage_taken(target,user,self,dmg)
     
         
         # update last attacker and last damage
-        if user in self.player_team:
-            target["last_attacker"] = user
-            target["last_damage_taken"] = dmg
+
+        target["last_attacker"] = user
+        target["last_damage_taken"] = dmg
+        
 
     def deal_healing(self, user, heal_amount, rate = 0,heal_damage=False,target=None,self_mutilation = False):
         """

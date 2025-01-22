@@ -731,12 +731,12 @@ header #skip-round-btn:hover {
 @keyframes buffPulseRed {
   0%,
   100% {
-    box-shadow: 0 0 10px rgba(255, 0, 0, 0.3),
-      inset 0 0 5px rgba(255, 0, 0, 0.3);
+    box-shadow: 0 0 10px rgba(238, 255, 0, 0.3),
+      inset 0 0 5px rgba(242, 255, 0, 0.3);
   }
   50% {
-    box-shadow: 0 0 15px rgba(255, 0, 0, 0.8),
-      inset 0 0 10px rgba(255, 0, 0, 0.7);
+    box-shadow: 0 0 15px rgba(255, 251, 0, 0.8),
+      inset 0 0 10px rgba(255, 247, 0, 0.7);
   }
 }
 @keyframes buffPulseBlue {
@@ -765,12 +765,12 @@ header #skip-round-btn:hover {
 @keyframes buffPulseRedLower {
     0%,
     100% {
-      box-shadow: 0 0 10px rgba(67, 4, 4, 0.15),
-        inset 0 0 5px rgba(49, 5, 5, 0.15);
+      box-shadow: 0 0 10px rgba(63, 67, 4, 0.15),
+        inset 0 0 5px rgba(49, 42, 5, 0.15);
     }
     50% {
-      box-shadow: 0 0 15px rgba(75, 53, 53, 0.35),
-        inset 0 0 10px rgba(78, 48, 48, 0.3);
+      box-shadow: 0 0 15px rgba(75, 73, 53, 0.35),
+        inset 0 0 10px rgba(74, 78, 48, 0.3);
     }
   }
   @keyframes buffPulseBlueLower {

@@ -119,6 +119,7 @@ class Paladin(BattleProfession):
             # 技能 1 => 本回合迴避攻擊，回復10點血量。冷卻3回合。
             user["is_defending"] = True
             heal_amount = 15
+
             env.deal_healing(user, heal_amount,rate= 1,heal_damage = True,target = targets[0])
 
 
@@ -131,6 +132,7 @@ class Paladin(BattleProfession):
                 heal_amount = 35
             else:
                 heal_amount = 15
+                
             env.deal_healing(user, heal_amount,rate=1,heal_damage = True,target = targets[0])
             user["times_healed"] = times_healed + 1
 
@@ -221,21 +223,25 @@ class Assassin(BattleProfession):
            
         elif skill_id == 7:
             # 毒爆=>  引爆中毒的對象，每層造成10點傷害，並回復8點血量
-            for target in env.enemy_team:
-                if target["hp"] > 0:
-                    # 計算燃燒或是凍結
-                    total_layers = 0
-                    for effects in target["effect_manager"].active_effects.values():
-                        for eff in effects:
-                            if isinstance(eff, (Poison)):
-                                total_layers += eff.stacks
-                    dmg =  15 * total_layers
-                    dmg = self.passive(targets,dmg)
+            target = targets[0]
+            total_layers = 0
+            for effects in target["effect_manager"].active_effects.values():
+                for eff in effects:
+                    if isinstance(eff, Poison):
+                        total_layers += eff.stacks
+            if total_layers > 0:
+                env.add_event(event = BattleEvent(type="text",text=f"引爆了中毒效果！"))
+                # 回復8點血量
+                # 對敵方造成10點傷害
+                dmg = 10 * total_layers
+                dmg = self.passive(targets,dmg)
+                heal = 8*total_layers
+                env.deal_damage(user, target, dmg, can_be_blocked=True)
+                env.deal_healing(user, heal)
+                target["effect_manager"].remove_all_effects("中毒")
+            else:
+                env.add_event(event = BattleEvent(type="text",text=f"無法引爆中毒效果，對方並未中毒。"))
 
-                    env.deal_damage(user, target, dmg, can_be_blocked=True)
-                    heal_amount = 15 * total_layers
-                    env.deal_healing(user, heal_amount)
-                    target["effect_manager"].remove_all_effects("中毒")
         elif skill_id == 8:
             # 對單體造成10點傷害並疊加中毒1~3層（最多5層），每層中毒造成3點傷害
             # 45% 1層 35% 2層 20% 3層
@@ -272,12 +278,16 @@ class Archer(BattleProfession):
         super().apply_skill(skill_id, user, targets, env)
         if skill_id == 9:
             # 技能 9 => 對單體造成50點傷害，使對方防禦力下降10%。
-            dmg = 50 * self.baseAtk 
+            dmg = 10 * self.baseAtk 
             dmg = self.passive(env, dmg,targets)
             env.deal_damage(user, targets[0], dmg, can_be_blocked=True)
-            # 降低對方防禦力25%，持續2回合
             def_buff = DefenseMultiplier(multiplier=0.9, duration=2, stackable=False,source=skill_id)
             env.apply_status(targets[0], def_buff)
+            
+            for i in range(4):
+                env.deal_damage(user, targets[0], dmg, can_be_blocked=True)
+            # 降低對方防禦力25%，持續2回合
+
 
         elif skill_id == 10:
             # 技能 10 => 2回合間增加150%傷害，或是自身防禦力降低50%
@@ -419,9 +429,9 @@ class DragonGod(BattleProfession):
                 consume_stack = stacks // 2
                 damage = consume_stack * 35
                 # 消耗了X層龍神狀態
+                env.add_event(event = BattleEvent(type="text",text=f"「神龍燎原」消耗了 {consume_stack} 層龍神狀態。"))
                 env.deal_damage(user, targets[0], damage, can_be_blocked=True)
 
-                env.add_event(event = BattleEvent(type="text",text=f"「神龍燎原」消耗了 {consume_stack} 層龍神狀態。"))
                 # 1 2 and 12 and 999
                 # 1: DamageMultiplier
                 # 2: DefenseMultiplier
@@ -785,6 +795,7 @@ class GodOfStar(BattleProfession):
         buff_effect_count = len(buff_effects)
         bounous_damage = 5 * buff_effect_count
         bounous_heal = 5 * buff_effect_count
+        print('星神的被動技能「天啟星盤」層數',buff_effect_count)
         # battle log "能量聚於天啟星盤，攻擊時額外造成了 {bounous_damage} 點傷害，並回復了 {bounous_heal} 點生命值。"
         env.add_event(event = BattleEvent(type="text",text=f"{self.name} 的被動技能「天啟星盤」觸發！"))
         return bounous_damage, bounous_heal
@@ -801,6 +812,7 @@ class GodOfStar(BattleProfession):
             # 隨機為自身附加以下一種增益效果，持續 3 回合：攻擊力提升 5%，防禦力提升 5%，治癒效果提升 5%。
             buff = random.choice([DamageMultiplier(multiplier=0.95, duration=3, stackable=False,source=skill_id), DefenseMultiplier(multiplier=0.95, duration=3, stackable=False,source=skill_id), HealMultiplier(multiplier=0.95, duration=3, stackable=False,source=skill_id)])
             env.apply_status(targets[0], buff)
+            
             env.deal_healing(user, heal)
         elif skill_id == 37:
             # 技能 37 => 為自身恢復 15 點生命值

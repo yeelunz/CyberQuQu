@@ -181,43 +181,57 @@ class EffectManager:
                 if not self.active_effects[effect_id]:
                     del self.active_effects[effect_id]
 
-    def has_effect(self, effect_name: str) -> bool:
+    def has_effect(self, effect_name: str , source = None) -> bool:
         """
-        檢查目標是否擁有特定的效果。
+        檢查目標是否擁有特定的效果。 如果指定source，則僅參考來源相同的效果。
         """
         for effect_id, effects in self.active_effects.items():
             for effect in effects:
                 if effect.name == effect_name:
-                    return True
+                    if source:
+                        if effect.source == source:
+                            return True
+                    else:
+                        return True
         return False
 
-    def get_effects(self, effect_name: str):
+    def get_effects(self, effect_name: str, source = None):
         """
-        獲取特定效果的所有實例。
+        獲取特定效果的所有實例。 如果指定source，則僅返回來源相同的效果。
         """
         result = []
         for effect_id, effects in self.active_effects.items():
             for effect in effects:
                 if effect.name == effect_name:
-                    result.append(effect)
+                    if source:
+                        if effect.source == source:
+                            result.append(effect)
+                    else:
+                        result.append(effect)
         return result
 
-    def remove_all_effects(self, effect_name: str):
+    def remove_all_effects(self, effect_name: str,source = None):
         """
         移除所有指定名稱的效果。
         """
         for effect_id, effects in list(self.active_effects.items()):
             for effect in effects:
                 if effect.name == effect_name:
-                    effect.on_remove(self.target)
-                    self.active_effects[effect_id].remove(effect)
-                    self.env.add_event(user = self.target, event = BattleEvent(type="status_remove",appendix={"effect_name":effect.name}))
+                    if source:
+                        if effect.source == source:
+                            effect.on_remove(self.target)
+                            self.active_effects[effect_id].remove(effect)
+                            self.env.add_event(user = self.target, event = BattleEvent(type="status_remove",appendix={"effect_name":effect.name}))
+                    else:
+                        effect.on_remove(self.target)
+                        self.active_effects[effect_id].remove(effect)
+                        self.env.add_event(user = self.target, event = BattleEvent(type="status_remove",appendix={"effect_name":effect.name}))
             if not self.active_effects[effect_id]:
                 del self.active_effects[effect_id]
 
     def set_effect_stack(self, effect_name: int, tar, stacks: int, sources: str = None):
         """
-        設置指定效果的堆疊數。正數增加堆疊，負數減少堆疊。
+        設置指定效果的堆疊數
         
         :param effect_name: status_effect類中的name屬性
         :param tar: 目標對象，通常是角色本身。
@@ -229,9 +243,6 @@ class EffectManager:
             # 只有：同名字，但效果不同的效果才需要sourc來區分
             if not sources:
                 raise ValueError(f"Effect ID {effect_name} 必須指定 source。")
-        
-        # 初始化列表以存儲需要移除的效果
-        effects_to_remove = []
         
         # 檢查效果是否已存在
         # find effect by name and source

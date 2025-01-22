@@ -106,6 +106,7 @@ class BattleEnv(MultiAgentEnv):
             m["last_attacker"] = None
             m["last_damage_taken"] = 0
             m['accumulated_damage'] = 0
+            m['private_info'] = {}
         
         # 重置敵方
         for e in self.enemy_team:
@@ -121,13 +122,13 @@ class BattleEnv(MultiAgentEnv):
             e["defend_multiplier"] = 1.0
             e["heal_multiplier"] = 1.0
             e["cooldowns"] = {0:0, 1:0, 2:0}
-            
             e["last_skill_used"] = None 
             e["skills_used"] = {} 
             e["effect_manager"] = EffectManager(target=e, env=self)  # 初始化 EffectManager
             e["last_attacker"] = None
             e["last_damage_taken"] = 0
             e['accumulated_damage'] = 0
+            e['private_info'] = {}
 
         infos = {
              "player": {"professions":self.mpro},
@@ -618,19 +619,23 @@ class BattleEnv(MultiAgentEnv):
             pair[0]()
             pair[1]()
             
+        
         # check 我方是否全滅
-        if all(m["hp"] <= 0 for m in self.player_team):
-            self.done = True
-            self.add_event(event=BattleEvent(type="text",text="我方全滅，敵方獲勝！"))
-        # check 敵方是否全滅
-        if all(e["hp"] <= 0 for e in self.enemy_team):
-            self.done = True
-            self.add_event(event=BattleEvent(type="text",text="敵方全滅，我方獲勝！"))
-        # check 雙方全滅?
-        if self._check_both_defeated():
-            self.done = True
-            self.add_event(event=BattleEvent(type="text",text="雙方全滅，平手！"))
+        def check_end():
+            if all(m["hp"] <= 0 for m in self.player_team):
+                self.done = True
+                self.add_event(event=BattleEvent(type="text",text="我方全滅，敵方獲勝！"))
+            # check 敵方是否全滅
+            if all(e["hp"] <= 0 for e in self.enemy_team):
+                self.done = True
+                self.add_event(event=BattleEvent(type="text",text="敵方全滅，我方獲勝！"))
+            # check 雙方全滅?
+            if self._check_both_defeated():
+                self.done = True
+                self.add_event(event=BattleEvent(type="text",text="雙方全滅，平手！"))
 
+        
+        check_end()
         
         #  最後階段的處理(冷卻，回合狀態，回合末端技能)
         if not self.done:
@@ -647,8 +652,11 @@ class BattleEnv(MultiAgentEnv):
         self.round_count += 1
         if self.round_count > self.max_rounds:
                 self.done = True
-                
-
+        
+        # 因為異常狀態有可能造成擊殺，所以要在最後檢查
+        if not self.done:
+            check_end()
+        
         self._print_round_footer()   
             
         #  返回觀測、獎勵、終止條件、截斷條件、信息
@@ -988,7 +996,6 @@ class BattleEnv(MultiAgentEnv):
                 # print(line.type, line.text)
             # self.battle_log = []
         self.add_event(event=BattleEvent(type="turn_end"))
-        print("回合結束\n---")
 
     def _print_teams_hp(self):
         if not self.show_battle_log:

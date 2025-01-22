@@ -13,6 +13,11 @@ from .models.main import (
     get_professions_data
 )
 
+from .models.data_stamp import Gdata
+import json
+from .models.global_var import globalVar
+import os
+
 main_routes = Blueprint('main', __name__)
 
 # 建立全域的 manager & professions，避免每次端點都要重建
@@ -61,8 +66,33 @@ def api_version_test():
     """
     (2) 版本環境測試 => 隨機 VS 隨機
     """
-    version_test_random_vs_random(professions, skill_mgr, num_battles=50)
-    return jsonify({"message": "版本環境測試完成，詳情請查看後端日誌"})
+    # find in data/cross_validation to find if the version same as globalVar
+    # traverse all the data in cross_validation
+    hasData = False
+    for i in os.listdir("data/cross_validation_pc"):
+        print(f"data/cross_validation_pc/{i}")
+        with open(f"data/cross_validation_pc/{i}", 'r') as f:
+            data = json.load(f)
+            print('dv',data["version"],'gv',globalVar["version"])
+            if data["version"] == globalVar["version"]:
+                hasData = True
+                
+    
+    
+    # if not find the same version
+    if not hasData:
+        res = version_test_random_vs_random(professions, skill_mgr, num_battles=100)
+        resGdata = Gdata(res,globalVar["version"],"cross_validation_pc")
+        resGdata.save()
+
+    all_data = []
+    for i in os.listdir("data/cross_validation_pc"):
+        with open(f"data/cross_validation_pc/{i}", 'r') as f:
+            data = json.load(f)
+            all_data.append(data)
+    return jsonify({"message": all_data})
+
+    
     
 @main_routes.route("/api/show_professions", methods=["GET"])
 def api_show_professions():

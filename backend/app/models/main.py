@@ -385,10 +385,7 @@ def get_professions_data(profession_list, skill_mgr):
     return professions_data
 
 
-
 if __name__ == "__main__":
     main()
-    
-    
-#TODO 重構profession 的passive 部分
-#TODO 修正battle log的部分
+
+

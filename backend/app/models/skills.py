@@ -95,24 +95,24 @@ sm.add_skill(Skill(16, "龍血之泉", "恢復 120 點生命值，持續 3 回�
 sm.add_skill(Skill(17, "神龍燎原", "消除一半的龍神層數，每層對敵方造成 35 點傷害。", 'damage'))
 
 # 血神
-sm.add_skill(Skill(18, "血刀", "對敵方造成 45 點傷害。", 'damage'))
-sm.add_skill(Skill(19, "飲血", "消耗敵方的流血疊加層數，每層流血對敵方造成 15 點傷害，並為自身恢復 15 點生命值。", 'damage'))
-sm.add_skill(Skill(20, "赤紅之災", "隨機為敵方單體疊加 1~3 層流血狀態。", 'effect'))
+sm.add_skill(Skill(18, "血刀", "對敵方造成 60 點傷害，對敵方疊加流血狀態，攻擊流血的敵人時恢復一定的生命力。", 'damage'))
+sm.add_skill(Skill(19, "血脈祭儀", " 血脈的累積傷害降低敵方當前流血層數的 300%；恢復敵方流血層數 500% 的生命值，並使敵方流血層數翻倍。", 'effect'))
+sm.add_skill(Skill(20, "轉生", "消耗當前 15% 生命值，2回合內，受到致死傷害時，則生命值回復最大血量的 25% ，並額外累積致死傷害傷害的 500% 至血脈裡。", 'effect',5))
 
 # 剛毅武士 (SteadfastWarrior) 技能定義
 sm.add_skill(Skill(21, "剛毅打擊", "對敵方造成 35 點傷害，並降低其 20% 防禦力，持續 2 回合。", 'damage'))
 sm.add_skill(Skill(22, "不屈意志", "持續 1 回合，自身防禦力增加 30%，並恢復 25 點生命值。", 'effect'))
 sm.add_skill(Skill(23, "絕地反擊", "對攻擊者立即造成其本次攻擊傷害的 300%。", 'damage', 3))
 
-# 烈陽勇士 (SunWarrior) 技能定義
+# 鯨吞 技能定義
 sm.add_skill(Skill(24, "吞裂", "對敵方造成 65 點傷害，50% 機率使用失敗。", 'damage'))
 sm.add_skill(Skill(25, "巨口吞世", "當敵方當前血量比例較我方高時，對敵方造成已損血量 15% 的傷害，否則，造成當前血量 10% 的傷害。", 'damage', 2))
-sm.add_skill(Skill(26, "堅硬皮膚", "提升 35% 防禦力，持續 3 回合。", 'effect'))
+sm.add_skill(Skill(26, "堅硬皮膚", "提升 45% 防禦力，持續 3 回合。", 'effect'))
 
 # 荒原遊俠 (Ranger) 技能定義
 sm.add_skill(Skill(27, "續戰攻擊", "對敵方造成 35 點傷害，每次連續使用攻擊技能時額外造成 15 點傷害。", 'damage'))
-sm.add_skill(Skill(28, "埋伏防禦", "持續 3 回合，提升 25% 防禦力。", 'effect'))
-sm.add_skill(Skill(29, "荒原抗性", "消耗 15 點生命值，免疫 1 回合的傷害。", 'effect'))
+sm.add_skill(Skill(28, "埋伏防禦", "持續 3 回合，提升 25% 防禦力，期間受到攻擊時 25% 機率反擊傷害的 50% 。", 'effect'))
+sm.add_skill(Skill(29, "荒原抗性", "消耗 30 點生命值，免疫 2 回合的傷害以及控制效果。", 'effect',5))
 
 # 元素法師 (ElementalMage) 技能定義
 sm.add_skill(Skill(30, "雷霆護甲", "持續 2 回合，受到傷害時有 30% 機率直接麻痺敵人，並提升 50% 防禦力，恢復最大生命的 5%。", 'effect'))

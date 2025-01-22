@@ -1,0 +1,295 @@
+/* backend/static/css/cross_battle_result_pc.css */
+
+/* 交叉對戰整體容器樣式 */
+.env-evaluation-section,
+.profession-evaluation-section,
+.combine-win-rate-section,
+.skill-usage-section,
+.data-info,
+.data-selection {
+  background-color: #fff;
+  margin-bottom: 20px;
+  padding: 15px 20px;
+  border-radius: 6px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* 標題樣式 */
+.env-evaluation-section h2,
+.profession-evaluation-section h2,
+.combine-win-rate-section h2,
+.skill-usage-section h2 {
+  margin-bottom: 10px;
+  font-size: 1.2rem;
+  border-left: 4px solid #2c3e50;
+  padding-left: 8px;
+}
+
+/* 資料選擇選單樣式 */
+.data-selection {
+  margin-bottom: 20px;
+}
+
+.data-selection label {
+  margin-right: 10px;
+  font-weight: bold;
+}
+
+.data-selection select {
+  padding: 5px 10px;
+  font-size: 1rem;
+}
+
+/* 資料基本資訊樣式 */
+.data-info h3 {
+  margin-bottom: 8px;
+}
+
+.data-info p {
+  margin: 4px 0;
+}
+
+/* 表格基礎樣式 */
+.cross-battle-table,
+.cross-battle-heatmap-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+  table-layout: fixed; /* 固定表格布局，防止溢出 */
+}
+
+.cross-battle-table thead tr,
+.cross-battle-heatmap-table thead tr {
+  background-color: #34495e;
+  color: #fff;
+}
+
+.cross-battle-table th,
+.cross-battle-table td,
+.cross-battle-heatmap-table th,
+.cross-battle-heatmap-table td {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  text-align: center;
+  word-wrap: break-word; /* 文字換行，防止表格過寬 */
+}
+
+.cross-battle-table tbody tr:nth-child(even),
+.cross-battle-heatmap-table tbody tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+.cross-battle-table tbody tr:hover,
+.cross-battle-heatmap-table tbody tr:hover {
+  background-color: #f1f1f1;
+}
+
+/* 指標說明區塊 */
+.indicator-explanation {
+  margin-top: 15px;
+  background-color: #fafafa;
+  padding: 10px 15px;
+  border-left: 4px solid #7f8c8d;
+}
+
+.indicator-explanation h3 {
+  margin-bottom: 8px;
+}
+
+.indicator-explanation ul {
+  list-style: disc inside;
+}
+
+.indicator-explanation li {
+  position: relative;
+  margin-bottom: 10px;
+}
+
+/* Heat Map 表格樣式 */
+.cross-battle-heatmap-table th {
+  background-color: #34495e;
+  color: #fff;
+}
+
+.cross-battle-heatmap-table th:first-child {
+  background-color: #2c3e50;
+}
+
+.cross-battle-heatmap-table th,
+.cross-battle-heatmap-table td {
+  min-width: 120px;
+  position: relative;
+}
+
+.cross-battle-heatmap-table th[data-sort],
+.cross-battle-table th[data-sort] {
+  cursor: pointer;
+}
+
+.cross-battle-heatmap-table th[data-sort]:hover,
+.cross-battle-table th[data-sort]:hover {
+  background-color: #3d566e;
+}
+
+/* 排序箭頭樣式 */
+.sortable th::after {
+  content: "";
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  border: 5px solid transparent;
+}
+
+.sortable th[data-sort]:hover::after {
+  border-top-color: #fff;
+  border-bottom-color: #fff;
+}
+
+/* Heat Map 色彩 */
+.cross-battle-heatmap-table td {
+  color: #fff; /* 確保文字可讀 */
+  font-weight: bold;
+}
+
+/* Tooltip 樣式 */
+.cross-battle-heatmap-table td .tooltip {
+  visibility: hidden;
+  width: 180px;
+  background-color: rgba(0, 0, 0, 0.9);
+  color: #fff;
+  text-align: left;
+  border-radius: 6px;
+  padding: 8px;
+  position: absolute;
+  z-index: 10;
+  top: 50%;
+  left: 105%;
+  transform: translateY(-50%);
+  white-space: pre-line;
+  font-size: 0.9rem;
+  margin-top: -5px; /* 調整垂直位置 */
+}
+
+/* 顯示 Tooltip */
+.cross-battle-heatmap-table td:hover .tooltip {
+  visibility: visible;
+}
+
+/* Tooltip 箭頭 */
+.cross-battle-heatmap-table td .tooltip::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: 100%;
+  margin-top: -5px;
+  border-width: 5px;
+  border-style: solid;
+  border-color: transparent rgba(0, 0, 0, 0.9) transparent transparent;
+}
+
+/* 職業頭像樣式 */
+.profession-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  vertical-align: middle;
+  margin-right: 8px;
+}
+
+.profession-avatar-small {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  vertical-align: middle;
+}
+
+/* 技能頭像樣式 */
+.skill-avatar-small {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  vertical-align: middle;
+}
+
+.skill-avatar {
+  width: 50px;
+  height: 50px;
+  border-radius: 8px;
+  vertical-align: middle;
+}
+
+/* 滾動條樣式 */
+.combine-win-rate-section {
+  overflow-x: auto;
+}
+
+/* Popover 樣式 */
+.popover-content {
+  position: absolute;
+  background-color: #fff;
+  color: #333;
+  padding: 10px 15px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  width: 250px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  z-index: 100;
+  display: none; /* 初始隱藏 */
+}
+
+.popover-content::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: 100%;
+  margin-top: -5px;
+  border-width: 5px;
+  border-style: solid;
+  border-color: transparent #ccc transparent transparent;
+}
+
+.info-icon {
+  cursor: pointer;
+  color: #3498db;
+  font-size: 1rem;
+}
+
+.info-icon:hover {
+  color: #2980b9;
+}
+
+/* 指標詳細說明的 Popover 調整 */
+.indicator-explanation .info-icon {
+  margin-left: 5px;
+}
+
+/* 調整表格在小螢幕上的顯示 */
+@media (max-width: 768px) {
+  .cross-battle-heatmap-table th,
+  .cross-battle-heatmap-table td {
+    min-width: 100px;
+    padding: 6px 8px;
+  }
+
+  .skill-usage-section .skill-avatar-small {
+    width: 30px;
+    height: 30px;
+  }
+}
+
+/* 載入中的轉動圖標樣式 */
+.loading-spinner {
+  border: 8px solid #f3f3f3;
+  border-top: 8px solid #3498db;
+  border-radius: 50%;
+  width: 60px;
+  height: 60px;
+  animation: spin 1s linear infinite;
+  margin: 50px auto;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}

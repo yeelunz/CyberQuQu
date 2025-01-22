@@ -7,7 +7,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const menuVersion = document.getElementById("menu-version");
     const menuTestRandom = document.getElementById("menu-test-random");
     const menuInfo = document.getElementById("menu-info");
-    
+    const menuCrossBattlePC = document.getElementById("menu-cross-battle-result-pc");
 
     const contentArea = document.getElementById("content-area");
 
@@ -117,6 +117,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         return text;
     }
+
 
     // 點選 "各職業介紹" => GET /api/show_professions
     menuInfo.addEventListener("click", (e) => {

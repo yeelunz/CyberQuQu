@@ -410,6 +410,9 @@ def version_test_random_vs_random(professions,skill_mgr,  num_battles=100):
     # print(results)
     total_combinations = len(professions) * (len(professions) - 1)
     current_combination = 0
+    # all professions add in skillusedFre
+    skillusedFreq = {p.name: {0:0,1:0,2:0} for p in professions}
+    
  
     for p in professions:
         for op in professions:
@@ -441,6 +444,13 @@ def version_test_random_vs_random(professions,skill_mgr,  num_battles=100):
                     e_actions = np.where(emask == 1)[0]
                     p_act = random.choice(p_actions) if len(p_actions) > 0 else 0
                     e_act = random.choice(e_actions) if len(e_actions) > 0 else 0
+                    
+                    # 統計技能使用次數，如果p_action = 2，則在 skillusedFreq['p.profession'][2] += 1
+                    # e_act = 2，則在 skillusedFreq['e.profession'][2] += 1
+
+                    skillusedFreq[p.name][int(p_act)] += 1
+                    skillusedFreq[op.name][int(e_act)] += 1
+                    
 
 
                     obs, rew, done, tru, info = env.step({
@@ -584,10 +594,20 @@ def version_test_random_vs_random(professions,skill_mgr,  num_battles=100):
     esi = calculate_esi(combine_rate_table, calculate_combined_metrics)
     mpi = calculate_mpi(combine_rate_table, calculate_combined_metrics)
     print(f"\nEHI: {ehi}, ESI: {esi}, MPI: {mpi}")
-
-    input("對戰完成。按Enter返回主選單...")
-
-    return
+    
+    res  = {
+        "env_evaluation": {
+            "ehi": ehi,
+            "esi": esi,
+            "mpi": mpi
+        },
+        "profession_evaluation": metrics,
+        "combine_win_rate_table": combine_rate_table,
+        "profession_skill_used_freq": skillusedFreq,
+        "total_battles": int(num_battles*len(professions)*(len(professions)-1))
+    }
+    
+    return res
 
 def high_level_test_ai_vs_ai(model_path_1, model_path_2, professions, skill_mgr, num_battles=100):
     """

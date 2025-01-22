@@ -1,0 +1,4 @@
+globalVar = {
+    
+    "version": 1,
+}

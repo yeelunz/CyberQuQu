@@ -177,7 +177,7 @@ class Mage(BattleProfession):
 
     def apply_skill(self, skill_id, user, targets, env):
         super().apply_skill(skill_id, user, targets, env)
-        if skill_id == 0:
+        if skill_id == 3:
             # 技能 0：火焰之球
             dmg = MAGE_VAR['MAGE_SKILL_0_DAMAGE'][0] * self.baseAtk
             env.deal_damage(user, targets[0], dmg, can_be_blocked=True)
@@ -185,7 +185,7 @@ class Mage(BattleProfession):
             env.apply_status(targets[0], burn_effect)
             self.passive(user, targets, env)
 
-        elif skill_id == 1:
+        elif skill_id == 4:
             # 技能 1：冰霜箭
             dmg = MAGE_VAR['MAGE_SKILL_1_DAMAGE'][0] * self.baseAtk
             env.deal_damage(user, targets[0], dmg, can_be_blocked=True)
@@ -193,7 +193,7 @@ class Mage(BattleProfession):
             env.apply_status(targets[0], freeze_effect)
             self.passive(user, targets, env)
 
-        elif skill_id == 2:
+        elif skill_id == 5:
             # 技能 2：全域爆破
             base_dmg = MAGE_VAR['MAGE_SKILL_2_BASE_DAMAGE'][0] * self.baseAtk
             total_layers = sum(
@@ -230,7 +230,7 @@ class Assassin(BattleProfession):
 
     def apply_skill(self, skill_id, user, targets, env):
         super().apply_skill(skill_id, user, targets, env)
-        if skill_id == 0:
+        if skill_id == 6:
             # 技能 0：致命暗殺
             dmg = ASSASSIN_VAR['ASSASSIN_SKILL_0_DAMAGE'][0] * self.baseAtk
             dmg = self.passive(targets, dmg, env)
@@ -239,7 +239,7 @@ class Assassin(BattleProfession):
                 dmg *= 2
             env.deal_damage(user, targets[0], dmg, can_be_blocked=True)
 
-        elif skill_id == 1:
+        elif skill_id == 7:
             # 技能 1：毒爆
             target = targets[0]
             total_layers = 0
@@ -259,7 +259,7 @@ class Assassin(BattleProfession):
                 env.add_event(event=BattleEvent(
                     type="text", text=f"無法引爆中毒效果，對方並未中毒。"))
 
-        elif skill_id == 2:
+        elif skill_id == 8:
             # 技能 2：毒刃襲擊
             dmg = ASSASSIN_VAR['ASSASSIN_SKILL_2_DAMAGE'][0] * self.baseAtk
             dmg = self.passive(targets, dmg, env)
@@ -306,7 +306,7 @@ class Archer(BattleProfession):
 
     def apply_skill(self, skill_id, user, targets, env):
         super().apply_skill(skill_id, user, targets, env)
-        if skill_id == 0:
+        if skill_id == 9:
             # 技能 0：五連矢
             dmg = ARCHER_VAR['ARCHER_SKILL_0_DAMAGE'][0] * self.baseAtk
             dmg /= 5 
@@ -322,7 +322,7 @@ class Archer(BattleProfession):
             )
             env.apply_status(targets[0], def_buff)
 
-        elif skill_id == 1:
+        elif skill_id == 10:
             # 技能 1：箭矢補充
             if random.random() < ARCHER_VAR['ARCHER_SKILL_1_SUCESS_RATIO'][0]:
                 dmg_multiplier = ARCHER_VAR['ARCHER_SKILL_1_DAMAGE_MULTIPLIER'][0]
@@ -347,7 +347,7 @@ class Archer(BattleProfession):
                     type="text", text=f"箭矢補充失敗，防禦力下降！"))
                 env.apply_status(user, def_debuff)
 
-        elif skill_id == 2:
+        elif skill_id == 11:
             # 技能 2：吸血箭
             dmg = ARCHER_VAR['ARCHER_SKILL_2_DAMAGE'][0] * self.baseAtk
             dmg = self.passive(env, dmg, targets)
@@ -382,8 +382,8 @@ class Berserker(BattleProfession):
             dmg = self.passive(user, dmg, env)
             env.deal_damage(user, targets[0], dmg, can_be_blocked=True)
             self_mutilation = dmg * BERSERKER_VAR['BERSERKER_SKILL_0_SELF_MUTILATION_RATE'][0]
+            env.add_event(event=BattleEvent(type="text", text=f"{self.name} 受到反噬。"))
             env.deal_healing(user, self_mutilation, self_mutilation=True)
-            env.add_event(event=BattleEvent(type="text", text=f"{self.name} 受到反噬，損失了 {int(self_mutilation)} 點生命值。"))
 
         elif skill_id == 13:  # 對應 BERSERKER_SKILL_1
             if user["hp"] > BERSERKER_VAR['BERSERKER_SKILL_1_HP_COST'][0]:
@@ -496,7 +496,13 @@ class DragonGod(BattleProfession):
                 env.add_event(event=BattleEvent(
                     type="text", text=f"「神龍燎原」消耗了 {consume_stack} 層龍神狀態。"))
                 env.deal_damage(user, targets[0], damage, can_be_blocked=True)
-                dragon_soul_effect.stacks -= consume_stack
+                finstack = dragon_soul_effect.stacks - consume_stack
+                   
+                env.set_status(user, "攻擊力" , finstack,source = self.default_passive_id)
+                env.set_status(user, "防禦力" , finstack,source = self.default_passive_id)
+                dragon_soul_effect.stacks = finstack
+                
+                
             else:
                 env.add_event(event=BattleEvent(
                     type="text", text=f"{self.name} 嘗試使用「神龍燎原」，但沒有足夠的龍神狀態。"))
@@ -562,6 +568,11 @@ class BloodGod(BattleProfession):
             user["effect_manager"].remove_all_effects("治癒力", source=self.default_passive_id)
 
     def damage_taken(self, user, targets, env, dmg):
+        if 'total_accumulated_damage' in user['private_info']:
+            user['private_info']['total_accumulated_damage'] += user['accumulated_damage']
+        else:
+            user['private_info']['total_accumulated_damage'] = user['accumulated_damage']
+        
         if user["effect_manager"].has_effect("轉生之印"):
             eff = user["effect_manager"].get_effects("轉生之印")[0]
             if eff.stacks > 0 and user["hp"] == 0:
@@ -593,9 +604,19 @@ class BloodGod(BattleProfession):
                 stack = bleed_effects[0].stacks
                 user['private_info']['total_accumulated_damage'] = max(
                     user['private_info']['total_accumulated_damage'] - stack * BLOODGOD_VAR['BLOODGOD_SKILL_1_BLEED_REDUCTION_MULTIPLIER'][0], 0)
+                
 
-                env.add_event(event=BattleEvent(
-                    type="text", text=f"{self.name} 發動血脈祭儀，並使敵方流血更加嚴重！"))
+                if user['private_info']['total_accumulated_damage'] < user['max_hp'] * BLOODGOD_VAR['BLOODGOD_PASSIVE_DAMAGE_THRESHOLD']:
+                    env.add_event(event = BattleEvent(type="text",text=f"{self.name} 發動血脈祭儀來純化血脈，現在擁有完美的血脈，並使敵方流血更加嚴重！"))
+                elif user['private_info']['total_accumulated_damage'] < user['max_hp'] * (BLOODGOD_VAR['BLOODGOD_PASSIVE_DAMAGE_THRESHOLD']*2):
+                    env.add_event(event = BattleEvent(type="text",text=f"{self.name} 發動血脈祭儀來純化血脈，現在擁有上等的血脈，並使敵方流血更加嚴重！"))
+                elif user['private_info']['total_accumulated_damage'] < user['max_hp'] * (BLOODGOD_VAR['BLOODGOD_PASSIVE_DAMAGE_THRESHOLD']*3):
+                    env.add_event(event = BattleEvent(type="text",text=f"{self.name} 發動血脈祭儀來純化血脈，現在擁有普通的血脈，並使敵方流血更加嚴重！"))
+                elif user['private_info']['total_accumulated_damage'] < user['max_hp'] * (BLOODGOD_VAR['BLOODGOD_PASSIVE_DAMAGE_THRESHOLD']*4):
+                    env.add_event(event = BattleEvent(type="text",text=f"{self.name} 發動血脈祭儀來純化血脈，現在擁有混濁的血脈，並使敵方流血更加嚴重！"))
+                else:
+                    env.add_event(event = BattleEvent(type="text",text=f"{self.name} 發動血脈祭儀來純化血脈，現在擁有拙劣的血脈，並使敵方流血更加嚴重！"))
+                    
                 heal_amount = stack * BLOODGOD_VAR['BLOODGOD_SKILL_1_HEAL_MULTIPLIER'][0]
                 env.deal_healing(user, heal_amount)
                 env.set_status(targets[0], "流血", stacks=stack * BLOODGOD_VAR['BLOODGOD_SKILL_1_BLEED_STACK_MULTIPLIER'][0])

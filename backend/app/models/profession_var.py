@@ -1,6 +1,6 @@
 # 基本調用格式為
 # PALADIN_VAR['PALADIN_BASE_HP'][0] <= current value：目前的數值
-# PALADIN_VAR['PALADIN_BASE_HP'][1] <= efault value：原本的數值
+# PALADIN_VAR['PALADIN_BASE_HP'][1] <= default value：預設的數值
 # PALADIN_VAR['PALADIN_BASE_HP'][2] <= lowwer bound：沒有指定=0
 # PALADIN_VAR['PALADIN_BASE_HP'][3] <= upper bound：沒有指定=0
 # PALADIN_VAR['PALADIN_BASE_HP'][4] <= 用來判斷要越高越好或是越小越好
@@ -104,6 +104,8 @@ ARCHER_VAR = {
     'ARCHER_PASSIVE_BASE_TRIGGER_RATE': [0.15, 0.15, 0.01, 1, 'high'],
     'ARCHER_PASSIVE_TRIGGER_RATE_BONUS': [2.0, 2.0, 0.1, 5, 'high'],  # 每單位防禦力增加的觸發率
     'ARCHER_PASSIVE_TRIGGER_RATE_MAX': [0.5, 0.5, 0.1, 1, 'high'],  # 最大觸發率
+    # 觸發後的傷害倍率
+    'ARCHER_PASSIVE_DAMAGE_MULTIPLIER': [2, 2, 0.1, 5, 'high'],
 
     # SKILL 9 DAMAGE AND DEFENSE DEBUFF
     'ARCHER_SKILL_0_DAMAGE': [50, 50, 1, 999, 'high'],

@@ -300,8 +300,8 @@ class Archer(BattleProfession):
             prob = min(prob, ARCHER_VAR['ARCHER_PASSIVE_TRIGGER_RATE_MAX'][0])
         if random.random() < prob:
             env.add_event(event=BattleEvent(
-                type="text", text=f"被動技能「鷹眼」觸發，攻擊造成兩倍傷害！"))
-            return dmg * 2
+                type="text", text=f"被動技能「鷹眼」觸發，攻擊造成{ARCHER_VAR['ARCHER_PASSIVE_DAMAGE_MULTIPLIER'][0]} 倍傷害！"))
+            return dmg * ARCHER_VAR['ARCHER_PASSIVE_DAMAGE_MULTIPLIER'][0]
         return dmg
 
     def apply_skill(self, skill_id, user, targets, env):
@@ -310,17 +310,19 @@ class Archer(BattleProfession):
             # 技能 0：五連矢
             dmg = ARCHER_VAR['ARCHER_SKILL_0_DAMAGE'][0] * self.baseAtk
             dmg /= 5 
-            for _ in range(5):
+            for i in range(5):
                 dmg = self.passive(env, dmg, targets)
                 env.deal_damage(user, targets[0], dmg, can_be_blocked=True)
+                if i==0:
+                    def_buff = DefenseMultiplier(
+                    multiplier=ARCHER_VAR['ARCHER_SKILL_0_DEFENSE_DEBUFF'][0],
+                    duration=ARCHER_VAR['ARCHER_SKILL_0_DURATION'][0],
+                    stackable=False,
+                    source=skill_id)
+                    env.apply_status(targets[0], def_buff)
+                    
                 
-            def_buff = DefenseMultiplier(
-                multiplier=ARCHER_VAR['ARCHER_SKILL_0_DEFENSE_DEBUFF'][0],
-                duration=ARCHER_VAR['ARCHER_SKILL_0_DURATION'][0],
-                stackable=False,
-                source=skill_id
-            )
-            env.apply_status(targets[0], def_buff)
+            
 
         elif skill_id == 10:
             # 技能 1：箭矢補充
@@ -606,13 +608,13 @@ class BloodGod(BattleProfession):
                     user['private_info']['total_accumulated_damage'] - stack * BLOODGOD_VAR['BLOODGOD_SKILL_1_BLEED_REDUCTION_MULTIPLIER'][0], 0)
                 
 
-                if user['private_info']['total_accumulated_damage'] < user['max_hp'] * BLOODGOD_VAR['BLOODGOD_PASSIVE_DAMAGE_THRESHOLD']:
+                if user['private_info']['total_accumulated_damage'] < user['max_hp'] * BLOODGOD_VAR['BLOODGOD_PASSIVE_DAMAGE_THRESHOLD'][0]:
                     env.add_event(event = BattleEvent(type="text",text=f"{self.name} 發動血脈祭儀來純化血脈，現在擁有完美的血脈，並使敵方流血更加嚴重！"))
-                elif user['private_info']['total_accumulated_damage'] < user['max_hp'] * (BLOODGOD_VAR['BLOODGOD_PASSIVE_DAMAGE_THRESHOLD']*2):
+                elif user['private_info']['total_accumulated_damage'] < user['max_hp'] * (BLOODGOD_VAR['BLOODGOD_PASSIVE_DAMAGE_THRESHOLD'][0]*2):
                     env.add_event(event = BattleEvent(type="text",text=f"{self.name} 發動血脈祭儀來純化血脈，現在擁有上等的血脈，並使敵方流血更加嚴重！"))
-                elif user['private_info']['total_accumulated_damage'] < user['max_hp'] * (BLOODGOD_VAR['BLOODGOD_PASSIVE_DAMAGE_THRESHOLD']*3):
+                elif user['private_info']['total_accumulated_damage'] < user['max_hp'] * (BLOODGOD_VAR['BLOODGOD_PASSIVE_DAMAGE_THRESHOLD'][0]*3):
                     env.add_event(event = BattleEvent(type="text",text=f"{self.name} 發動血脈祭儀來純化血脈，現在擁有普通的血脈，並使敵方流血更加嚴重！"))
-                elif user['private_info']['total_accumulated_damage'] < user['max_hp'] * (BLOODGOD_VAR['BLOODGOD_PASSIVE_DAMAGE_THRESHOLD']*4):
+                elif user['private_info']['total_accumulated_damage'] < user['max_hp'] * (BLOODGOD_VAR['BLOODGOD_PASSIVE_DAMAGE_THRESHOLD'][0]*4):
                     env.add_event(event = BattleEvent(type="text",text=f"{self.name} 發動血脈祭儀來純化血脈，現在擁有混濁的血脈，並使敵方流血更加嚴重！"))
                 else:
                     env.add_event(event = BattleEvent(type="text",text=f"{self.name} 發動血脈祭儀來純化血脈，現在擁有拙劣的血脈，並使敵方流血更加嚴重！"))
@@ -620,6 +622,9 @@ class BloodGod(BattleProfession):
                 heal_amount = stack * BLOODGOD_VAR['BLOODGOD_SKILL_1_HEAL_MULTIPLIER'][0]
                 env.deal_healing(user, heal_amount)
                 env.set_status(targets[0], "流血", stacks=stack * BLOODGOD_VAR['BLOODGOD_SKILL_1_BLEED_STACK_MULTIPLIER'][0])
+            else:
+                env.add_event(event=BattleEvent(
+                    type="text", text=f"{self.name} 嘗試使用「血脈祭儀」，但是流血層數不夠發動血脈祭儀。"))
 
         elif skill_id == 20:
             env.add_event(event=BattleEvent(

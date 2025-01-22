@@ -240,7 +240,7 @@ sm.add_skill(Skill(
 
 sm.add_skill(Skill(
     32, "雷擊術",
-    f"對敵方造成 {ELEMENTALMAGE_VAR['ELEMENTALMAGE_SKILL_2_DAMAGE'][0]} 點傷害，{int(ELEMENTALMAGE_VAR['ELEMENTALMAGE_SKILL_2_PARALYSIS_TRIGGER_RATE'][0] * 100)}% 機率使敵方暈眩 2~4 回合。",
+    f"對敵方造成 {ELEMENTALMAGE_VAR['ELEMENTALMAGE_SKILL_2_DAMAGE'][0]} 點傷害，{int(ELEMENTALMAGE_VAR['ELEMENTALMAGE_SKILL_2_PARALYSIS_TRIGGER_RATE'][0] * 100)}% 機率使敵方麻痺 2~4 回合。",
     'damage'
 ))
 

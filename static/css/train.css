@@ -1,0 +1,199 @@
+/* /static/css/train.css */
+
+#train-page {
+  margin: 20px;
+  font-family: Arial, sans-serif;
+}
+
+.params-explanation {
+  background-color: #f9f9f9;
+  padding: 15px;
+  border-left: 5px solid #4caf50;
+  margin-bottom: 20px;
+  border-radius: 3px;
+}
+
+.params-explanation h2 {
+  margin-top: 0;
+}
+
+.params-explanation p {
+  margin: 10px 0;
+  line-height: 1.5;
+}
+
+.form-section {
+  margin-bottom: 20px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.form-section label {
+  width: 150px;
+  font-weight: bold;
+  align-self: center;
+}
+
+.form-section input {
+  flex: 1 1 200px;
+  padding: 5px;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+}
+
+#startTrainBtn {
+  padding: 10px 20px;
+  background-color: #4caf50;
+  color: white;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+#startTrainBtn:hover {
+  background-color: #45a049;
+}
+
+.progress-bar-container {
+  width: 100%;
+  height: 25px;
+  background-color: #eee;
+  margin-bottom: 20px;
+  border-radius: 12.5px;
+  overflow: hidden;
+}
+
+.progress-bar {
+  height: 100%;
+  width: 0%;
+  background-color: #4caf50;
+  transition: width 0.5s;
+}
+
+#initializing-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.spinner {
+  width: 24px;
+  height: 24px;
+  border: 4px solid #ccc;
+  border-top: 4px solid #4caf50;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+#initialized-info {
+  margin-bottom: 20px;
+}
+
+.iteration-block {
+  border: 1px solid #ccc;
+  margin-bottom: 10px;
+  border-radius: 5px;
+  overflow: hidden;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.iteration-header {
+  background-color: #f3f3f3;
+  padding: 10px 15px;
+  font-weight: bold;
+  cursor: pointer;
+  position: relative;
+}
+
+.iteration-header::after {
+  content: '+';
+  position: absolute;
+  right: 20px;
+  font-size: 1.2rem;
+  transition: transform 0.3s;
+}
+
+.iteration-header.active::after {
+  transform: rotate(45deg);
+}
+
+.iteration-details {
+  padding: 15px;
+  background-color: #fff;
+}
+
+.info-table, .nested-info-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 10px;
+}
+
+.info-table td, .nested-info-table td {
+  border: 1px solid #ddd;
+  padding: 8px;
+  vertical-align: top;
+}
+
+.info-table tr:nth-child(even), .nested-info-table tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+.info-table tr:hover, .nested-info-table tr:hover {
+  background-color: #f1f1f1;
+}
+
+.info-table td:first-child, .nested-info-table td:first-child {
+  font-weight: bold;
+  width: 200px;
+}
+
+.modal {
+  display: none; 
+  position: fixed; 
+  z-index: 999;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  overflow: auto; 
+  background-color: rgba(0,0,0,0.4); 
+}
+
+.modal-content {
+  background-color: #fefefe;
+  margin: 15% auto; 
+  padding: 20px;
+  width: 300px;
+  position: relative;
+  border-radius: 5px;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+  text-align: center;
+}
+
+.modal-close {
+  position: absolute;
+  top: 10px;
+  right: 15px;
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #aaa;
+  cursor: pointer;
+}
+
+.modal-close:hover {
+  color: #000;
+}
+
+.modal-content p {
+  margin: 20px 0;
+  font-size: 1.1rem;
+}

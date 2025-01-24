@@ -1,0 +1,65 @@
+<!-- backend/templates/index.html -->
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <title>cyberququ</title>
+  <!-- 你的原本CSS -->
+  <link rel="stylesheet" href="/static/css/style.css?v=1.0" />
+  <!-- 針對交叉對戰數據頁面的額外 CSS -->
+  <link rel="stylesheet" href="/static/css/cross_battle_result_pc.css?v=1.0" />
+  <link rel="stylesheet" href="/static/css/train.css?v=1.0" />
+</head>
+<body>
+  <!-- 頂部資訊列 -->
+  <header>
+    <div id="game-version">版本：v0.0.1</div>
+    <div id="action-times">可行動次數：<span id="action-count">0</span></div>
+    <button id="skip-round-btn">跳過當前回合</button>
+  </header>
+
+  <div class="container">
+    <!-- 左側選單列 -->
+    <nav class="sidebar">
+      <ul>
+        <li><a href="#" id="menu-train">訓練模型</a></li>
+        <li><a href="#" id="menu-elo">ELO 排名</a></li>
+        <li><a href="#" id="menu-battle">戰鬥系統</a></li>
+        <li><a href="#" id="menu-version">版本資訊</a></li>
+        <li><a href="#" id="menu-test-random">電腦對戰：顯示battle log</a></li>
+        <li><a href="#" id="menu-cross-battle-result-pc">電腦對戰：顯示交叉對戰數據</a></li>
+        <li><a href="#" id="menu-bp">Ban&Pick test</a></li>
+        <li><a href="#" id="menu-testA">測試A</a></li>
+        <li><a href="#" id="menu-testB">測試B</a></li>
+        <li><a href="#" id="menu-info">各職業介紹</a></li>
+      </ul>
+    </nav>
+
+    <!-- 右側主要內容區 -->
+    <main class="main-content">
+
+      <!-- 這裡根據使用者點選不同功能，動態更新內容 -->
+      <div id="content-area">
+        <p>請從左側選單選擇功能</p>
+      </div>
+    </main>
+  </div>
+
+  <!-- 自訂 Modal 視窗 -->
+  <div id="train-complete-modal" class="modal">
+    <div class="modal-content">
+      <span class="modal-close" id="modal-close">&times;</span>
+      <p id="modal-message">訓練完成！</p>
+    </div>
+  </div>
+
+  <!-- 先載入主程式 -->
+  <script src="/static/js/script.js?v=1.0"></script>
+  <!-- 再載入戰鬥用的動畫邏輯檔案(讓 battle.js 可以使用到 script.js 內的東西) -->
+  <script src="/static/js/battle.js?v=1.0"></script>
+  <!-- 最後載入 專門處理交叉對戰結果的邏輯檔案 -->
+  <script src="/static/js/cross_battle_result_pc.js?v=1.0"></script>
+  <!-- 載入訓練頁面的 JS -->
+  <script src="/static/js/train.js?v=1.0"></script>
+</body>
+</html>

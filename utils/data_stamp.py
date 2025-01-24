@@ -1,5 +1,6 @@
 import json
 import time
+import os
 
 class Gdata:
     """
@@ -25,7 +26,10 @@ class Gdata:
         self.type = type
         self.name = name
         if model != None:
-            self.model = model
+            # model 只留最後面的資料夾名稱
+            self.model = os.path.basename(model)
+        else:
+            self.model = None
         self.hash = hash(str(data)+str(version)+type+name)
     def save(self,file_name = None):
         # 用json格式儲存

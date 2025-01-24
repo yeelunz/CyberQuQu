@@ -11,6 +11,8 @@
   <link rel="stylesheet" href="/static/css/train.css?v=1.0" />
   <!-- 新增: 管理模型用的 CSS -->
   <link rel="stylesheet" href="/static/css/manage_models.css?v=1.0" />
+  <link rel="stylesheet" href="/static/css/cross_battle_generate_pc.css?v=1.0" />
+  <link rel="stylesheet" href="/static/css/versus_mode.css?v=1.0" />
 </head>
 <body>
   <!-- 頂部資訊列 -->
@@ -25,12 +27,11 @@
     <nav class="sidebar">
       <ul>
         <li><a href="#" id="menu-train">訓練模型</a></li>
-        <li><a href="#" id="menu-elo">ELO 排名</a></li>
-        <li><a href="#" id="menu-battle">戰鬥系統</a></li>
-        <li><a href="#" id="menu-version">版本資訊</a></li>
-        <li><a href="#" id="menu-test-random">電腦對戰：顯示battle log</a></li>
-        <li><a href="#" id="menu-cross-battle-result-pc">電腦對戰：顯示交叉對戰數據</a></li>
-        <li><a href="#" id="menu-bp">Ban&Pick test</a></li>
+        <!-- 新增：產生交叉對戰數據 -->
+        <li><a href="#" id="menu-ai-vs-ai">AI vs AI 對戰</a></li>
+        <li><a href="#" id="menu-pc-vs-pc">PC vs PC 對戰</a></li>
+        <li><a href="#" id="menu-cross-battle-generate-pc">產生交叉對戰數據</a></li>
+        <li><a href="#" id="menu-cross-battle-result-pc">顯示交叉對戰數據</a></li>
         <li><a href="#" id="menu-info">各職業介紹</a></li>
 
         <!-- 新增: 模型管理選單 -->
@@ -66,5 +67,19 @@
   <script src="/static/js/train.js?v=1.0"></script>
   <!-- 新增: 管理模型的 JS -->
   <script src="/static/js/manage_models.js?v=1.0"></script>
+   <!-- 新增：產生交叉對戰數據的 JS (含 SSE) -->
+  <script src="/static/js/cross_battle_generate_pc.js?v=1.0"></script>
+  <!-- 新增: 對戰模式JS -->
+<script src="/static/js/versus_mode.js?v=1.0"></script>
+<script>
+  // 等所有 DOM/JS 載入完畢後
+  window.addEventListener("DOMContentLoaded", () => {
+      // 讓「AI vs AI / PC vs PC」選單可以正常點擊
+      initVersusMenuEvents();
+  });
+</script>
+<div id="model-loading-spinner">
+  <div class="spinner-icon"></div>
+</div>
 </body>
 </html>

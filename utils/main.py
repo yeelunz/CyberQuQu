@@ -34,7 +34,6 @@ import ray
 from .train_methods import (
     multi_agent_cross_train,        # (1) 交叉疊代訓練
     version_test_random_vs_random,  # (2) 版本環境測試
-    high_level_test_ai_vs_ai,       # (3) 高段環境測試
     compute_ai_elo,                 # (4) AI ELO
 )
 
@@ -60,9 +59,10 @@ def show_profession_info(profession_list, skill_mgr):
 #---------------------------------------
 # (5) 電腦 VS 電腦
 #---------------------------------------
-def computer_vs_computer(skill_mgr, professions):
+def computer_vs_computer(skill_mgr, professions,pr1,pr2):
+    # 這邊的 pr1, pr2 是職業物件
     env = BattleEnv(
-        config=make_env_config(skill_mgr=skill_mgr, professions=professions,show_battlelog=True),
+        config=make_env_config(skill_mgr=skill_mgr, professions=professions,show_battlelog=True,pr1=pr1,pr2=pr2),
     )
     done = False
     obs, _ = env.reset()
@@ -94,174 +94,119 @@ def computer_vs_computer(skill_mgr, professions):
     
 
     return env.battle_log
+
+
+current_loaded_model_path_1 = None
+current_loaded_model_path_2 = None
+current_trainer_1 = None
+current_trainer_2 = None
+
+
+
+def ai_vs_ai(skill_mgr, professions, model_path_1, model_path_2, pr1, pr2,SameModel=False):
+    global current_loaded_model_path_1, current_loaded_model_path_2
+    global current_trainer_1, current_trainer_2
     
-
-
-#---------------------------------------
-# (6) AI VS 電腦
-#---------------------------------------
-def ai_vs_computer(model_path, skill_mgr, professions):
-    try:
-        model = PPO.load(model_path)
-    except:
-        print(f"模型 {model_path} 載入失敗，請先進行訓練。")
-        input("按Enter返回主選單...")
-        return
-
-    p_team = [{
-        "profession": random.choice(professions),
-        "hp": 0,
-        "max_hp": 0,
-        "status": {},
-        "skip_turn": False,
-        "is_defending": False,
-        "times_healed": 0,
-        "next_heal_double": False,
-        "damage_multiplier": 1.0,
-        "defend_multiplier": 1.0,
-        "heal_multiplier": 1.0,
-        "battle_log": [],
-        "cooldowns": {}
-    }]
-    e_team = [{
-        "profession": random.choice(professions),
-        "hp": 0,
-        "max_hp": 0,
-        "status": {},
-        "skip_turn": False,
-        "is_defending": False,
-        "times_healed": 0,
-        "next_heal_double": False,
-        "damage_multiplier": 1.0,
-        "defend_multiplier": 1.0,
-        "heal_multiplier": 1.0,
-        "battle_log": [],
-        "cooldowns": {}
-    }]
-
     env = BattleEnv(
-        team_size=1,
-        enemy_team_size=1,
-        max_rounds=30,
-        player_team=p_team,
-        enemy_team=e_team,
-        skill_mgr=skill_mgr,
-        show_battle_log=True
+        config=make_env_config(skill_mgr=skill_mgr, professions=professions,show_battlelog=True,pr1=pr1,pr2=pr2),
     )
-
-    obs = env.reset()
     done = False
-    while not done:
-        player_obs = obs["player_obs"]
-        p_mask = obs["player_action_mask"]
-        avail_actions = np.where(p_mask == 1)[0]
-        if len(avail_actions) == 0:
-            action_player = 0
-        else:
-            pred, _ = model.predict(player_obs, deterministic=False)
-            if pred not in avail_actions:
-                action_player = random.choice(avail_actions)
-            else:
-                action_player = pred
-
-        e_mask = obs["opponent_action_mask"]
-        e_actions = np.where(e_mask == 1)[0]
-        if len(e_actions) == 0:
-            action_enemy = 0
-        else:
-            action_enemy = random.choice(e_actions)
-
-        actions = {
-            "player_action": action_player,
-            "opponent_action": action_enemy
-        }
-
-        obs, rewards, done_, info = env.step(actions)
-        done = done_
-
-    final_rew = rewards["player_reward"]
-    if final_rew > 0:
-        print("AI(左)贏了!")
-    elif final_rew < 0:
-        print("電腦(右)贏了!")
-    else:
-        print("平手或回合耗盡")
-    input("按Enter返回主選單...")
-
-#---------------------------------------
-# (7) AI VS AI
-#---------------------------------------
-def ai_vs_ai(model_path_1, model_path_2, skill_mgr, professions):
-    print("AI1 職業選擇:")
-    for i, p in enumerate(professions):
-        print(f"{i}) {p.name}")
-    try:
-        p1_idx = int(input("請輸入AI1職業(0-12): "))
-        if p1_idx < 0 or p1_idx > 12:
-            p1_idx = 0
-    except:
-        p1_idx = 0
-
-    print("AI2 職業選擇:")
-    for i, p in enumerate(professions):
-        print(f"{i}) {p.name}")
-    try:
-        p2_idx = int(input("請輸入AI2職業(0-12): "))
-        if p2_idx < 0 or p2_idx > 12:
-            p2_idx = 0
-    except:
-        p2_idx = 0
-
-    p1 = professions[p1_idx]
-    p2 = professions[p2_idx]
-
-    beconfig = make_env_config(skill_mgr=skill_mgr, professions=professions, pr1=p1, pr2=p2, show_battlelog=True)
-    benv = BattleEnv(config=beconfig)
-
+    obs, _ = env.reset()
+    
+    # 初始化 AI ELO
+    beconfig = make_env_config(skill_mgr=skill_mgr, professions=professions,show_battlelog=True,pr1=pr1,pr2=pr2)
     config = (
         PPOConfig()
-        .environment(env=BattleEnv, env_config=beconfig)
-        .env_runners(num_env_runners=1, sample_timeout_s=120)
-        .framework("torch")
-        .training(model={"custom_model": "my_mask_model"})
+        .environment(
+            env=BattleEnv,            # 指定我們剛剛定義的環境 class
+            env_config=beconfig# 傳入給 env 的一些自定設定
+        )
+        .env_runners(num_env_runners=1,sample_timeout_s=120)  # 可根據你的硬體調整
+        .framework("torch")            # 或 "tf"
+        .training(
+        model={
+            "custom_model": "my_mask_model",
+        }
     )
-    config.api_stack(enable_rl_module_and_learner=False, enable_env_runner_and_connector_v2=False)
+    )
+    benv = BattleEnv(config=beconfig)
+    config.api_stack(enable_rl_module_and_learner=False,enable_env_runner_and_connector_v2=False)
     config = config.multi_agent(
-        policies={"shared_policy": (None, benv.observation_space, benv.action_space, {})},
-        policy_mapping_fn=lambda agent_id, episode, worker=None, **kwargs: "shared_policy"
-    )
+        policies={
+            "shared_policy": (None, benv.observation_space, benv.action_space, {}),
+            },
+        policy_mapping_fn=lambda agent_id, episode, worker=None, **kwargs: 
+            "shared_policy" if agent_id == "player" else "shared_policy")
+    
+    need_reload_1 = (model_path_1 is not None and model_path_1 != current_loaded_model_path_1)
+    need_reload_2 = (model_path_2 is not None and model_path_2 != current_loaded_model_path_2 and not SameModel)
 
-    check_point_path = os.path.abspath("my_battle_ppo_checkpoints")
-    trainer = config.build()
-    trainer.restore(check_point_path)
+    if SameModel:
+        # 雙方用同一個 model
+        if need_reload_1:
+            # 需要重載
+            current_trainer_1 = config.build()
+            print("載入模型:", model_path_1)
+            # 這裡可以顯示轉圈(前端) -> 你可以用 SSE 或直接讓前端等 fetch
+            current_trainer_1.restore(model_path_1)
+            current_loaded_model_path_1 = model_path_1
+        trainer1 = current_trainer_1
+        trainer2 = current_trainer_1
+        current_loaded_model_path_2 = model_path_1  # 同一個
+    else:
+        # 左方
+        if need_reload_1:
+            current_trainer_1 = config.build()
+            print("載入模型(左):", model_path_1)
+            current_trainer_1.restore(model_path_1)
+            current_loaded_model_path_1 = model_path_1
 
-    done = False
-    obs, _ = benv.reset()
-    while not done:
-        pmask = obs["player"][0:3]
-        emask = obs["enemy"][0:3]
-        p_actions = np.where(pmask == 1)[0]
-        e_actions = np.where(emask == 1)[0]
+        # 右方
+        if need_reload_2:
+            current_trainer_2 = config.build()
+            print("載入模型(右):", model_path_2)
+            current_trainer_2.restore(model_path_2)
+            current_loaded_model_path_2 = model_path_2
+
+        trainer1 = current_trainer_1
+        trainer2 = current_trainer_2
         
-        p_act = trainer.compute_single_action(obs['player'], policy_id="shared_policy")
-        e_act = trainer.compute_single_action(obs['enemy'], policy_id="shared_policy")
+        
+    
+    while not done:
+        
+        if SameModel:
+            p_act = trainer1.compute_single_action(obs['player'], policy_id="shared_policy")
+            e_act = trainer1.compute_single_action(obs['enemy'], policy_id="shared_policy")
+           
+        else:
+            
+            p_act = trainer1.compute_single_action(obs['player'], policy_id="shared_policy")
+            # if p act in mask is 0, then choose random action
+            e_act = trainer2.compute_single_action(obs['enemy'] ,policy_id="shared_policy")
 
         actions = {
             "player": p_act,
             "enemy": e_act
         }
-        obs, rew, done_, tru, info = benv.step(actions)
+        obs, rew, done_, tru, info = env.step(actions)
+        
         done = done_["__all__"]
 
-    info = info["__common__"]["result"]
-    if info > 0:
-        print("AI1(左)贏了!")
-    elif info < 0:
-        print("AI2(右)贏了!")
-    else :
+    res = info["__common__"]["result"]
+    
+    if res == 1:
+        print("電腦(左)贏了!")
+    elif res == -1:
+        print("電腦(右)贏了!")
+    else:
         print("平手或回合耗盡")
+    
 
-    input("按Enter返回主選單...")
+    return env.battle_log
+    
+
+
 
 
 # backend/main.py

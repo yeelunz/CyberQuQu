@@ -42,7 +42,7 @@
   border-radius: 3px;
 }
 
-#startTrainBtn {
+.form-section button {
   padding: 10px 20px;
   background-color: #4caf50;
   color: white;
@@ -50,9 +50,15 @@
   border-radius: 3px;
   cursor: pointer;
   font-weight: bold;
+  margin-right: 10px;
 }
 
-#startTrainBtn:hover {
+.form-section button:disabled {
+  background-color: #a5d6a7;
+  cursor: not-allowed;
+}
+
+.form-section button:hover:not(:disabled) {
   background-color: #45a049;
 }
 

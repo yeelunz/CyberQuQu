@@ -30,7 +30,8 @@ from .global_var import globalVar as gl
 
 from .professions import build_professions
 from .skills import build_skill_manager
-
+import threading
+import time
 
 class MaskedFullyConnectedNetwork(TorchModelV2, nn.Module):
     """
@@ -73,6 +74,10 @@ class MaskedFullyConnectedNetwork(TorchModelV2, nn.Module):
 
 ModelCatalog.register_custom_model("my_mask_model", MaskedFullyConnectedNetwork)
 
+
+stop_training_flag = threading.Event()
+
+
 def multi_agent_cross_train(num_iterations,
                             model_name="my_multiagent_ai",
                             hyperparams=None):
@@ -89,6 +94,7 @@ def multi_agent_cross_train(num_iterations,
     print("=== 開始多智能體交叉訓練 ===")
     print("模型名稱:", model_name)
     print("超參數:", hyperparams)
+    
 
     beconfig = make_env_config(skill_mgr, professions, train_mode=True)
     config = (
@@ -141,10 +147,17 @@ def multi_agent_cross_train(num_iterations,
     # 先 yield 一個事件，告知「初始化完成」(前端會判斷 type=initialized)
     yield {
         "type": "initialized",
-        "message": "模型初始化完成"
+        "message": "環境初始化完成"
     }
 
     for i in range(num_iterations):
+        if stop_training_flag.is_set():
+            yield {
+                "type": "stopped",
+                "message": "訓練已被終止。"
+            }
+            break
+
         result = algo.train()
         print(f"=== Iteration {i + 1} ===")
 
@@ -163,31 +176,38 @@ def multi_agent_cross_train(num_iterations,
             "ram_util_percent": result["perf"]["ram_util_percent"]
         }
 
-    # 訓練完成 => 存檔
-    save_root = os.path.join("data", "saved_models", model_name)
-    os.makedirs(save_root, exist_ok=True)
-    checkpoint_dir = algo.save(save_root)
-    print("Checkpoint saved at", checkpoint_dir)
+    # 訓練完成或被終止
+    if not stop_training_flag.is_set():
+        # 訓練完成 => 存檔
+        save_root = os.path.join("data", "saved_models", model_name)
+        os.makedirs(save_root, exist_ok=True)
+        checkpoint_dir = algo.save(save_root)
+        print("Checkpoint saved at", checkpoint_dir)
 
-    meta_path = os.path.join(save_root, "training_meta.json")
-    meta_info = {
-        "model_name": model_name,
-        "num_iterations": num_iterations,
-        "hyperparams": hyperparams,
-        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "version": gl["version"],
-        "elo_result": None,
-    }
-    with open(meta_path, "w", encoding="utf-8") as f:
-        json.dump(meta_info, f, ensure_ascii=False, indent=2)
+        meta_path = os.path.join(save_root, "training_meta.json")
+        meta_info = {
+            "model_name": model_name,
+            "num_iterations": num_iterations,
+            "hyperparams": hyperparams,
+            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "version": gl["version"],
+            "elo_result": None,
+        }
+        with open(meta_path, "w", encoding="utf-8") as f:
+            json.dump(meta_info, f, ensure_ascii=False, indent=2)
 
-    print(f"模型訓練完成，相關資訊已儲存至 {save_root}")
+        print(f"模型訓練完成，相關資訊已儲存至 {save_root}")
 
-    # 最後再 yield 一個事件，告知訓練流程已整體結束 (type=done)
-    yield {
-        "type": "done",
-        "message": "訓練全部結束"
-    }
+        # 最後再 yield 一個事件，告知訓練流程已整體結束 (type=done)
+        yield {
+            "type": "done",
+            "message": "訓練全部結束"
+        }
+    else:
+        print("訓練過程被終止。")
+
+    # 重置停止標誌
+    stop_training_flag.clear()
 
 
 
@@ -899,18 +919,11 @@ import os
 import math
 import random
 
+
 def compute_ai_elo(model_path_1, professions, skill_mgr, base_elo=1500, opponent_elo=1500, num_battles=100, K=32):
     """
-    計算 AI 的 ELO 分數，與固定 ELO1500 的隨機電腦對戰。
-
-    參數:
-        model_path_1: AI 模型的路徑
-        professions: 職業列表，每個職業物件應有 .name 屬性
-        skill_mgr: 技能管理器
-        base_elo: AI 的初始 ELO 分數
-        opponent_elo: 對手（電腦）的固定 ELO 分數
-        num_battles: 每種攻擊順序的對戰場數 (總場數 = num_battles * 2)
-        K: ELO 計算中的 K 值
+    計算 AI 的 ELO 分數，並回報進度。
+    修改為生成器，定期 yield 進度資訊。
     """
     print("=== AI ELO 測試 ===")
 
@@ -918,155 +931,184 @@ def compute_ai_elo(model_path_1, professions, skill_mgr, base_elo=1500, opponent
     elo_results = {}
     total_first = 0
     total_second = 0
-    randomELO = 1500
-
+    randomELO = 1500  # 用於跟AI對戰的「隨機對手」ELO
 
     # 設定環境配置
     beconfig = make_env_config(skill_mgr=skill_mgr, professions=professions, show_battlelog=False)
     config = (
         PPOConfig()
         .environment(
-            env=BattleEnv,            # 指定我們剛剛定義的環境 class
-            env_config=beconfig# 傳入給 env 的一些自定設定
+            env=BattleEnv,
+            env_config=beconfig
         )
-        .env_runners(num_env_runners=1,sample_timeout_s=120)  # 可根據你的硬體調整
-        .framework("torch")            # 或 "tf"
+        .env_runners(num_env_runners=1, sample_timeout_s=120)
+        .framework("torch")
         .training(
-        model={
-            "custom_model": "my_mask_model",
-        }))
-    
+            model={
+                "custom_model": "my_mask_model",
+            }
+        )
+    )
+
     benv = BattleEnv(config=beconfig)
     # 定義多代理策略
     config = config.multi_agent(
         policies={
             "shared_policy": (None, benv.observation_space, benv.action_space, {}),
         },
-        policy_mapping_fn=lambda agent_id, episode, worker=None, **kwargs: 
-            "shared_policy" if agent_id == "player" else "shared_policy"
+        policy_mapping_fn=lambda agent_id, episode, worker=None, **kwargs:
+            "shared_policy"
     )
-    config.api_stack(enable_rl_module_and_learner=False,enable_env_runner_and_connector_v2=False)
+    config.api_stack(enable_rl_module_and_learner=False, enable_env_runner_and_connector_v2=False)
 
     # 建立訓練器並載入檢查點
-    check_point_path = os.path.abspath("my_battle_ppo_checkpoints")
+    check_point_path = os.path.abspath(model_path_1)
+
+    # 注意：這裡只留一次 build
     trainer = config.build()
-    trainer.restore(check_point_path)
-    
+
+    if os.path.exists(check_point_path):
+        trainer.restore(check_point_path)
+    else:
+        print(f"檢查點路徑 {check_point_path} 不存在。")
+
+    total_professions = len(professions)
+    total_steps = total_professions * num_battles * 2  # 先攻+後攻
+    current_step = 0
+
     for p in professions:
+        if stop_training_flag.is_set():
+            yield {"type": "stopped", "message": "ELO 計算已被終止。"}
+            return
+
         print(f"\n=== 職業: {p.name} ===")
-        # 初始化先攻和後攻的 ELO
+        # 初始化先攻和後攻 ELO
         elo_first = base_elo
         elo_second = base_elo
 
-        # 測試先攻（玩家政策）
-        print("  測試先攻...")
+        # 測試先攻
         for battle_num in range(1, num_battles // 2 + 1):
-            # 初始化 BattleEnv，AI 作為先攻方
+            if stop_training_flag.is_set():
+                yield {"type": "stopped", "message": "ELO 計算已被終止。"}
+                return
 
             env = BattleEnv(make_env_config(skill_mgr, professions, show_battlelog=False, pr1=p, pr2=p))
             done = False
             obs, _ = env.reset()
 
             while not done:
-                # AI 的動作
-
-                # ai_act = random.choice([0, 1, 2])
                 ai_act = trainer.compute_single_action(obs['player'], policy_id="shared_policy")
-            
-                # 電腦（隨機）動作
-                # random action from 0 - 2
-                enemy_act = random.choice([0, 1, 2])
-                
+                enemy_act = random.choice([0, 1, 2])  # 隨機對手
                 actions = {"player": ai_act, "enemy": enemy_act}
                 obs, rew, done_dict, tru, info = env.step(actions)
                 done = done_dict["__all__"]
 
             res = info["__common__"]["result"]
-            # 確定比賽結果
             if res == 1:
-                score = 1  # AI 勝利
+                score = 1
             elif res == -1:
-                score = 0  # AI 敗北
+                score = 0
             else:
-                score = 0.5  # 平局
+                score = 0.5
 
-            # 計算期望分數
             expected = 1 / (1 + 10 ** ((randomELO - elo_first) / 400))
-            # 更新 ELO
             elo_first += K * (score - expected)
 
-            # 顯示進度
-            if battle_num % 10 == 0:
-                print(f"    完成 {battle_num}/{num_battles // 2} 場 (先攻)")
+            current_step += 1
+            progress_percentage = (current_step / total_steps) * 100
+            if battle_num % 50 == 0:
+                progress_event =  {
+                    "type": "progress",
+                    "progress": progress_percentage *2 ,
+                    "message": f"職業 {p.name} - 先攻方完成 {battle_num}/{num_battles // 2} 場"
+                }
+                print(f"Yielding progress: {progress_event}")  # 新增
+                yield progress_event
 
-        # 測試後攻（敵人政策）
-        print("  測試後攻...")
+        # 測試後攻
         for battle_num in range(1, num_battles // 2 + 1):
-            # 初始化 BattleEnv，AI 作為後攻方
-            env_config = make_env_config(skill_mgr, professions, show_battlelog=False, pr1=p, pr2=p)  # pr1=None 表示對手為隨機電腦
-            env = BattleEnv(env_config)
+            if stop_training_flag.is_set():
+                yield {"type": "stopped", "message": "ELO 計算已被終止。"}
+                return
+
+            env = BattleEnv(make_env_config(skill_mgr, professions, show_battlelog=False, pr1=p, pr2=p))
             done = False
             obs, _ = env.reset()
 
             while not done:
-                # 電腦（隨機）動作
-                enemy_act = random.choice([0, 1, 2])
-                # AI 的動作
+                enemy_act = random.choice([0, 1, 2])  # 隨機對手
                 ai_act = trainer.compute_single_action(obs['enemy'], policy_id="shared_policy")
-                # ai_act = random.choice([0, 1, 2])
-                    
                 actions = {"player": enemy_act, "enemy": ai_act}
                 obs, rew, done_dict, tru, info = env.step(actions)
                 done = done_dict["__all__"]
 
+            # 先攻方 res=1 代表先攻(=player)贏；AI 是後攻 => AI 贏分數要反轉
             res = info["__common__"]["result"]
-            # 確定比賽結果 這邊要反轉 因為res是先攻方的結果
             if res == 1:
-                score = 0  # AI 勝利
+                score = 0
             elif res == -1:
-                score = 1  # AI 敗北
+                score = 1
             else:
-                score = 0.5  # 平局
+                score = 0.5
 
-            # 計算期望分數
             expected = 1 / (1 + 10 ** ((randomELO - elo_second) / 400))
-            # 更新 ELO
             elo_second += K * (score - expected)
 
-            # 顯示進度
-            if battle_num % 10 == 0:
-                print(f"    完成 {battle_num}/{num_battles // 2} 場 (後攻)")
+            current_step += 1
+            progress_percentage = (current_step / total_steps) * 100
+            if battle_num % 50 == 0:
+                progress_event =  {
+                    "type": "progress",
+                    "progress": progress_percentage *2,
+                    "message": f"職業 {p.name} - 後攻方完成 {battle_num}/{num_battles // 2} 場"
+                }
+                print(f"Yielding progress: {progress_event}")  # 新增
+                yield progress_event
 
-        # 計算總和 ELO
         total_elo = (elo_first + elo_second) / 2
-
-        # 儲存結果
         elo_results[p.name] = {
-            "先攻方 ELO": elo_first,
-            "後攻方 ELO": elo_second,
-            "總和 ELO": total_elo
+            "先攻方 ELO": round(elo_first),
+            "後攻方 ELO": round(elo_second),
+            "總和 ELO": round(total_elo)
+        }
+        print(f"Yielding final ELO for {p.name}: {elo_results[p.name]}")  # 新增
+        yield {
+            "type": "progress",
+            "progress": progress_percentage*2,
+            "message": f"職業 {p.name} 的 ELO 計算完成。"
         }
 
-        # 累加總和
         total_first += elo_first
         total_second += elo_second
 
-    # 計算整體總和
     overall_total = len(professions)
     average_first = total_first / overall_total
     average_second = total_second / overall_total
     average_total = (average_first + average_second) / 2
 
-    # 輸出結果表格
     print(f"\n=== ELO 結果===")
     print(f"{'職業':<15} | {'先攻方 ELO':<15} | {'後攻方 ELO':<15} | {'總和 ELO':<10}")
     print("-" * 60)
     for prof, elos in elo_results.items():
-        print(f"{prof:<15} | {elos['先攻方 ELO']:<15.2f} | {elos['後攻方 ELO']:<15.2f} | {elos['總和 ELO']:<10.2f}")
+        print(f"{prof:<15} | {elos['先攻方 ELO']:<15} | {elos['後攻方 ELO']:<15} | {elos['總和 ELO']:<10}")
     print("-" * 60)
-    print(f"{'總和':<15} | {average_first:<15.2f} | {average_second:<15.2f} | {average_total:<10.2f}")
+    print(f"{'平均':<15} | {round(average_first):<15} | {round(average_second):<15} | {round(average_total):<10}")
 
-    input("按 Enter 返回主選單...")
+    print("\nELO 計算完成。")
+    
+    print("Final ELO Results:", elo_results)  # 已有的 print，確認最終結果
+    
+    yield {
+        "type": "final_result",
+        "elo_result": {
+            "平均 ELO": round(average_total),
+            "詳細": elo_results,
+            "總和先攻方ELO": round(average_first),
+            "總和後攻方ELO": round(average_second),
+            "總和ELO": round(average_total),
+        }
+    }
+
 
 
 

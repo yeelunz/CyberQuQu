@@ -21,6 +21,9 @@ document.addEventListener("DOMContentLoaded", function() {
   const modalCloseBtn = document.getElementById("modal-close");
   modalCloseBtn.addEventListener("click", closeModal);
 
+  // 當前的 SSE 連線
+  let currentSource = null;
+
   // 點擊左側選單「訓練模型」時的處理
   menuTrain.addEventListener("click", function() {
     contentArea.innerHTML = `
@@ -45,7 +48,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
         <div class="form-section">
           <label for="modelNameInput">模型名稱：</label>
-          <input type="text" id="modelNameInput" placeholder="my_multiagent_ai" />
+          <input type="text" id="modelNameInput" placeholder="my_multiagent_ai_{timestamp}" />
 
           <label for="iterationInput">Iteration 次數：</label>
           <input type="number" id="iterationInput" placeholder="5" min="1" />
@@ -57,6 +60,7 @@ document.addEventListener("DOMContentLoaded", function() {
           <input type="number" id="batchInput" placeholder="4000" min="1" />
 
           <button id="startTrainBtn">開始訓練</button>
+          <button id="stopTrainBtn" disabled>終止訓練</button>
         </div>
     
         <!-- 顯示訓練初始化中 的載入效果 -->
@@ -84,11 +88,19 @@ document.addEventListener("DOMContentLoaded", function() {
 
     // 綁定開始訓練按鈕事件
     const startTrainBtn = document.getElementById("startTrainBtn");
+    const stopTrainBtn = document.getElementById("stopTrainBtn");
     startTrainBtn.addEventListener("click", startTraining);
+    stopTrainBtn.addEventListener("click", stopTraining);
+
+    // 設定模型名稱預設值
+    const modelNameInput = document.getElementById("modelNameInput");
+    const now = new Date();
+    const timestamp = `${now.getFullYear()}_${String(now.getMonth()+1).padStart(2, '0')}_${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}_${String(now.getMinutes()).padStart(2, '0')}_${String(now.getSeconds()).padStart(2, '0')}`;
+    modelNameInput.value = `my_multiagent_ai_${timestamp}`;
   });
 
   function startTraining() {
-    const modelName = document.getElementById("modelNameInput").value.trim() || "my_multiagent_ai";
+    const modelName = document.getElementById("modelNameInput").value.trim() || `my_multiagent_ai_${getCurrentTimestamp()}`;
     const iteration = parseInt(document.getElementById("iterationInput").value) || 5;
     const lr = parseFloat(document.getElementById("lrInput").value) || 0.0001;
     const batchSize = parseInt(document.getElementById("batchInput").value) || 4000;
@@ -122,19 +134,25 @@ document.addEventListener("DOMContentLoaded", function() {
 
     const initializingStatus = document.getElementById("initializing-status");
     const initializedInfo = document.getElementById("initialized-info");
+    const startTrainBtn = document.getElementById("startTrainBtn");
+    const stopTrainBtn = document.getElementById("stopTrainBtn");
 
     // 顯示初始化提示
     initializingStatus.style.display = "flex";  // 使用 flex 以水平排列 spinner 和文字
     initializedInfo.style.display = "none";
 
+    // 禁用開始訓練按鈕，啟用終止訓練按鈕
+    startTrainBtn.disabled = true;
+    stopTrainBtn.disabled = false;
+
     // 建立 SSE 連線
     const hyperparamsJson = encodeURIComponent(JSON.stringify(hyperparams));
     const url = `/api/train_sse?model_name=${modelName}&iteration=${iteration}&hyperparams_json=${hyperparamsJson}`;
-    const source = new EventSource(url);
+    currentSource = new EventSource(url);
 
     let currentIteration = 0;
 
-    source.onmessage = (event) => {
+    currentSource.onmessage = (event) => {
       const data = JSON.parse(event.data);
       console.log("SSE 收到資料:", data);
 
@@ -174,8 +192,10 @@ document.addEventListener("DOMContentLoaded", function() {
           iterationHeader.addEventListener("click", () => {
             if (iterationDetails.style.display === "none") {
               iterationDetails.style.display = "block";
+              iterationHeader.classList.add("active");
             } else {
               iterationDetails.style.display = "none";
+              iterationHeader.classList.remove("active");
             }
           });
 
@@ -186,7 +206,8 @@ document.addEventListener("DOMContentLoaded", function() {
 
         case "done":
           // 關閉 SSE
-          source.close();
+          currentSource.close();
+          currentSource = null;
           // 進度條直接 100%
           progressBar.style.width = "100%";
           // 顯示初始化完成資訊（如果尚未顯示）
@@ -196,6 +217,19 @@ document.addEventListener("DOMContentLoaded", function() {
           }
           // 彈窗顯示完成
           showModal(data.message || "訓練完成！");
+          // 重置按鈕狀態
+          startTrainBtn.disabled = false;
+          stopTrainBtn.disabled = true;
+          break;
+
+        case "stopped":
+          // 訓練被終止
+          currentSource.close();
+          currentSource = null;
+          showModal(data.message || "訓練已被終止。");
+          // 重置按鈕狀態
+          startTrainBtn.disabled = false;
+          stopTrainBtn.disabled = true;
           break;
 
         default:
@@ -203,11 +237,37 @@ document.addEventListener("DOMContentLoaded", function() {
       }
     };
 
-    source.onerror = (err) => {
+    currentSource.onerror = (err) => {
       console.error("SSE 發生錯誤或連線中斷:", err);
-      source.close();
+      currentSource.close();
+      currentSource = null;
       showModal("訓練過程中發生錯誤或連線中斷。");
+      // 重置按鈕狀態
+      startTrainBtn.disabled = false;
+      stopTrainBtn.disabled = true;
     };
+  }
+
+  function stopTraining() {
+    if (currentSource) {
+      // 發送終止請求到後端
+      fetch('/api/stop_train', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ message: '終止訓練請求' })
+      })
+      .then(response => response.json())
+      .then(data => {
+        console.log("終止訓練回應:", data);
+        showModal(data.message || "訓練終止請求已發送。");
+      })
+      .catch(error => {
+        console.error("終止訓練時發生錯誤:", error);
+        showModal("終止訓練時發生錯誤。");
+      });
+    }
   }
 
   // 工具函式：將物件轉成 HTML Table (支援嵌套物件)
@@ -262,6 +322,12 @@ document.addEventListener("DOMContentLoaded", function() {
       nestedTable.appendChild(row);
     }
     return nestedTable;
+  }
+
+  // 工具函式：取得當前時間的字串格式
+  function getCurrentTimestamp() {
+    const now = new Date();
+    return `${now.getFullYear()}_${String(now.getMonth()+1).padStart(2, '0')}_${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}_${String(now.getMinutes()).padStart(2, '0')}_${String(now.getSeconds()).padStart(2, '0')}`;
   }
 
 });

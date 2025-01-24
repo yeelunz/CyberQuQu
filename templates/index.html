@@ -9,6 +9,8 @@
   <!-- 針對交叉對戰數據頁面的額外 CSS -->
   <link rel="stylesheet" href="/static/css/cross_battle_result_pc.css?v=1.0" />
   <link rel="stylesheet" href="/static/css/train.css?v=1.0" />
+  <!-- 新增: 管理模型用的 CSS -->
+  <link rel="stylesheet" href="/static/css/manage_models.css?v=1.0" />
 </head>
 <body>
   <!-- 頂部資訊列 -->
@@ -32,6 +34,9 @@
         <li><a href="#" id="menu-testA">測試A</a></li>
         <li><a href="#" id="menu-testB">測試B</a></li>
         <li><a href="#" id="menu-info">各職業介紹</a></li>
+
+        <!-- 新增: 模型管理選單 -->
+        <li><a href="#" id="menu-manage-models">管理模型</a></li>
       </ul>
     </nav>
 
@@ -49,7 +54,7 @@
   <div id="train-complete-modal" class="modal">
     <div class="modal-content">
       <span class="modal-close" id="modal-close">&times;</span>
-      <p id="modal-message">訓練完成！</p>
+      <p id="modal-message">訊息</p>
     </div>
   </div>
 
@@ -57,9 +62,11 @@
   <script src="/static/js/script.js?v=1.0"></script>
   <!-- 再載入戰鬥用的動畫邏輯檔案(讓 battle.js 可以使用到 script.js 內的東西) -->
   <script src="/static/js/battle.js?v=1.0"></script>
-  <!-- 最後載入 專門處理交叉對戰結果的邏輯檔案 -->
+  <!-- 載入專門處理交叉對戰結果的邏輯檔案 -->
   <script src="/static/js/cross_battle_result_pc.js?v=1.0"></script>
   <!-- 載入訓練頁面的 JS -->
   <script src="/static/js/train.js?v=1.0"></script>
+  <!-- 新增: 管理模型的 JS -->
+  <script src="/static/js/manage_models.js?v=1.0"></script>
 </body>
 </html>

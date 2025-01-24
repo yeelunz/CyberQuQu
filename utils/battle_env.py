@@ -42,12 +42,7 @@ class BattleEnv(MultiAgentEnv):
     def __init__(self, config):
         # self, team_size, enemy_team_size, max_rounds,
         #             player_team, enemy_team, skill_mgr, show_battle_log=True
-        
-            print(" ** Ray worker sys.path: ** ")
-            print("\n".join(sys.path))
-            print(" ** Ray worker sys.path: <> ")
-        
-        
+         
             super(BattleEnv, self).__init__()
             self.config = config
       

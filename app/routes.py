@@ -255,4 +255,5 @@ def api_show_professions():
     professions_data = get_professions_data(professions, skill_mgr)
     return jsonify({"professions_info": professions_data})
 
-# 你還可以繼續加其它端點 ...
+
+

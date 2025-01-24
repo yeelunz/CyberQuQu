@@ -231,22 +231,7 @@ document.addEventListener("DOMContentLoaded", () => {
         img.parentNode.insertBefore(noImageDiv, img.nextSibling);
     };
 
-    // 其餘功能(如 ELO、Battle、Version) 你可以依相同邏輯去做
-    menuElo.addEventListener("click", (e) => {
-        e.preventDefault();
-        alert("這裡可以做 ELO 相關操作，請自行對應後端 API。");
-    });
 
-    menuBattle.addEventListener("click", (e) => {
-        e.preventDefault();
-        
-        alert("這裡可以做戰鬥相關操作(5:電腦vs電腦 / 6:AI vs電腦)，請自行對應後端 API。");
-    });
-
-    menuVersion.addEventListener("click", (e) => {
-        e.preventDefault();
-        alert("版本資訊可自行設計 UI 介面並連動後端。");
-    });
 
     menuTestRandom.addEventListener("click", (e) => {
         e.preventDefault();

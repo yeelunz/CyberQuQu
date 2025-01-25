@@ -58,7 +58,7 @@ class BattleEnv(MultiAgentEnv):
             self.done = False
             self.battle_log = []
             self.damage_coefficient = 1.0
-            self.size = 140
+            self.size = 143
             self.train_mode = config["train_mode"]
             self.mpro = []
             self.epro = []
@@ -110,6 +110,7 @@ class BattleEnv(MultiAgentEnv):
             m["last_damage_taken"] = 0
             m['accumulated_damage'] = 0
             m['private_info'] = {}
+            m['last_skill_used'] = [0,0,0]
         
         # 重置敵方
         for e in self.enemy_team:
@@ -132,6 +133,7 @@ class BattleEnv(MultiAgentEnv):
             e["last_damage_taken"] = 0
             e['accumulated_damage'] = 0
             e['private_info'] = {}
+            e['last_skill_used'] = [0,0,0]
 
         infos = {
              "player": {"professions":self.mpro},
@@ -412,6 +414,14 @@ class BattleEnv(MultiAgentEnv):
 
         p_action = actions.get("player", 0)
         e_action = actions.get("enemy", 0)
+        
+        # last skill used by one-hot encoding
+        m = self.player_team[0]
+        e = self.enemy_team[0]
+        m['last_skill_used'] = [0,0,0]
+        e['last_skill_used'] = [0,0,0]
+        m['last_skill_used'][p_action] = 1
+        e['last_skill_used'][e_action] = 1
 
         player_actions = [p_action]
         enemy_actions = [e_action]
@@ -737,7 +747,8 @@ class BattleEnv(MultiAgentEnv):
                 np.log(player_m["accumulated_damage"]+1),
                 player_m["profession"].baseAtk,
                 player_m["profession"].baseDef,
-            ]
+            ],
+            # player_m["last_skill_used"]
         ], dtype=np.float32)
 
         enemy_obs = np.concatenate([
@@ -751,7 +762,8 @@ class BattleEnv(MultiAgentEnv):
                 np.log(enemy_m["accumulated_damage"]+1),
                 enemy_m["profession"].baseAtk,
                 enemy_m["profession"].baseDef,
-            ]
+            ],
+            # enemy_m["last_skill_used"]
         ], dtype=np.float32)
 
         # 行動遮罩 共有 3 個特徵
@@ -763,11 +775,20 @@ class BattleEnv(MultiAgentEnv):
         flattened_eobs = np.concatenate([enemy_mask, enemy_obs])
 
         # 公共觀測值 共有 2 個特徵 
-        public_obs = np.array(
-            [self.damage_coefficient
-             , self.round_count/self.max_rounds],
-            dtype=np.float32
-        )
+        if agent == "player":
+            public_obs = np.array(
+                [self.damage_coefficient
+                 , self.round_count/self.max_rounds],
+                dtype=np.float32
+            )
+            public_obs = np.concatenate([public_obs, enemy_m['last_skill_used']])
+        else:
+            public_obs = np.array(
+                [self.damage_coefficient
+                 , self.round_count/self.max_rounds],
+                dtype=np.float32
+            )
+            public_obs = np.concatenate([public_obs, player_m['last_skill_used']])
 
         # 特效管理器觀測值 共有42個特徵
         pem = player_m["effect_manager"].export_obs()
@@ -982,7 +1003,7 @@ class BattleEnv(MultiAgentEnv):
                 if all(m["hp"] <= 0 for m in self.player_team) and all(e["hp"] <= 0 for e in self.enemy_team):
                     return 0
                 elif all(m["hp"] <= 0 for m in self.player_team):
-                    return 3
+                    return 1
                 elif all(e["hp"] <= 0 for e in self.enemy_team):
                     return -1
         return 0

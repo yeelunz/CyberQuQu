@@ -1,0 +1,64 @@
+<!-- backend/templates/dev_manage_vars_content.html -->
+<div class="dev-vars-container">
+    <h1>管理技能/職業變數</h1>
+    {% for profession, vars in professions_vars.items() %}
+    <div class="dev-profession-section">
+        <h2 class="dev-profession-title">{{ profession }}</h2>
+        <table class="dev-vars-table">
+            <thead>
+                <tr>
+                    <th>技能圖片</th>
+                    <th>變數名稱</th>
+                    <th>當前值</th>
+                    <th>預設值</th>
+                    <th>下限</th>
+                    <th>上限</th>
+                    <th>標記</th>
+                    <th>說明</th>
+                    <th>更新</th>
+                    <th>狀態</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for var_key, var_data in vars.items() %}
+                <tr>
+                    <td>
+                        {% if "SKILL" in var_key %}
+                        <img src="/static/images/{{ profession|lower }}_{{ var_key|lower }}.png"
+                             alt="{{ var_key }}"
+                             class="dev-skill-img"
+                             onerror="this.style.display='none'">
+                        {% endif %}
+                    </td>
+                    <td>{{ var_key }}</td>
+                    <td>
+                        <input type="text" class="dev-var-input" id="input-{{ profession }}-{{ var_key }}" value="{{ var_data[0] }}">
+                    </td>
+                    <td>{{ var_data[1] }}</td>
+                    <td>{{ var_data[2] }}</td>
+                    <td>{{ var_data[3] }}</td>
+                    <td>{% if var_data|length > 4 %}{{ var_data[4] }}{% else %}no{% endif %}</td>
+                    <td>
+                        {% if var_key in skill_desc %}
+                            {{ skill_desc[var_key] }}
+                        {% else %}
+                            --
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if var_data|length > 4 and var_data[4] == 'no' %}
+                            <span>不可修改</span>
+                        {% else %}
+                            <button class="dev-update-btn" data-profession="{{ profession }}" data-varkey="{{ var_key }}">更新</button>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="dev-message" id="message-{{ profession }}-{{ var_key }}"></span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endfor %}
+</div>

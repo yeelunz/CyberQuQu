@@ -1,3 +1,5 @@
+# profession_var.py is used to store the default value of each profession 
+
 # 基本調用格式為
 # PALADIN_VAR['PALADIN_BASE_HP'][0] <= current value：目前的數值
 # PALADIN_VAR['PALADIN_BASE_HP'][1] <= default value：預設的數值
@@ -67,10 +69,10 @@ ASSASSIN_VAR = {
     # BASE STATS
     'ASSASSIN_BASE_HP': [258, 258, 100, 999, 'high'],
     'ASSASSIN_BASE_ATK': [1.15, 1.15, 0.1, 999, 'high'],
-    'ASSASSIN_BASE_DEF': [0.95, 0.95, 0.1, 999, 'high'],
+    'ASSASSIN_BASE_DEF': [1.0, 1.0, 0.1, 999, 'high'],
 
     # PASSIVE TRIGGER RATE
-    'ASSASSIN_PASSIVE_TRIGGER_RATE': [0.25, 0.25, 0.01, 1, 'high'],
+    'ASSASSIN_PASSIVE_TRIGGER_RATE': [0.3, 0.3, 0.01, 1, 'high'],
 
     # PASSIVE BONUS DAMAGE RATE
     'ASSASSIN_PASSIVE_BONUS_DAMAGE_RATE': [0.05, 0.05, 0.01, 1, 'high'],
@@ -80,35 +82,35 @@ ASSASSIN_VAR = {
     'ASSASSIN_SKILL_0_CRIT_RATE': [0.35, 0.35, 0.01, 1, 'high'],
 
     # SKILL 1 DAMAGE PER POISON LAYER AND HEAL PER LAYER
-    'ASSASSIN_SKILL_1_DAMAGE_PER_LAYER': [15, 15, 1, 999, 'high'],
-    'ASSASSIN_SKILL_1_HEAL_PER_LAYER': [15, 15, 1, 999, 'high'],
+    'ASSASSIN_SKILL_1_DAMAGE_PER_LAYER': [20, 20, 1, 999, 'high'],
+    'ASSASSIN_SKILL_1_HEAL_PER_LAYER': [20, 20, 1, 999, 'high'],
 
     # SKILL 2 DAMAGE AMOUNT AND POISON STACKS
-    'ASSASSIN_SKILL_2_DAMAGE': [10, 10, 1, 999, 'high'],
+    'ASSASSIN_SKILL_2_DAMAGE': [15, 15, 1, 999, 'high'],
     'ASSASSIN_SKILL_2_POISON_STACKS_1_WEIGHT': [4,4,0,999,'nd'],
     'ASSASSIN_SKILL_2_POISON_STACKS_2_WEIGHT': [3,3,0,999,'nd'],
     'ASSASSIN_SKILL_2_POISON_STACKS_3_WEIGHT': [2,2,0,999,'nd'],
-    'ASSASSIN_SKILL_2_POISON_STACKS_4_WEIGHT': [0,0,0,999,'nd'],
-    'ASSASSIN_SKILL_2_POISON_STACKS_5_WEIGHT': [0,0,0,999,'nd'],
+    'ASSASSIN_SKILL_2_POISON_STACKS_4_WEIGHT': [1,1,0,999,'nd'],
+    'ASSASSIN_SKILL_2_POISON_STACKS_5_WEIGHT': [1,1,0,999,'nd'],
     
     'ASSASSIN_SKILL_2_POISON_DAMAGE': [3, 3, 1, 999, 'high'],
 }
 
 ARCHER_VAR = {
     # BASE STATS
-    'ARCHER_BASE_HP': [234, 234, 100, 999, 'high'],
-    'ARCHER_BASE_ATK': [1.15, 1.15, 0.1, 999, 'high'],
+    'ARCHER_BASE_HP': [285, 285, 100, 999, 'high'],
+    'ARCHER_BASE_ATK': [1.12, 1.12, 0.1, 999, 'high'],
     'ARCHER_BASE_DEF': [1.03, 1.03, 0.1, 999, 'high'],
 
     # PASSIVE TRIGGER RATE
-    'ARCHER_PASSIVE_BASE_TRIGGER_RATE': [0.15, 0.15, 0.01, 1, 'high'],
+    'ARCHER_PASSIVE_BASE_TRIGGER_RATE': [0.05, 0.05, 0.01, 1, 'high'],
     'ARCHER_PASSIVE_TRIGGER_RATE_BONUS': [2.0, 2.0, 0.1, 5, 'high'],  # 每單位防禦力增加的觸發率
     'ARCHER_PASSIVE_TRIGGER_RATE_MAX': [0.5, 0.5, 0.1, 1, 'high'],  # 最大觸發率
     # 觸發後的傷害倍率
     'ARCHER_PASSIVE_DAMAGE_MULTIPLIER': [2, 2, 0.1, 5, 'high'],
 
     # SKILL 9 DAMAGE AND DEFENSE DEBUFF
-    'ARCHER_SKILL_0_DAMAGE': [50, 50, 1, 999, 'high'],
+    'ARCHER_SKILL_0_DAMAGE': [60, 60, 1, 999, 'high'],
     'ARCHER_SKILL_0_DEFENSE_DEBUFF': [0.895, 0.895, 0.1, 1, 'low'],  # 防禦力降低比例
     'ARCHER_SKILL_0_DURATION': [2, 2, 1, 5, 'high'],
 
@@ -116,18 +118,18 @@ ARCHER_VAR = {
     'ARCHER_SKILL_1_DAMAGE_MULTIPLIER': [3.5, 3.5, 1, 5, 'high'],  # 提升攻擊倍率
     'ARCHER_SKILL_1_DEFENSE_MULTIPLIER': [0.5, 0.5, 0.1, 1, 'high'],  # 降低防禦倍率
     'ARCHER_SKILL_1_DURATION': [2, 2, 1, 5, 'high'],
-    'ARCHER_SKILL_1_SUCESS_RATIO': [0.5, 0.5, 0.01, 1, 'high'],  # 成功率
+    'ARCHER_SKILL_1_SUCESS_RATIO': [0.6, 0.6, 0.01, 1, 'high'],  # 成功率
 
     # SKILL 11 DAMAGE AND HEAL
-    'ARCHER_SKILL_2_DAMAGE': [30, 30, 1, 999, 'high'],
-    'ARCHER_SKILL_2_HEAL': [15, 15, 1, 999, 'high'],
+    'ARCHER_SKILL_2_DAMAGE': [35, 35, 1, 999, 'high'],
+    'ARCHER_SKILL_2_HEAL': [20, 20, 1, 999, 'high'],
 }
 
 BERSERKER_VAR = {
     # BASE STATS
-    'BERSERKER_BASE_HP': [430, 430, 100, 999, 'high'],
-    'BERSERKER_BASE_ATK': [1.0, 1.0, 0.1, 999, 'high'],
-    'BERSERKER_BASE_DEF': [0.76, 0.76, 0.1, 999, 'high'],
+    'BERSERKER_BASE_HP': [395, 395, 100, 999, 'high'],
+    'BERSERKER_BASE_ATK': [1.15, 1.15, 0.1, 999, 'high'],
+    'BERSERKER_BASE_DEF': [0.8, 0.8, 0.1, 999, 'high'],
 
     # PASSIVE EXTRA DAMAGE RATE
     'BERSERKER_PASSIVE_EXTRA_DAMAGE_RATE': [0.3, 0.3, 0.01, 1, 'high'],
@@ -153,9 +155,9 @@ BERSERKER_VAR = {
 
 DRAGONGOD_VAR = {
     # BASE STATS
-    'DRAGONGOD_BASE_HP': [315, 315, 100, 999, 'high'],
-    'DRAGONGOD_BASE_ATK': [1.05, 1.05, 0.1, 999, 'high'],
-    'DRAGONGOD_BASE_DEF': [1.05, 1.05, 0.1, 999, 'high'],
+    'DRAGONGOD_BASE_HP': [332, 332, 100, 999, 'high'],
+    'DRAGONGOD_BASE_ATK': [1.0, 1.0, 0.1, 999, 'high'],
+    'DRAGONGOD_BASE_DEF': [1.0, 1.0, 0.1, 999, 'high'],
 
     # PASSIVE EFFECT
     'DRAGONGOD_PASSIVE_ATK_MULTIPLIER': [1.05, 1.05, 0.01, 2, 'high'],
@@ -163,7 +165,7 @@ DRAGONGOD_VAR = {
 
     # SKILL 0 DAMAGE
     'DRAGONGOD_SKILL_0_BASE_DAMAGE': [25, 25, 1, 999, 'high'],
-    'DRAGONGOD_SKILL_0_BONUS_DAMAGE_PER_STACK': [8, 8, 1, 999, 'high'],
+    'DRAGONGOD_SKILL_0_BONUS_DAMAGE_PER_STACK': [10, 10, 1, 999, 'high'],
 
     # SKILL 1 HEAL AND BLEED
     'DRAGONGOD_SKILL_1_HEAL_AMOUNT': [120, 120, 1, 999, 'high'],
@@ -181,8 +183,8 @@ DRAGONGOD_VAR = {
 BLOODGOD_VAR = {
     # BASE STATS
     'BLOODGOD_BASE_HP': [266, 266, 100, 999, 'high'],
-    'BLOODGOD_BASE_ATK': [1.9, 1.9, 0.1, 999, 'high'],
-    'BLOODGOD_BASE_DEF': [1.9, 1.9, 0.1, 999, 'high'],
+    'BLOODGOD_BASE_ATK': [1.5, 1.5, 0.1, 999, 'high'],
+    'BLOODGOD_BASE_DEF': [1.5, 1.5, 0.1, 999, 'high'],
 
     # PASSIVE EFFECT
     'BLOODGOD_PASSIVE_DAMAGE_THRESHOLD': [0.25, 0.25, 0.01, 1, 'high'],  # 每受到最大血量的 25% 傷害
@@ -208,17 +210,17 @@ BLOODGOD_VAR = {
 
 STEADFASTWARRIOR_VAR = {
     # BASE STATS
-    'STEADFASTWARRIOR_BASE_HP': [282, 282, 100, 999, 'high'],
+    'STEADFASTWARRIOR_BASE_HP': [276, 276, 100, 999, 'high'],
     'STEADFASTWARRIOR_BASE_ATK': [1.0, 1.0, 0.1, 999, 'high'],
-    'STEADFASTWARRIOR_BASE_DEF': [1.35, 1.35, 0.1, 999, 'high'],
+    'STEADFASTWARRIOR_BASE_DEF': [1.25, 1.25, 0.1, 999, 'high'],
 
     # PASSIVE: HEAL LOST HP PERCENTAGE
     'STEADFASTWARRIOR_PASSIVE_HEAL_PERCENT': [0.07, 0.07, 0.01, 1, 'high'],  # 每回合恢復損失生命值的百分比
 
     # SKILL 21: DAMAGE AND DEFENSE DEBUFF
-    'STEADFASTWARRIOR_SKILL_0_DAMAGE': [35, 35, 1, 999, 'high'],
-    'STEADFASTWARRIOR_SKILL_0_DEFENSE_DEBUFF': [0.795, 0.795, 0.01, 1, 'low'],  # 防禦降低比例
-    'STEADFASTWARRIOR_SKILL_0_DURATION': [2, 2, 1, 5, 'high'],  # 持續回合數
+    'STEADFASTWARRIOR_SKILL_0_DAMAGE': [40, 40, 1, 999, 'high'],
+    'STEADFASTWARRIOR_SKILL_0_DEFENSE_DEBUFF': [0.745, 0.745, 0.01, 1, 'low'],  # 防禦降低比例
+    'STEADFASTWARRIOR_SKILL_0_DURATION': [3, 3, 1, 5, 'high'],  # 持續回合數
 
     # SKILL 22: DEFENSE BUFF AND HEAL
     'STEADFASTWARRIOR_SKILL_1_DEFENSE_BUFF': [1.3, 1.3, 0.1, 2, 'high'],  # 防禦力增加比例
@@ -241,7 +243,7 @@ DEVOUR_VAR = {
     'DEVOUR_PASSIVE_SELF_DAMAGE_PERCENT': [0.08, 0.08, 0.01, 1, 'low'],  # 攻擊時消耗的生命值比例
 
     # SKILL 24: DAMAGE AND FAILURE RATE
-    'DEVOUR_SKILL_0_DAMAGE': [65, 65, 1, 999, 'high'],
+    'DEVOUR_SKILL_0_DAMAGE': [70, 70, 1, 999, 'high'],
     'DEVOUR_SKILL_0_FAILURE_RATE': [0.5, 0.5, 0.01, 1, 'low'],  # 技能失敗的機率
 
     # SKILL 25: DAMAGE BASED ON HP DIFFERENCE
@@ -256,20 +258,20 @@ DEVOUR_VAR = {
 
 RANGER_VAR = {
     # BASE STATS
-    'RANGER_BASE_HP': [269, 269, 100, 999, 'high'],
+    'RANGER_BASE_HP': [299, 299, 100, 999, 'high'],
     'RANGER_BASE_ATK': [1.2, 1.2, 0.1, 999, 'high'],
-    'RANGER_BASE_DEF': [0.9, 0.9, 0.1, 999, 'high'],
+    'RANGER_BASE_DEF': [0.95, 0.95, 0.1, 999, 'high'],
 
     # PASSIVE: COLD ARROW
     'RANGER_PASSIVE_TRIGGER_RATE': [0.25, 0.25, 0.01, 1, 'high'],  # 被動觸發機率
     'RANGER_PASSIVE_DAMAGE': [35, 35, 1, 999, 'high'],  # 被動傷害
 
     # SKILL 27: DAMAGE AND STACKED BONUS
-    'RANGER_SKILL_0_DAMAGE': [35, 35, 1, 999, 'high'],
+    'RANGER_SKILL_0_DAMAGE': [40, 40, 1, 999, 'high'],
     'RANGER_SKILL_0_BONUS_DAMAGE_PER_USE': [15, 15, 1, 999, 'high'],  # 每次連續使用增加的傷害
 
     # SKILL 28: DEFENSE BUFF
-    'RANGER_SKILL_1_DEFENSE_BUFF': [1.25, 1.25, 0.1, 2, 'high'],  # 防禦力提升倍率
+    'RANGER_SKILL_1_DEFENSE_BUFF': [1.3, 1.3, 0.1, 2, 'high'],  # 防禦力提升倍率
     'RANGER_SKILL_1_DURATION': [3, 3, 1, 5, 'nd'],  # 持續時間
     'RANGER_SKILL_1_AMBUSH_TRIGGER_RATE': [0.25, 0.25, 0.01, 1, 'high'],  # 埋伏成功觸發機率
     'RANGER_SKILL_1_AMBUSH_DAMAGE_MULTIPLIER': [0.5, 0.5, 0.01, 1, 'high'],  # 埋伏反擊傷害倍率
@@ -335,20 +337,20 @@ HUANGSHEN_VAR = {
 GODOFSTAR_VAR = {
     # BASE STATS
     'GODOFSTAR_BASE_HP': [295, 295, 100, 999, 'high'],
-    'GODOFSTAR_BASE_ATK': [1.08, 1.08, 0.1, 999, 'high'],
-    'GODOFSTAR_BASE_DEF': [1.08, 1.08, 0.1, 999, 'high'],
+    'GODOFSTAR_BASE_ATK': [1.16, 1.16, 0.1, 999, 'high'],
+    'GODOFSTAR_BASE_DEF': [1.16, 1.16, 0.1, 999, 'high'],
 
     # PASSIVE: STAR PENDULUM
     'GODOFSTAR_PASSIVE_DAMAGE_PER_EFFECT': [5, 5, 1, 999, 'high'],  # 每層效果造成的額外傷害
     'GODOFSTAR_PASSIVE_HEAL_PER_EFFECT': [5, 5, 1, 999, 'high'],  # 每層效果恢復的額外生命值
 
     # SKILL 36: DEBUFF METEOR
-    'GODOFSTAR_SKILL_0_DAMAGE': [25, 25, 1, 999, 'high'],
+    'GODOFSTAR_SKILL_0_DAMAGE': [30, 30, 1, 999, 'high'],
     'GODOFSTAR_SKILL_0_DEBUFF_MULTIPLIER': [1.05, 1.05, 0.01, 2, 'low'],  # 減益倍率
     'GODOFSTAR_SKILL_0_DEBUFF_DURATION': [3, 3, 1, 5, 'nd'],  # 持續時間
 
     # SKILL 37: BUFF METEOR
-    'GODOFSTAR_SKILL_1_HEAL': [25, 25, 1, 999, 'high'],
+    'GODOFSTAR_SKILL_1_HEAL': [30, 30, 1, 999, 'high'],
     'GODOFSTAR_SKILL_1_BUFF_MULTIPLIER': [0.95, 0.95, 0.01, 1, 'low'],  # 增益倍率
     'GODOFSTAR_SKILL_1_BUFF_DURATION': [3, 3, 1, 5, 'high'],  # 持續時間
 

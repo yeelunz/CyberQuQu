@@ -991,22 +991,23 @@ class BattleEnv(MultiAgentEnv):
         計算獎勵，根據玩家或對手
         """
         # 勝利/失敗獎勵
+        res = 0
         if self.done:
             if player:
                 if all(m["hp"] <= 0 for m in self.player_team) and all(e["hp"] <= 0 for e in self.enemy_team):
-                    return 0
+                    return -0.3
                 elif all(m["hp"] <= 0 for m in self.player_team):
                     return -1
                 elif all(e["hp"] <= 0 for e in self.enemy_team):
                     return 1
             else:
                 if all(m["hp"] <= 0 for m in self.player_team) and all(e["hp"] <= 0 for e in self.enemy_team):
-                    return 0
+                    return -0.3
                 elif all(m["hp"] <= 0 for m in self.player_team):
                     return 1
                 elif all(e["hp"] <= 0 for e in self.enemy_team):
                     return -1
-        return 0
+        return res
 
     def _print_round_header(self):
         self.add_event(event=BattleEvent(type="turn_start"))

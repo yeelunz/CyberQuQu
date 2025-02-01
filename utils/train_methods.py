@@ -111,17 +111,19 @@ def multi_agent_cross_train(num_iterations,
         )
         .framework("torch")
         .training(
-            model={
-                "custom_model": "my_mask_model",
-                "fcnet_hiddens": [256, 256],
-                "fcnet_activation": "ReLU",
-                "vf_share_layers": False
-            },
-            use_gae=True,
-            lr=hyperparams.get("learning_rate", 1e-4),
-            train_batch_size=hyperparams.get("train_batch_size", 4000),
-            # ... 如果有更多超參數需要動態帶入，繼續加 ...
-        )
+        model={
+            "custom_model": "my_mask_model",
+            "fcnet_hiddens": hyperparams.get("fcnet_hiddens", [256,256,256]),
+            "fcnet_activation": "ReLU",
+            "vf_share_layers": False
+        },
+        use_gae=True,
+        lr=hyperparams.get("learning_rate", 1e-4),
+        train_batch_size=hyperparams.get("train_batch_size", 4000),
+        entropy_coeff=hyperparams.get("entropy_coeff", 0.01),
+        entropy_coeff_schedule=hyperparams.get("entropy_coeff_schedule", [[0, 0.01], [1000000, 0.0]])
+        # ... 如果有更多超參數需要動態帶入，可在此處增加 ...
+    )
     )
 
     benv = BattleEnv(beconfig)
@@ -707,6 +709,24 @@ def compute_ai_elo(model_path_1, professions, skill_mgr, base_elo=1500, opponent
     randomELO = 1500  # 用於跟AI對戰的「隨機對手」ELO
     
     t1 = time.time()
+    fc_hiddens = [256, 256 ,256]
+    check_point_path = os.path.abspath(model_path_1)
+    
+    if os.path.exists(check_point_path):
+        # load check_point_path/training_meta.json
+        meta_path = os.path.join(check_point_path, "training_meta.json")
+        # get fcnet_hiddens from json
+        try:
+            with open(meta_path, "r", encoding="utf-8") as f:
+                meta_info = json.load(f)
+                hyperparams = meta_info.get("hyperparams", {})
+                fc_hiddens = hyperparams.get("fcnet_hiddens", [256, 256, 256])
+        except FileNotFoundError:
+            print(f"找不到 {meta_path}，將使用預設的 fcnet_hiddens。")
+    else:
+        print(f"mata data 路徑 {check_point_path} 不存在。")
+        
+    
 
     # 設定環境配置
     beconfig = make_env_config(skill_mgr=skill_mgr, professions=professions, show_battlelog=False)
@@ -720,8 +740,11 @@ def compute_ai_elo(model_path_1, professions, skill_mgr, base_elo=1500, opponent
         .framework("torch")
         .training(
             model={
-                "custom_model": "my_mask_model",
-            }
+            "custom_model": "my_mask_model",
+            "fcnet_hiddens": fc_hiddens,
+            "fcnet_activation": "ReLU",
+            "vf_share_layers": False
+        },
         )
     )
 
@@ -1086,6 +1109,21 @@ def version_test_random_vs_random_sse_ai(professions, skill_mgr, num_battles=100
     results = {p.name: {op.name: {'win': 0, 'loss': 0, 'draw': 0} for op in professions if op != p} for p in professions}
     skillusedFreq = {p.name: {0:0,1:0,2:0} for p in professions}
     
+    fc_hiddens = [256, 256 ,256]
+    check_point_path = os.path.abspath(model_path_1)
+    
+    if os.path.exists(check_point_path):
+        # load check_point_path/training_meta.json
+        meta_path = os.path.join(check_point_path, "training_meta.json")
+        # get fcnet_hiddens from json
+        try:
+            with open(meta_path, "r", encoding="utf-8") as f:
+                meta_info = json.load(f)
+                hyperparams = meta_info.get("hyperparams", {})
+                fc_hiddens = hyperparams.get("fcnet_hiddens", [256, 256, 256])
+        except FileNotFoundError:
+            print(f"找不到 {meta_path}，將使用預設的 fcnet_hiddens。")
+    
     
     # 初始化 AI ELO
     beconfig = make_env_config(skill_mgr=skill_mgr, professions=professions,show_battlelog=True)
@@ -1100,7 +1138,10 @@ def version_test_random_vs_random_sse_ai(professions, skill_mgr, num_battles=100
         .training(
         model={
             "custom_model": "my_mask_model",
-        }
+            "fcnet_hiddens": fc_hiddens,
+            "fcnet_activation": "ReLU",
+            "vf_share_layers": False
+        },
     )
     )
     benv = BattleEnv(config=beconfig)

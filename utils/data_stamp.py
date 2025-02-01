@@ -20,10 +20,11 @@ class Gdata:
      - name並不作為唯一識別，只是用來標記資料的名稱
      - hash 是用來確保資料的唯一性 
     """
-    def __init__(self, data,version,type ,name = str(time.time()),model = None):
+    def __init__(self, data,version,type ,name = time.strftime("%Y_%m_%d_%H_%M_%S", time.localtime()),model = None):
         self.data = data
         self.version = version
         self.type = type
+        # 這邊name 改為如下: 2021_01_01_12_00_00
         self.name = name
         if model != None:
             # model 只留最後面的資料夾名稱

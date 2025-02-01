@@ -313,9 +313,9 @@ class Archer(BattleProfession):
     def passive(self, env, dmg, tar):
         target = tar[0]
         prob = ARCHER_VAR['ARCHER_PASSIVE_BASE_TRIGGER_RATE'][0]
-        if target["profession"].baseDef > 1:
-            prob += (target["profession"].baseDef - 1) * \
-                ARCHER_VAR['ARCHER_PASSIVE_TRIGGER_RATE_BONUS'][0]
+        toatal_def = target["profession"].baseDef * target["defend_multiplier"]
+        if toatal_def > 1:
+            prob += (toatal_def - 1) * ARCHER_VAR['ARCHER_PASSIVE_TRIGGER_RATE_BONUS'][0]
             prob = min(prob, ARCHER_VAR['ARCHER_PASSIVE_TRIGGER_RATE_MAX'][0])
         if random.random() < prob:
             env.add_event(event=BattleEvent(
@@ -330,6 +330,7 @@ class Archer(BattleProfession):
             dmg = ARCHER_VAR['ARCHER_SKILL_0_DAMAGE'][0] * self.baseAtk
             dmg /= 5 
             for i in range(5):
+                tmp = dmg
                 dmg = self.passive(env, dmg, targets)
                 env.deal_damage(user, targets[0], dmg, can_be_blocked=True)
                 if i==0:
@@ -339,6 +340,7 @@ class Archer(BattleProfession):
                     stackable=False,
                     source=skill_id)
                     env.apply_status(targets[0], def_buff)
+                dmg = tmp
                     
                 
             

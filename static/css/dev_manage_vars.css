@@ -1,0 +1,65 @@
+/* /static/css/dev_manage_vars.css */
+.dev-vars-container {
+    padding: 20px;
+    font-family: Arial, sans-serif;
+}
+
+.dev-profession-section {
+    margin-bottom: 30px;
+    border: 1px solid #ccc;
+    padding: 10px;
+    border-radius: 4px;
+}
+
+.dev-profession-title {
+    font-size: 24px;
+    margin-bottom: 10px;
+    color: #333;
+}
+
+.dev-vars-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.dev-vars-table th,
+.dev-vars-table td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: center;
+}
+
+.dev-vars-table th {
+    background-color: #f2f2f2;
+    font-weight: bold;
+}
+
+.dev-var-input {
+    width: 80px;
+    padding: 4px;
+    box-sizing: border-box;
+}
+
+.dev-update-btn {
+    padding: 4px 8px;
+    background-color: #4CAF50;
+    color: #fff;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+}
+
+.dev-update-btn:hover {
+    background-color: #45a049;
+}
+
+.dev-message {
+    font-size: 14px;
+    color: #d9534f;
+}
+
+.dev-skill-img {
+    width: 50px;
+    height: 50px;
+    object-fit: cover;
+}

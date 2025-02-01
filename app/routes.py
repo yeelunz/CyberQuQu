@@ -16,9 +16,100 @@ from utils.train_methods import version_test_random_vs_random_sse, version_test_
 from utils.data_stamp import Gdata
 import json
 from utils.global_var import globalVar
+from utils.profession_var import (
+    PALADIN_VAR, MAGE_VAR, ASSASSIN_VAR, ARCHER_VAR, BERSERKER_VAR,
+    DRAGONGOD_VAR, BLOODGOD_VAR, STEADFASTWARRIOR_VAR, DEVOUR_VAR, RANGER_VAR,
+    ELEMENTALMAGE_VAR, HUANGSHEN_VAR, GODOFSTAR_VAR
+)
+# 將所有職業的變數整理到一個全域 dict 中 (注意：此處只是在記憶體中修改，重新啟動後會回復原始設定)
+ALL_PROFESSIONS_VARS = {
+    'PALADIN': PALADIN_VAR,
+    'MAGE': MAGE_VAR,
+    'ASSASSIN': ASSASSIN_VAR,
+    'ARCHER': ARCHER_VAR,
+    'BERSERKER': BERSERKER_VAR,
+    'DRAGONGOD': DRAGONGOD_VAR,
+    'BLOODGOD': BLOODGOD_VAR,
+    'STEADFASTWARRIOR': STEADFASTWARRIOR_VAR,
+    'DEVOUR': DEVOUR_VAR,
+    'RANGER': RANGER_VAR,
+    'ELEMENTALMAGE': ELEMENTALMAGE_VAR,
+    'HUANGSHEN': HUANGSHEN_VAR,
+    'GODOFSTAR': GODOFSTAR_VAR,
+}
+
 import os
 
 main_routes = Blueprint('main', __name__)
+
+
+@main_routes.route("/dev/manage_vars")
+def manage_vars_page():
+    """
+    開發者介面：瀏覽並修改各職業/技能的變數
+    """
+    return render_template("dev_manage_vars.html", professions_vars=ALL_PROFESSIONS_VARS)
+
+
+@main_routes.route("/api/update_var", methods=["POST"])
+def update_var():
+    """
+    API: 更新指定職業變數的「當前值」
+    
+    傳入的 JSON 格式：
+    {
+       "profession": "PALADIN",
+       "var_key": "PALADIN_BASE_HP",
+       "new_value": 400
+    }
+    """
+    data = request.get_json()
+    profession = data.get("profession")
+    var_key = data.get("var_key")
+    new_value = data.get("new_value")
+    
+    if profession not in ALL_PROFESSIONS_VARS:
+        return jsonify({"status": "error", "message": "無效的職業名稱"}), 400
+
+    profession_vars = ALL_PROFESSIONS_VARS[profession]
+    if var_key not in profession_vars:
+        return jsonify({"status": "error", "message": "無效的變數名稱"}), 400
+
+    var_data = profession_vars[var_key]
+    # 若該變數有設定第5個值且為 'no'，則不可修改
+    if len(var_data) >= 5 and var_data[4] == 'no':
+        return jsonify({"status": "error", "message": "該變數不可修改"}), 400
+
+    try:
+        # 根據預設值的型態來轉換 new_value
+        default_val = var_data[1]
+        if isinstance(default_val, int):
+            converted_value = int(new_value)
+        elif isinstance(default_val, float):
+            converted_value = float(new_value)
+        else:
+            converted_value = new_value  # 當作字串處理
+    except ValueError:
+        return jsonify({"status": "error", "message": "數值型態錯誤"}), 400
+
+    # 若有提供上下界，則做簡單檢查
+    lower_bound = var_data[2] if len(var_data) > 2 else None
+    upper_bound = var_data[3] if len(var_data) > 3 else None
+    if lower_bound is not None and converted_value < lower_bound:
+        return jsonify({"status": "error", "message": "數值低於下限"}), 400
+    if upper_bound is not None and upper_bound > 0 and converted_value > upper_bound:
+        return jsonify({"status": "error", "message": "數值超過上限"}), 400
+
+    # 更新變數的「當前值」 (索引 0)
+    profession_vars[var_key][0] = converted_value
+
+    return jsonify({
+        "status": "success",
+        "profession": profession,
+        "var_key": var_key,
+        "new_value": converted_value
+    })
+
 
 # 建立全域的 manager & professions，避免每次端點都要重建
 skill_mgr = build_skill_manager()

@@ -189,7 +189,5 @@ def get_trainer(model_path, fc_hiddens_default=[256, 256, 256]):
     trainer.restore(model_path)
     return trainer
 
-# 後端路由範例
-from flask import Blueprint
-main_routes = Blueprint("main_routes", __name__)
+
 

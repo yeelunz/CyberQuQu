@@ -47,7 +47,7 @@ document.addEventListener("DOMContentLoaded", function () {
             <b>Max Seq Len (max_seq_len)</b>：指定模型中 LSTM 的序列長度，也就是一次輸入的步數。這個值通常與資料中的時間序列長度或上下文窗口大小相匹配，預設為 <strong>10</strong>。根據應用場景，可適當調整此參數。
           </p>
           <p>
-            <b>FC Net Hiddens (fcnet_hiddens)</b>：定義全連接層中每層的隱藏單元數量。輸入格式為用逗號分隔的數值，例如預設值 <strong>256,256</strong> 表示兩層，每層各有 256 個神經元。此參數影響模型容量與計算成本，請根據需求調整。
+            <b>FC Net Hiddens (fcnet_hiddens)</b>：定義全連接層中每層的隱藏單元數量。輸入格式為用逗號分隔的數值，例如預設值 <strong>256,256</strong> 表示兩層，每層各有 256 個神經元。此參數影響模型容量與計算成本，請根據需求調整。最後一層之尺寸相當於lstm_cell_size。
           </p>
         </div>
         

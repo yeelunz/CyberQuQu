@@ -1,4 +1,3 @@
-// /static/js/train.js
 document.addEventListener("DOMContentLoaded", function () {
   const menuTrain = document.getElementById("menu-train");
   const contentArea = document.getElementById("content-area");
@@ -103,13 +102,13 @@ document.addEventListener("DOMContentLoaded", function () {
         </div>
         
         <!-- 訓練初始化中狀態 -->
-        <div id="initializing-status" style="display:none;">
-          <div class="spinner"></div>
-          <span>訓練初始化中，請稍候...</span>
+        <div id="initializing-status" style="display:none; align-items: center;">
+          <span style="color: black;">訓練初始化中，請稍候...</span>
+          <div class="spinner" style="margin-left:10px;"></div>
         </div>
 
-        <!-- 初始化與訓練中資訊 (文字改為白色) -->
-        <div id="initialized-info" style="display:none; color: white; font-weight: bold;"></div>
+        <!-- 初始化與訓練中資訊 (訓練中提示文字預設為黑色) -->
+        <div id="initialized-info" style="display:none; color: black; font-weight: bold;"></div>
         
         <!-- 進度條 -->
         <div class="progress-bar-container">
@@ -213,6 +212,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const startTrainBtn = document.getElementById("startTrainBtn");
     const stopTrainBtn = document.getElementById("stopTrainBtn");
 
+    // 顯示初始化狀態（提示文字預設為黑色）
     initializingStatus.style.display = "flex";
     initializedInfo.style.display = "none";
 
@@ -233,10 +233,10 @@ document.addEventListener("DOMContentLoaded", function () {
         case "initialized":
           initializingStatus.style.display = "none";
           initializedInfo.style.display = "block";
-          // 調整：將文字放在左側，轉圈圈圖標放在右側
+          // 調整：將文字放在左側，轉圈圈圖標放在右側，並修改提示文字內容與顏色（黑色）
           initializedInfo.innerHTML =
             data.message +
-            "<br><div style='display:flex; align-items:center;'><span>模型訓練中</span><span class='spinner' style='margin-left:10px;'></span></div>";
+            "<br><div style='display:flex; align-items:center;'><span style=\"color: black;\">模型訓練中，請稍後 ...</span><span class='spinner' style='margin-left:10px;'></span></div>";
           break;
 
         case "iteration":
@@ -275,10 +275,12 @@ document.addEventListener("DOMContentLoaded", function () {
           currentSource.close();
           currentSource = null;
           progressBar.style.width = "100%";
+          // 將訓練中提示文字更新為完成狀態（綠色）
+          initializedInfo.style.color = "green";
           if (initializedInfo.style.display === "none") {
             initializedInfo.style.display = "block";
-            initializedInfo.textContent = "algo = config.build() 完成";
           }
+          initializedInfo.innerHTML = data.message || "algo = config.build() 完成";
           showModal(data.message || "訓練完成！");
           startTrainBtn.disabled = false;
           stopTrainBtn.disabled = true;

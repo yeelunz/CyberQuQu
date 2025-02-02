@@ -261,7 +261,7 @@ def multi_agent_cross_train(num_iterations,
         .env_runners(
             num_env_runners=1,
             num_cpus_per_env_runner=1,
-            num_gpus_per_env_runner=0,
+            num_gpus_per_env_runner=1,
             sample_timeout_s=120
         )
         .framework("torch")

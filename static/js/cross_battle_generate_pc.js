@@ -45,7 +45,7 @@ document.addEventListener("DOMContentLoaded", () => {
     battleLabel.textContent = "對戰場次(num_battles)：";
     const battleInput = document.createElement("input");
     battleInput.type = "number";
-    battleInput.value = "100";
+    battleInput.value = "10";
     battleInput.min = "1";
     generateContainer.appendChild(battleLabel);
     generateContainer.appendChild(battleInput);

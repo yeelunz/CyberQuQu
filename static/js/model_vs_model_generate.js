@@ -50,7 +50,7 @@ function mvmg_buildPage() {
     inputBattles.className = "mvmg-input";
     inputBattles.type = "number";
     inputBattles.id = "mvmg-num-battles";
-    inputBattles.value = "100";
+    inputBattles.value = "10";
     inputBattles.min = "1";
     groupBattles.appendChild(labelBattles);
     groupBattles.appendChild(inputBattles);

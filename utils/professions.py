@@ -1014,20 +1014,23 @@ class GodOfStar(BattleProfession):
             dmg += GODOFSTAR_VAR['GODOFSTAR_SKILL_0_DAMAGE'][0] * self.baseAtk
             env.deal_damage(user, targets[0], dmg, can_be_blocked=True)
             buff = random.choice([
-                DamageMultiplier(multiplier=GODOFSTAR_VAR['GODOFSTAR_SKILL_1_BUFF_MULTIPLIER'][0], duration=GODOFSTAR_VAR['GODOFSTAR_SKILL_1_BUFF_DURATION'][0], stackable=False, source=skill_id),
-                DefenseMultiplier(multiplier=GODOFSTAR_VAR['GODOFSTAR_SKILL_1_BUFF_MULTIPLIER'][0], duration=GODOFSTAR_VAR['GODOFSTAR_SKILL_1_BUFF_DURATION'][0], stackable=False, source=skill_id),
-                HealMultiplier(multiplier=GODOFSTAR_VAR['GODOFSTAR_SKILL_1_BUFF_MULTIPLIER'][0], duration=GODOFSTAR_VAR['GODOFSTAR_SKILL_1_BUFF_DURATION'][0], stackable=False, source=skill_id)
+                DamageMultiplier(multiplier=GODOFSTAR_VAR['GODOFSTAR_SKILL_0_DEBUFF_MULTIPLIER'][0], duration=GODOFSTAR_VAR['GODOFSTAR_SKILL_0_DEBUFF_DURATION'][0], stackable=False, source=skill_id),
+                DefenseMultiplier(multiplier=GODOFSTAR_VAR['GODOFSTAR_SKILL_0_DEBUFF_MULTIPLIER'][0], duration=GODOFSTAR_VAR['GODOFSTAR_SKILL_0_DEBUFF_DURATION'][0], stackable=False, source=skill_id),
+                HealMultiplier(multiplier=GODOFSTAR_VAR['GODOFSTAR_SKILL_0_DEBUFF_MULTIPLIER'][0], duration=GODOFSTAR_VAR['GODOFSTAR_SKILL_0_DEBUFF_DURATION'][0], stackable=False, source=skill_id)
+                
             ])
             env.apply_status(targets[0], buff)
             env.deal_healing(user, heal)
 
         elif skill_id == 37:
+            env.deal_damage(user, targets[0], dmg, can_be_blocked=True)
             heal += GODOFSTAR_VAR['GODOFSTAR_SKILL_1_HEAL'][0]
             env.deal_healing(user, heal)
             debuff = random.choice([
-                DamageMultiplier(multiplier=GODOFSTAR_VAR['GODOFSTAR_SKILL_0_DEBUFF_MULTIPLIER'][0], duration=GODOFSTAR_VAR['GODOFSTAR_SKILL_0_DEBUFF_DURATION'][0], stackable=False, source=skill_id),
-                DefenseMultiplier(multiplier=GODOFSTAR_VAR['GODOFSTAR_SKILL_0_DEBUFF_MULTIPLIER'][0], duration=GODOFSTAR_VAR['GODOFSTAR_SKILL_0_DEBUFF_DURATION'][0], stackable=False, source=skill_id),
-                HealMultiplier(multiplier=GODOFSTAR_VAR['GODOFSTAR_SKILL_0_DEBUFF_MULTIPLIER'][0], duration=GODOFSTAR_VAR['GODOFSTAR_SKILL_0_DEBUFF_DURATION'][0], stackable=False, source=skill_id)
+                DamageMultiplier(multiplier=GODOFSTAR_VAR['GODOFSTAR_SKILL_1_BUFF_MULTIPLIER'][0], duration=GODOFSTAR_VAR['GODOFSTAR_SKILL_1_BUFF_DURATION'][0], stackable=False, source=skill_id),
+                DefenseMultiplier(multiplier=GODOFSTAR_VAR['GODOFSTAR_SKILL_1_BUFF_MULTIPLIER'][0], duration=GODOFSTAR_VAR['GODOFSTAR_SKILL_1_BUFF_DURATION'][0], stackable=False, source=skill_id),
+                HealMultiplier(multiplier=GODOFSTAR_VAR['GODOFSTAR_SKILL_1_BUFF_MULTIPLIER'][0], duration=GODOFSTAR_VAR['GODOFSTAR_SKILL_1_BUFF_DURATION'][0], stackable=False, source=skill_id)
+                
             ])
             env.apply_status(user, debuff)
 

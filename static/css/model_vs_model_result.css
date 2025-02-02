@@ -1,116 +1,174 @@
-/* 檔案：static/css/model_vs_model_result.css
-   前綴：.mvmr- 避免與其他頁面衝突 */
+/* 更新後的 CSS：參考 backend/static/css/model_vs_generate.css */
 
-   .mvmr-container {
-    margin: 20px;
-    padding: 20px;
-    border: 1px solid #ccc;
-  }
-  
-  .mvmr-form-group {
+/* 容器 */
+.mvmr-container {
+    background-color: #fff;
+    margin-bottom: 20px;
+    padding: 20px 25px;
+    border-radius: 6px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.mvmr-container h2 {
+    margin-bottom: 20px;
+    font-size: 1.4rem;
+    border-left: 4px solid #2c3e50;
+    padding-left: 10px;
+}
+
+/* 表單群組 */
+.mvmr-form-group {
     margin-bottom: 15px;
-  }
-  
-  .mvmr-label {
+}
+
+.mvmr-label {
     display: block;
     margin-bottom: 5px;
     font-weight: bold;
-  }
-  
-  .mvmr-input {
+}
+
+/* 下拉選單與輸入框 */
+.mvmr-input,
+.mvmr-input select {
     width: 100%;
-    padding: 8px;
+    padding: 8px 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
     box-sizing: border-box;
-  }
-  
-  .mvmr-btn {
-    padding: 8px 16px;
-    background-color: #17a2b8;
+}
+
+/* 按鈕 */
+.mvmr-btn {
+    padding: 10px 15px;
+    background-color: #3498db;
     color: #fff;
     border: none;
+    border-radius: 4px;
     cursor: pointer;
-    margin-bottom: 20px;
-  }
-  
-  .mvmr-btn:hover {
-    background-color: #117a8b;
-  }
-  
-  .mvmr-error {
-    color: red;
+    font-size: 1rem;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+.mvmr-btn:hover {
+    background-color: #2980b9;
+}
+
+/* 進度條區塊 (若有使用到) */
+.mvmr-progress-container {
+    margin-top: 20px;
+    background-color: #fafafa;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.mvmr-progress-bar {
+    height: 25px;
+    background-color: #3498db;
+    width: 0%;
+    transition: width 0.3s ease;
+}
+
+/* 進度文字 (若有使用到) */
+.mvmr-progress-text {
+    text-align: center;
+    margin-top: 10px;
     font-weight: bold;
-  }
-  
-  .mvmr-summary {
-    margin-bottom: 20px;
-  }
-  
-  /* 分析區塊 */
-  .mvmr-block {
+}
+
+/* 結果顯示區 */
+.mvmr-result-area {
+    margin-top: 20px;
+    padding: 15px;
+    border: 1px solid #ddd;
+    background-color: #fafafa;
+    border-radius: 4px;
+    font-family: monospace;
+}
+
+/* 錯誤訊息 */
+.mvmr-error {
+    color: red;
+}
+
+/* 分析區塊 */
+.mvmr-block {
     margin: 20px 0;
     padding: 15px;
     background-color: #f9f9f9;
-  }
-  
-  .mvmr-analysis-block {
+}
+
+.mvmr-analysis-block {
     margin-top: 15px;
     padding: 10px;
     background-color: #fff;
     border: 1px solid #ddd;
-  }
-  
-  /* 表格 */
-  .mvmr-table {
+}
+
+/* 表格 */
+.mvmr-table {
     width: 100%;
     border-collapse: collapse;
     margin-top: 15px;
-  }
-  
-  .mvmr-table th,
-  .mvmr-table td {
+}
+
+.mvmr-table th,
+.mvmr-table td {
     border: 1px solid #ddd;
     padding: 6px 10px;
     text-align: center;
     vertical-align: middle;
-  }
-  
-  .mvmr-table th {
+}
+
+.mvmr-table th {
     background-color: #eee;
-  }
-  
-  /* 職業名稱 + 圖示 */
-  .mvmr-prof-td {
+}
+
+/* 職業名稱與圖示 */
+.mvmr-prof-td {
     text-align: left;
-  }
-  
-  .mvmr-prof-icon {
+}
+
+.mvmr-prof-icon {
     width: 36px;
     height: 36px;
     margin-right: 8px;
-    border-radius: 50%;       /* 圓形 */
-    object-fit: cover;        /* 保持圖像比例 */
+    border-radius: 50%;
+    object-fit: cover;
     vertical-align: middle;
-  }
-  
-  /* 正負差值上色 */
-  .mvmr-pos-diff {
+}
+
+/* 正負差值上色 */
+.mvmr-pos-diff {
     color: green;
     font-weight: bold;
-  }
-  
-  .mvmr-neg-diff {
+}
+
+.mvmr-neg-diff {
     color: red;
     font-weight: bold;
-  }
-  
-  /* "是否訓練良好" 的文字顯示 */
-  .mvmr-good-trained {
+}
+
+/* 是否訓練良好文字 */
+.mvmr-good-trained {
     color: #2c6;
     font-weight: bold;
-  }
-  
-  .mvmr-bad-trained {
+}
+
+.mvmr-bad-trained {
     color: #f33;
     font-weight: bold;
-  }
-  
+}
+
+/* 小螢幕調整 */
+@media (max-width: 768px) {
+    .mvmr-container {
+        padding: 15px 20px;
+    }
+    .mvmr-container h2 {
+        font-size: 1.2rem;
+    }
+    .mvmr-progress-bar {
+        height: 20px;
+    }
+}

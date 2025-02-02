@@ -19,8 +19,8 @@
 PALADIN_VAR = {
     # BASE STATS
     'PALADIN_BASE_HP': [397, 397, 100, 999, 'high'],
-    'PALADIN_BASE_ATK': [1.0, 1.0, 0.1, 999, 'high'],
-    'PALADIN_BASE_DEF': [1.15, 1.15, 0.1, 999, 'high'],
+    'PALADIN_BASE_ATK': [1.1, 1.1, 0.1, 999, 'high'],
+    'PALADIN_BASE_DEF': [1.1, 1.1, 0.1, 999, 'high'],
 
     # PASSIVE TRIGGER RATE
     'PALADIN_PASSIVE_TRIGGER_RATE': [0.3, 0.3, 0.01, 1, 'high'],
@@ -67,12 +67,12 @@ MAGE_VAR = {
 
 ASSASSIN_VAR = {
     # BASE STATS
-    'ASSASSIN_BASE_HP': [267, 267, 100, 999, 'high'],
-    'ASSASSIN_BASE_ATK': [1.15, 1.15, 0.1, 999, 'high'],
+    'ASSASSIN_BASE_HP': [279, 279, 100, 999, 'high'],
+    'ASSASSIN_BASE_ATK': [1.2, 1.2, 0.1, 999, 'high'],
     'ASSASSIN_BASE_DEF': [1.0, 1.0, 0.1, 999, 'high'],
 
     # PASSIVE TRIGGER RATE
-    'ASSASSIN_PASSIVE_TRIGGER_RATE': [0.3, 0.3, 0.01, 1, 'high'],
+    'ASSASSIN_PASSIVE_TRIGGER_RATE': [0.35, 0.35, 0.01, 1, 'high'],
 
     # PASSIVE BONUS DAMAGE RATE
     'ASSASSIN_PASSIVE_BONUS_DAMAGE_RATE': [0.05, 0.05, 0.01, 1, 'high'],
@@ -98,7 +98,7 @@ ASSASSIN_VAR = {
 
 ARCHER_VAR = {
     # BASE STATS
-    'ARCHER_BASE_HP': [285, 285, 100, 999, 'high'],
+    'ARCHER_BASE_HP': [275, 275, 100, 999, 'high'],
     'ARCHER_BASE_ATK': [1.12, 1.12, 0.1, 999, 'high'],
     'ARCHER_BASE_DEF': [1.03, 1.03, 0.1, 999, 'high'],
 
@@ -183,8 +183,8 @@ DRAGONGOD_VAR = {
 BLOODGOD_VAR = {
     # BASE STATS
     'BLOODGOD_BASE_HP': [266, 266, 100, 999, 'high'],
-    'BLOODGOD_BASE_ATK': [1.65, 1.65, 0.1, 999, 'high'],
-    'BLOODGOD_BASE_DEF': [1.65, 1.65, 0.1, 999, 'high'],
+    'BLOODGOD_BASE_ATK': [1.6, 1.6, 0.1, 999, 'high'],
+    'BLOODGOD_BASE_DEF': [1.6, 1.6, 0.1, 999, 'high'],
 
     # PASSIVE EFFECT
     'BLOODGOD_PASSIVE_DAMAGE_THRESHOLD': [0.25, 0.25, 0.01, 1, 'high'],  # 每受到最大血量的 25% 傷害
@@ -210,9 +210,9 @@ BLOODGOD_VAR = {
 
 STEADFASTWARRIOR_VAR = {
     # BASE STATS
-    'STEADFASTWARRIOR_BASE_HP': [263, 263, 100, 999, 'high'],
-    'STEADFASTWARRIOR_BASE_ATK': [1.0, 1.0, 0.1, 999, 'high'],
-    'STEADFASTWARRIOR_BASE_DEF': [1.15, 1.15, 0.1, 999, 'high'],
+    'STEADFASTWARRIOR_BASE_HP': [253, 253, 100, 999, 'high'],
+    'STEADFASTWARRIOR_BASE_ATK': [0.95, 0.95, 0.1, 999, 'high'],
+    'STEADFASTWARRIOR_BASE_DEF': [1.2, 1.2, 0.1, 999, 'high'],
 
     # PASSIVE: HEAL LOST HP PERCENTAGE
     'STEADFASTWARRIOR_PASSIVE_HEAL_PERCENT': [0.07, 0.07, 0.01, 1, 'high'],  # 每回合恢復損失生命值的百分比
@@ -243,8 +243,8 @@ DEVOUR_VAR = {
     'DEVOUR_PASSIVE_SELF_DAMAGE_PERCENT': [0.08, 0.08, 0.01, 1, 'low'],  # 攻擊時消耗的生命值比例
 
     # SKILL 24: DAMAGE AND FAILURE RATE
-    'DEVOUR_SKILL_0_DAMAGE': [70, 70, 1, 999, 'high'],
-    'DEVOUR_SKILL_0_FAILURE_RATE': [0.4, 0.4, 0.01, 1, 'low'],  # 技能失敗的機率
+    'DEVOUR_SKILL_0_DAMAGE': [65, 65, 1, 999, 'high'],
+    'DEVOUR_SKILL_0_FAILURE_RATE': [0.5, 0.5, 0.01, 1, 'low'],  # 技能失敗的機率
 
     # SKILL 25: DAMAGE BASED ON HP DIFFERENCE
     'DEVOUR_SKILL_1_LOST_HP_DAMAGE_MULTIPLIER': [0.15, 0.15, 0.01, 1, 'high'],  # 已損血量傷害倍率
@@ -284,7 +284,7 @@ RANGER_VAR = {
 
 ELEMENTALMAGE_VAR = {
     # BASE STATS
-    'ELEMENTALMAGE_BASE_HP': [228, 228, 100, 999, 'high'],
+    'ELEMENTALMAGE_BASE_HP': [248, 248, 100, 999, 'high'],
     'ELEMENTALMAGE_BASE_ATK': [1.45, 1.45, 0.1, 999, 'high'],
     'ELEMENTALMAGE_BASE_DEF': [0.95, 0.95, 0.1, 999, 'high'],
 
@@ -336,22 +336,22 @@ HUANGSHEN_VAR = {
 
 GODOFSTAR_VAR = {
     # BASE STATS
-    'GODOFSTAR_BASE_HP': [295, 295, 100, 999, 'high'],
-    'GODOFSTAR_BASE_ATK': [1.16, 1.16, 0.1, 999, 'high'],
-    'GODOFSTAR_BASE_DEF': [1.16, 1.16, 0.1, 999, 'high'],
+    'GODOFSTAR_BASE_HP': [325, 325, 100, 999, 'high'],
+    'GODOFSTAR_BASE_ATK': [1, 1, 0.1, 999, 'high'],
+    'GODOFSTAR_BASE_DEF': [1, 1, 0.1, 999, 'high'],
 
     # PASSIVE: STAR PENDULUM
-    'GODOFSTAR_PASSIVE_DAMAGE_PER_EFFECT': [5, 5, 1, 999, 'high'],  # 每層效果造成的額外傷害
-    'GODOFSTAR_PASSIVE_HEAL_PER_EFFECT': [5, 5, 1, 999, 'high'],  # 每層效果恢復的額外生命值
+    'GODOFSTAR_PASSIVE_DAMAGE_PER_EFFECT': [10, 10, 1, 999, 'high'],  # 每層效果造成的額外傷害
+    'GODOFSTAR_PASSIVE_HEAL_PER_EFFECT': [10, 10, 1, 999, 'high'],  # 每層效果恢復的額外生命值
 
     # SKILL 36: DEBUFF METEOR
-    'GODOFSTAR_SKILL_0_DAMAGE': [30, 30, 1, 999, 'high'],
-    'GODOFSTAR_SKILL_0_DEBUFF_MULTIPLIER': [1.05, 1.05, 0.01, 2, 'low'],  # 減益倍率
+    'GODOFSTAR_SKILL_0_DAMAGE': [35, 35, 1, 999, 'high'],
+    'GODOFSTAR_SKILL_0_DEBUFF_MULTIPLIER': [0.9, 0.9, 0.01, 1, 'low'],  # 減益倍率
     'GODOFSTAR_SKILL_0_DEBUFF_DURATION': [3, 3, 1, 5, 'nd'],  # 持續時間
 
     # SKILL 37: BUFF METEOR
-    'GODOFSTAR_SKILL_1_HEAL': [30, 30, 1, 999, 'high'],
-    'GODOFSTAR_SKILL_1_BUFF_MULTIPLIER': [0.95, 0.95, 0.01, 1, 'low'],  # 增益倍率
+    'GODOFSTAR_SKILL_1_HEAL': [35, 35, 1, 999, 'high'],
+    'GODOFSTAR_SKILL_1_BUFF_MULTIPLIER': [1.1, 1.1, 1.0, 2, 'low'],  # 增益倍率
     'GODOFSTAR_SKILL_1_BUFF_DURATION': [3, 3, 1, 5, 'high'],  # 持續時間
 
     # SKILL 38: STAR CREATION

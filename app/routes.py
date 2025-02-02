@@ -8,7 +8,7 @@ from utils.main import (
 )
 from utils.skills import build_skill_manager
 from utils.professions import build_professions
-from utils.train_methods import multi_agent_cross_train , stop_training_flag
+from utils.train_methods import multi_agent_cross_train , stop_training_flag,compute_ai_elo
 from utils.train_methods import version_test_random_vs_random_sse, version_test_random_vs_random_sse_ai
 
 from utils.data_stamp import Gdata

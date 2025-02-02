@@ -1,5 +1,31 @@
-/* /static/css/train.css */
+/* 調整初始化狀態與訓練中資訊的樣式 */
+#initializing-status {
+  /* 內部已以內聯樣式設定 display 與 align-items，此處只負責 spinner 的動畫等 */
+}
 
+.spinner {
+  width: 24px;
+  height: 24px;
+  border: 4px solid #ccc;
+  border-top: 4px solid #4caf50;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* 調整訓練中提示文字預設為黑色（完成後由 JS 更新為綠色） */
+#initialized-info {
+  margin-bottom: 20px;
+  font-weight: bold;
+  /* 預設顏色由內聯樣式指定為 black */
+}
+
+/* 其他 CSS 保持不變 */
 #train-page {
   margin: 20px;
   font-family: Arial, sans-serif;
@@ -76,34 +102,6 @@
   width: 0%;
   background-color: #4caf50;
   transition: width 0.5s;
-}
-
-#initializing-status {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 10px;
-}
-
-.spinner {
-  width: 24px;
-  height: 24px;
-  border: 4px solid #ccc;
-  border-top: 4px solid #4caf50;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-/* 將初始化與訓練中的文字顏色設為白色 */
-#initialized-info {
-  margin-bottom: 20px;
-  color: white;
 }
 
 .iteration-block {

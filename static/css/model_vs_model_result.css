@@ -1,0 +1,116 @@
+/* 檔案：static/css/model_vs_model_result.css
+   前綴：.mvmr- 避免與其他頁面衝突 */
+
+   .mvmr-container {
+    margin: 20px;
+    padding: 20px;
+    border: 1px solid #ccc;
+  }
+  
+  .mvmr-form-group {
+    margin-bottom: 15px;
+  }
+  
+  .mvmr-label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+  }
+  
+  .mvmr-input {
+    width: 100%;
+    padding: 8px;
+    box-sizing: border-box;
+  }
+  
+  .mvmr-btn {
+    padding: 8px 16px;
+    background-color: #17a2b8;
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    margin-bottom: 20px;
+  }
+  
+  .mvmr-btn:hover {
+    background-color: #117a8b;
+  }
+  
+  .mvmr-error {
+    color: red;
+    font-weight: bold;
+  }
+  
+  .mvmr-summary {
+    margin-bottom: 20px;
+  }
+  
+  /* 分析區塊 */
+  .mvmr-block {
+    margin: 20px 0;
+    padding: 15px;
+    background-color: #f9f9f9;
+  }
+  
+  .mvmr-analysis-block {
+    margin-top: 15px;
+    padding: 10px;
+    background-color: #fff;
+    border: 1px solid #ddd;
+  }
+  
+  /* 表格 */
+  .mvmr-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+  }
+  
+  .mvmr-table th,
+  .mvmr-table td {
+    border: 1px solid #ddd;
+    padding: 6px 10px;
+    text-align: center;
+    vertical-align: middle;
+  }
+  
+  .mvmr-table th {
+    background-color: #eee;
+  }
+  
+  /* 職業名稱 + 圖示 */
+  .mvmr-prof-td {
+    text-align: left;
+  }
+  
+  .mvmr-prof-icon {
+    width: 36px;
+    height: 36px;
+    margin-right: 8px;
+    border-radius: 50%;       /* 圓形 */
+    object-fit: cover;        /* 保持圖像比例 */
+    vertical-align: middle;
+  }
+  
+  /* 正負差值上色 */
+  .mvmr-pos-diff {
+    color: green;
+    font-weight: bold;
+  }
+  
+  .mvmr-neg-diff {
+    color: red;
+    font-weight: bold;
+  }
+  
+  /* "是否訓練良好" 的文字顯示 */
+  .mvmr-good-trained {
+    color: #2c6;
+    font-weight: bold;
+  }
+  
+  .mvmr-bad-trained {
+    color: #f33;
+    font-weight: bold;
+  }
+  

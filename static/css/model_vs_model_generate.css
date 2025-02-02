@@ -1,0 +1,106 @@
+/* backend/static/css/model_vs_generate.css */
+
+/* 容器 */
+.mvmg-container {
+    background-color: #fff;
+    margin-bottom: 20px;
+    padding: 20px 25px;
+    border-radius: 6px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+  
+  .mvmg-container h2 {
+    margin-bottom: 20px;
+    font-size: 1.4rem;
+    border-left: 4px solid #2c3e50;
+    padding-left: 10px;
+  }
+  
+  /* 表單群組 */
+  .mvmg-form-group {
+    margin-bottom: 15px;
+  }
+  
+  .mvmg-label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+  }
+  
+  /* 下拉選單與輸入框 */
+  .mvmg-input,
+  .mvmg-input select {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box;
+  }
+  
+  /* 按鈕 */
+  .mvmg-btn {
+    padding: 10px 15px;
+    background-color: #3498db;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: background-color 0.3s, color 0.3s;
+  }
+  
+  .mvmg-btn:hover {
+    background-color: #2980b9;
+  }
+  
+  /* 進度條區塊 */
+  .mvmg-progress-container {
+    margin-top: 20px;
+    background-color: #fafafa;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  
+  .mvmg-progress-bar {
+    height: 25px;
+    background-color: #3498db;
+    width: 0%;
+    transition: width 0.3s ease;
+  }
+  
+  /* 進度文字 */
+  .mvmg-progress-text {
+    text-align: center;
+    margin-top: 10px;
+    font-weight: bold;
+  }
+  
+  /* 結果顯示區 */
+  .mvmg-result-area {
+    margin-top: 20px;
+    padding: 15px;
+    border: 1px solid #ddd;
+    background-color: #fafafa;
+    border-radius: 4px;
+    font-family: monospace;
+  }
+  
+  /* 錯誤訊息 */
+  .mvmg-error {
+    color: red;
+  }
+  
+  /* 小螢幕調整 */
+  @media (max-width: 768px) {
+    .mvmg-container {
+      padding: 15px 20px;
+    }
+    .mvmg-container h2 {
+      font-size: 1.2rem;
+    }
+    .mvmg-progress-bar {
+      height: 20px;
+    }
+  }
+  

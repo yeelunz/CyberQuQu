@@ -1,11 +1,9 @@
 from flask import Blueprint, request, jsonify, render_template , Response,stream_with_context
 from utils.main import (
 
-    version_test_random_vs_random,
-    compute_ai_elo,
     computer_vs_computer,
     ai_vs_ai,
-    show_profession_info,
+
     get_professions_data
 )
 from utils.skills import build_skill_manager
@@ -510,3 +508,152 @@ def api_show_professions():
     professions_data = get_professions_data(professions, skill_mgr)
     return jsonify({"professions_info": professions_data})
 
+
+@main_routes.route("/api/model_vs_model_result", methods=["GET"])
+def api_model_vs_model_result():
+    """
+    取得先前儲存的模型間對戰資料
+    GET 參數：
+      result_id (識別碼)
+    """
+    result_id = request.args.get("result_id", "")
+    if not result_id:
+        return jsonify({"error": "缺少 result_id"}), 400
+
+    # 假設你有函式 load_model_vs_model_result(result_id) 負責讀取資料
+    data = load_model_vs_model_result(result_id)
+    if not data:
+        return jsonify({"error": "找不到資料"}), 404
+
+    return jsonify(data), 200
+
+# 請自行實作或調整 load_model_vs_model_result 函式
+def load_model_vs_model_result(result_id):
+    # 範例：從檔案中讀取 (實際請依你存檔邏輯調整)
+    result_file = os.path.join("data", "results", f"{result_id}.json")
+    if os.path.exists(result_file):
+        with open(result_file, "r", encoding="utf-8") as f:
+            return json.load(f)
+    return None
+
+
+from utils.model_evaluation import version_test_model_vs_model_generate_sse
+
+@main_routes.route("/api/version_test_generate_model_vs_model", methods=["GET"])
+def api_version_test_generate_model_vs_model():
+    """
+    SSE 產生模型間對戰數據
+    GET 參數：
+      modelA, modelB (模型名稱)
+      num_battles (每組進行場數)
+    """
+    modelA = request.args.get("modelA", "")
+    modelB = request.args.get("modelB", "")
+    num_battles = request.args.get("num_battles", "100")
+    try:
+        num_battles = int(num_battles)
+    except:
+        num_battles = 100
+
+    if not modelA or not modelB:
+        return jsonify({"error": "必須選擇模型A與模型B"}), 400
+
+    model_path_A = os.path.abspath(os.path.join("data", "saved_models", modelA))
+    model_path_B = os.path.abspath(os.path.join("data", "saved_models", modelB))
+    if not os.path.exists(model_path_A):
+        return jsonify({"error": f"模型 {modelA} 不存在"}), 400
+    if not os.path.exists(model_path_B):
+        return jsonify({"error": f"模型 {modelB} 不存在"}), 400
+
+    # 取得 professions 與 skill_mgr（請依你專案調整）
+    professions = build_professions()
+    skill_mgr = build_skill_manager()
+
+    generator = version_test_model_vs_model_generate_sse(professions, skill_mgr, num_battles, model_path_A, model_path_B)
+
+    def sse_stream():
+        for info in generator:
+            yield f"data: {json.dumps(info, ensure_ascii=False)}\n\n"
+
+    response = Response(stream_with_context(sse_stream()), mimetype='text/event-stream')
+    response.headers["Cache-Control"] = "no-cache"
+    response.headers["X-Accel-Buffering"] = "no"
+    return response
+
+
+
+import logging
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
+
+@main_routes.route("/api/list_model_vs_results", methods=["GET"])
+def show_list_model_vs_model():
+    """
+    列出 /data/model_vs 下所有 JSON 檔案，並回傳檔案清單。
+    每筆資料包含：檔案名稱 (作為識別 id)、model_A、model_B、timestamp
+    """
+    # logger.debug("進入 /api/list_model_vs_results")
+    results = []
+    base_dir = os.path.join(os.getcwd(), "data", "model_vs")
+    # logger.debug(f"base_dir: {base_dir}")
+    if not os.path.exists(base_dir):
+        # logger.debug("目錄不存在")
+        return jsonify({"results": []})
+    for filename in os.listdir(base_dir):
+        # logger.debug(f"處理檔案: {filename}")
+        if filename.endswith(".json"):
+            filepath = os.path.join(base_dir, filename)
+            # logger.debug(f"完整路徑: {filepath}")
+            try:
+                with open(filepath, "r", encoding="utf-8") as f:
+                    content = json.load(f)
+                # logger.debug(f"讀取內容: {content}")
+                results.append({
+                    "id": filename,  # 以檔名作為識別碼
+                    "model_A": content.get("model_A", ""),
+                    "model_B": content.get("model_B", ""),
+                    "timestamp": content.get("timestamp", "")
+                })
+            except Exception as e:
+                logger.error(f"讀取 {filename} 時發生錯誤: {e}")
+                continue
+    # logger.debug(f"回傳結果: {results}")
+    return jsonify({"results": results})
+
+
+
+@main_routes.route("/api/model_vs_model_result_json", methods=["GET"])
+def show_list_model_vs_model_json():
+    """
+    根據 query string 中的 result_id，讀取 /data/model_vs 下對應檔案的 JSON 內容回傳。
+    """
+    result_id = request.args.get("result_id", "").strip()
+    # logger.debug(f"收到 result_id: {result_id}")
+    if not result_id:
+        # logger.debug("缺少 result_id")
+        return jsonify({"error": "缺少 result_id"}), 400
+    
+    # 強制print 這個result_id
+    # logger.debug(f"強制print 這個result_id: {result_id}")
+    
+    
+    base_dir = os.path.join(os.getcwd(), "data", "model_vs")
+    # logger.debug(f"base_dir: {base_dir}")
+    # 列出目前可用的檔案，方便除錯
+    available_files = os.listdir(base_dir) if os.path.exists(base_dir) else []
+    # logger.debug(f"目前 available_files: {available_files}")
+
+    filepath = os.path.join(base_dir, result_id)
+    # logger.debug(f"組成的 filepath: {filepath}")
+    
+    if not os.path.exists(filepath):
+        logger.debug(f"檔案 {filepath} 不存在")
+        return jsonify({"error": f"檔案 {result_id} 不存在. Available files: {available_files}"}), 404
+    try:
+        with open(filepath, "r", encoding="utf-8") as f:
+            content = json.load(f)
+        # logger.debug(f"檔案內容: {content}")
+        return jsonify(content)
+    except Exception as e:
+        logger.error(f"讀取檔案 {result_id} 時發生錯誤: {e}", exc_info=True)
+        return jsonify({"error": str(e)}), 500

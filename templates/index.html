@@ -1,19 +1,19 @@
-<!-- backend/templates/index.html -->
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
   <meta charset="UTF-8" />
   <title>cyberququ</title>
-  <!-- 你的原本CSS -->
+  <!-- CSS -->
   <link rel="stylesheet" href="/static/css/style.css?v=1.0" />
-  <!-- 針對交叉對戰數據頁面的額外 CSS -->
   <link rel="stylesheet" href="/static/css/cross_battle_result_pc.css?v=1.0" />
   <link rel="stylesheet" href="/static/css/train.css?v=1.0" />
-  <!-- 新增: 管理模型用的 CSS -->
   <link rel="stylesheet" href="/static/css/manage_models.css?v=1.0" />
   <link rel="stylesheet" href="/static/css/cross_battle_generate_pc.css?v=1.0" />
   <link rel="stylesheet" href="/static/css/versus_mode.css?v=1.0" />
-  <link rel="stylesheet" href="/static/css/dev_manage_vars.css?v=1.0">
+  <link rel="stylesheet" href="/static/css/dev_manage_vars.css?v=1.0" />
+  <!-- 模型間對戰功能專用 CSS -->
+  <link rel="stylesheet" href="/static/css/model_vs_model_generate.css?v=1.0" />
+  <link rel="stylesheet" href="/static/css/model_vs_model_result.css?v=1.0" />
 </head>
 <body>
   <!-- 頂部資訊列 -->
@@ -28,23 +28,21 @@
     <nav class="sidebar">
       <ul>
         <li><a href="#" id="menu-train">訓練模型</a></li>
-        <!-- 新增：產生交叉對戰數據 -->
         <li><a href="#" id="menu-ai-vs-ai">AI vs AI 對戰</a></li>
         <li><a href="#" id="menu-pc-vs-pc">PC vs PC 對戰</a></li>
         <li><a href="#" id="menu-cross-battle-generate-pc">產生交叉對戰數據</a></li>
         <li><a href="#" id="menu-cross-battle-result-pc">顯示交叉對戰數據</a></li>
         <li><a href="#" id="menu-info">各職業介紹</a></li>
         <li><a href="#" id="menu-manage-vars">管理技能/職業變數</a></li>
-
-        <!-- 新增: 模型管理選單 -->
         <li><a href="#" id="menu-manage-models">管理模型</a></li>
+        <!-- 模型間對戰功能 -->
+        <li><a href="#" id="menu-model-vs-model-generate">模型間對戰產生</a></li>
+        <li><a href="#" id="menu-model-vs-model-result">模型間對戰資料檢視</a></li>
       </ul>
     </nav>
 
     <!-- 右側主要內容區 -->
     <main class="main-content">
-
-      <!-- 這裡根據使用者點選不同功能，動態更新內容 -->
       <div id="content-area">
         <p>請從左側選單選擇功能</p>
       </div>
@@ -59,31 +57,48 @@
     </div>
   </div>
 
-  <!-- 先載入主程式 -->
+  <!-- 載入各功能 JS -->
   <script src="/static/js/script.js?v=1.0"></script>
-  <!-- 再載入戰鬥用的動畫邏輯檔案(讓 battle.js 可以使用到 script.js 內的東西) -->
   <script src="/static/js/battle.js?v=1.0"></script>
-  <!-- 載入專門處理交叉對戰結果的邏輯檔案 -->
   <script src="/static/js/cross_battle_result_pc.js?v=1.0"></script>
-  <!-- 載入訓練頁面的 JS -->
   <script src="/static/js/train.js?v=1.0"></script>
-  <!-- 新增: 管理模型的 JS -->
   <script src="/static/js/manage_models.js?v=1.0"></script>
-   <!-- 新增：產生交叉對戰數據的 JS (含 SSE) -->
   <script src="/static/js/cross_battle_generate_pc.js?v=1.0"></script>
-  <!-- 新增: 對戰模式JS -->
-<script src="/static/js/versus_mode.js?v=1.0"></script>
-<script src="/static/js/dev_manage_vars.js?v=1.0"></script>
+  <script src="/static/js/versus_mode.js?v=1.0"></script>
+  <script src="/static/js/dev_manage_vars.js?v=1.0"></script>
+  <!-- 模型間對戰專用 JS -->
+  <script src="/static/js/model_vs_model_generate.js?v=1.0"></script>
+  <script src="/static/js/model_vs_model_result.js?v=1.0"></script>
 
-<script>
-  // 等所有 DOM/JS 載入完畢後
-  window.addEventListener("DOMContentLoaded", () => {
-      // 讓「AI vs AI / PC vs PC」選單可以正常點擊
-      initVersusMenuEvents();
-  });
-</script>
-<div id="model-loading-spinner">
-  <div class="spinner-icon"></div>
-</div>
+  <div id="model-loading-spinner">
+    <div class="spinner-icon"></div>
+  </div>
+
+  <!-- 初始化所有左側選單事件 -->
+  <script>
+    // 此函式統一掛上各選單的 click 事件
+    function initMenuEvents() {
+      // 綁定其他功能的事件
+      document.getElementById("menu-model-vs-model-generate").addEventListener("click", function(e) {
+        e.preventDefault();
+        mvmg_init();
+      });
+      document.getElementById("menu-model-vs-model-result").addEventListener("click", function(e) {
+        e.preventDefault();
+        mvmr_init();
+      });
+      document.getElementById("menu-manage-vars").addEventListener("click", function(e) {
+        e.preventDefault();
+        loadManageVarsPage();
+      });
+      // 呼叫 versus_mode.js 中的初始化函數
+      if (typeof initVersusMenuEvents === "function") {
+        initVersusMenuEvents();
+      }
+    }
+    
+    // 當 DOM 載入完成後掛上事件監聽
+    window.addEventListener("DOMContentLoaded", initMenuEvents);
+  </script>
 </body>
 </html>

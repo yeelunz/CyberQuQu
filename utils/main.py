@@ -22,23 +22,6 @@ from ray.rllib.utils.checkpoints import get_checkpoint_info
 import ray
 from .global_var import globalVar as gl
 
-# 本檔案最重要的是「只留以下幾個功能選單」
-# 1) 交叉疊代訓練 (多智能體)
-# 2) 版本環境測試 (雙方隨機 => 交叉戰鬥100場，並給統計)
-# 3) 高段環境測試 (雙方都是 AI => 交叉戰鬥100場，並給統計)
-# 4) AI ELO (與隨機電腦比較，基準分設 1000)
-# 5) 電腦 VS 電腦
-# 6) AI VS 電腦
-# 7) AI VS AI
-# 8) 各職業介紹
-
-from .train_methods import (
-    multi_agent_cross_train,        # (1) 交叉疊代訓練
-    version_test_random_vs_random,  # (2) 版本環境測試
-    compute_ai_elo,                 # (4) AI ELO
-)
-
-
 
 #---------------------------------------
 # (8) 各職業介紹
@@ -234,8 +217,13 @@ def ai_vs_ai(skill_mgr, professions, model_path_1, model_path_2, pr1, pr2, SameM
         trainer1 = current_trainer_1
         trainer2 = current_trainer_2
     
-    policy_left = current_trainer_1.get_policy("shared_policy")
-    policy_right = current_trainer_2.get_policy("shared_policy")
+    # check trainer exist?
+    if trainer1 is None or trainer2 is None:
+        print("載入模型失敗，無法進行對戰。")
+        return None
+    
+    policy_left = trainer1.get_policy("shared_policy")
+    policy_right = trainer2.get_policy("shared_policy")
     
     state_left = policy_left.get_initial_state()
     state_right = policy_right.get_initial_state()
@@ -268,11 +256,7 @@ def ai_vs_ai(skill_mgr, professions, model_path_1, model_path_2, pr1, pr2, SameM
 
     return env.battle_log
 
-    
-
-
-
-
+   
 # backend/main.py
 def get_professions_data(profession_list, skill_mgr):
     """

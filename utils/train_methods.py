@@ -98,7 +98,7 @@ class MaskedLSTMNetwork(RecurrentNetwork, TorchModelV2, nn.Module):
         self._features = None
 
         # 固定 LSTM 的時間步長（此處僅作參考，實際切片由 config 決定）
-        self.max_seq_len = 10
+        self.max_seq_len = model_config.get("max_seq_len", 10)
 
     @override(TorchModelV2)
     def get_initial_state(self):

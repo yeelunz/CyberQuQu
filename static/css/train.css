@@ -100,8 +100,10 @@
   }
 }
 
+/* 將初始化與訓練中的文字顏色設為白色 */
 #initialized-info {
   margin-bottom: 20px;
+  color: white;
 }
 
 .iteration-block {

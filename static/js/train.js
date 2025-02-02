@@ -33,21 +33,22 @@ document.addEventListener("DOMContentLoaded", function () {
         <div class="params-explanation">
           <h2>超參數解說</h2>
           <p>
-            <b>Learning Rate (learning_rate)</b>：控制梯度下降時的步伐大小，
-            建議介於 <strong>1e-5 ~ 1e-2</strong> 之間。
+            <b>Learning Rate (learning_rate)</b>：控制模型更新時每次梯度下降的步伐大小。較大的值可以加速學習，但可能導致震盪或不穩定；較小的值則使收斂更平穩，但學習速度可能變慢。建議設定值介於 <strong>1e-5 ~ 1e-2</strong> 之間，並根據模型複雜度與資料量進行微調。
           </p>
           <p>
-            <b>Batch Size (train_batch_size)</b>：每次更新所使用的樣本數，
-            值愈大梯度估計愈穩定，但單次 iteration 所需時間也較久，
-            建議根據應用情境調整（例如：1000 ~ 10000）。
+            <b>Batch Size (train_batch_size)</b>：每次模型更新所使用的樣本數。較大的 batch size 可使梯度計算更穩定，但也會增加計算資源的消耗。通常建議值在 <strong>1000 ~ 10000</strong> 之間，可根據硬體資源和任務特性調整。
           </p>
           <p>
-            <b>Entropy Coefficient (entropy_coeff)</b>：用於鼓勵策略隨機性，
-            建議值通常在 <strong>0.001 ~ 0.1</strong> 範圍內。
+            <b>Entropy Coefficient (entropy_coeff)</b>：用於鼓勵模型探索新的策略，增加決策過程中的隨機性。較高的值有助於防止過早收斂，但過高可能導致訓練不穩定。建議值通常在 <strong>0.001 ~ 0.1</strong> 之間。
           </p>
           <p>
-            <b>Entropy Coefficient Schedule</b>：設定訓練過程中 entropy_coeff 的變化，
-            請依序填入兩組數值。
+            <b>Entropy Coefficient Schedule</b>：設定訓練過程中 entropy_coeff 的動態調整。請依序填入兩組數值，例如：<strong>[0, 0.01]</strong>（初期探索階段）與 <strong>[1000000, 0.0]</strong>（後期收斂階段），以平衡探索與利用。
+          </p>
+          <p>
+            <b>Max Seq Len (max_seq_len)</b>：指定模型中 LSTM 的序列長度，也就是一次輸入的步數。這個值通常與資料中的時間序列長度或上下文窗口大小相匹配，預設為 <strong>10</strong>。根據應用場景，可適當調整此參數。
+          </p>
+          <p>
+            <b>FC Net Hiddens (fcnet_hiddens)</b>：定義全連接層中每層的隱藏單元數量。輸入格式為用逗號分隔的數值，例如預設值 <strong>256,256</strong> 表示兩層，每層各有 256 個神經元。此參數影響模型容量與計算成本，請根據需求調整。
           </p>
         </div>
         
@@ -89,9 +90,13 @@ document.addEventListener("DOMContentLoaded", function () {
             </div>
           </fieldset>
           
-          <!-- 新增 FC Net Hiddens 輸入 -->
+          <!-- 新增 FC Net Hiddens 輸入 (預設改為 256,256) -->
           <label for="fcnetHiddensInput">FC Net Hiddens：</label>
-          <input type="text" id="fcnetHiddensInput" placeholder="256,256,256" />
+          <input type="text" id="fcnetHiddensInput" placeholder="256,256" />
+
+          <!-- 新增 max_seq_len 輸入 -->
+          <label for="maxSeqLenInput">Max Seq Len：</label>
+          <input type="number" id="maxSeqLenInput" placeholder="10" min="1" />
 
           <button id="startTrainBtn">開始訓練</button>
           <button id="stopTrainBtn" disabled>終止訓練</button>
@@ -103,8 +108,8 @@ document.addEventListener("DOMContentLoaded", function () {
           <span>訓練初始化中，請稍候...</span>
         </div>
 
-        <!-- 初始化與訓練中資訊 -->
-        <div id="initialized-info" style="display:none; color: green; font-weight: bold;"></div>
+        <!-- 初始化與訓練中資訊 (文字改為白色) -->
+        <div id="initialized-info" style="display:none; color: white; font-weight: bold;"></div>
         
         <!-- 進度條 -->
         <div class="progress-bar-container">
@@ -140,8 +145,11 @@ document.addEventListener("DOMContentLoaded", function () {
     const lr = parseFloat(document.getElementById("lrInput").value) || 0.0001;
     const batchSize = parseInt(document.getElementById("batchInput").value) || 4000;
     const entropy = parseFloat(document.getElementById("entropyInput").value) || 0.01;
+    
+    // 取得 max_seq_len 的數值，預設為 10
+    const maxSeqLen = parseInt(document.getElementById("maxSeqLenInput").value) || 10;
 
-    // 從四個欄位取得 Entropy Schedule 的數值，若使用者未填則採用預設值
+    // 取得 Entropy Schedule 四個欄位的數值
     const schedule1TimestepRaw = document.getElementById("entropySchedule1Timestep").value;
     const schedule1ValueRaw = document.getElementById("entropySchedule1Value").value;
     const schedule2TimestepRaw = document.getElementById("entropySchedule2Timestep").value;
@@ -149,8 +157,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     const schedule1Timestep = schedule1TimestepRaw !== "" ? parseInt(schedule1TimestepRaw) : 0;
     const schedule1Value = schedule1ValueRaw !== "" ? parseFloat(schedule1ValueRaw) : 0.01;
-    const schedule2Timestep =
-      schedule2TimestepRaw !== "" ? parseInt(schedule2TimestepRaw) : 1000000;
+    const schedule2Timestep = schedule2TimestepRaw !== "" ? parseInt(schedule2TimestepRaw) : 1000000;
     const schedule2Value = schedule2ValueRaw !== "" ? parseFloat(schedule2ValueRaw) : 0.0;
 
     const entropySchedule = [
@@ -158,7 +165,7 @@ document.addEventListener("DOMContentLoaded", function () {
       [schedule2Timestep, schedule2Value]
     ];
 
-    // 取得 FC Net Hiddens 的輸入值，並解析為整數陣列（以逗號分隔）
+    // 取得 FC Net Hiddens 的輸入值，並解析為整數陣列（以逗號分隔），預設改為 [256,256]
     const fcnetHiddensRaw = document.getElementById("fcnetHiddensInput").value.trim();
     let fcnetHiddens;
     if (fcnetHiddensRaw) {
@@ -166,10 +173,9 @@ document.addEventListener("DOMContentLoaded", function () {
         .map(item => parseInt(item))
         .filter(num => !isNaN(num));
     } else {
-      fcnetHiddens = [256, 256, 256]; // 預設值
+      fcnetHiddens = [256, 256]; // 預設值
     }
 
-    // 基本驗證
     if (iteration < 1) {
       alert("Iteration 次數必須大於 0");
       return;
@@ -192,19 +198,16 @@ document.addEventListener("DOMContentLoaded", function () {
       train_batch_size: batchSize,
       entropy_coeff: entropy,
       entropy_coeff_schedule: entropySchedule,
-      fcnet_hiddens: fcnetHiddens
-      // ... 其他可自行再擴充的超參數
+      fcnet_hiddens: fcnetHiddens,
+      max_seq_len: maxSeqLen
     };
 
-    // 重置訓練結果區
     const resultsContainer = document.getElementById("results-container");
     resultsContainer.innerHTML = "";
 
-    // 重置進度條
     const progressBar = document.getElementById("trainProgressBar");
     progressBar.style.width = "0%";
 
-    // 顯示初始化狀態
     const initializingStatus = document.getElementById("initializing-status");
     const initializedInfo = document.getElementById("initialized-info");
     const startTrainBtn = document.getElementById("startTrainBtn");
@@ -213,11 +216,9 @@ document.addEventListener("DOMContentLoaded", function () {
     initializingStatus.style.display = "flex";
     initializedInfo.style.display = "none";
 
-    // 禁用開始按鈕，啟用終止按鈕
     startTrainBtn.disabled = true;
     stopTrainBtn.disabled = false;
 
-    // 建立 SSE 連線並傳送超參數
     const hyperparamsJson = encodeURIComponent(JSON.stringify(hyperparams));
     const url = `/api/train_sse?model_name=${modelName}&iteration=${iteration}&hyperparams_json=${hyperparamsJson}`;
     currentSource = new EventSource(url);
@@ -230,12 +231,12 @@ document.addEventListener("DOMContentLoaded", function () {
 
       switch (data.type) {
         case "initialized":
-          // 隱藏初始化狀態，並顯示「環境初始化完成」及「模型訓練中」狀態與轉動圈圈
           initializingStatus.style.display = "none";
           initializedInfo.style.display = "block";
+          // 調整：將文字放在左側，轉圈圈圖標放在右側
           initializedInfo.innerHTML =
             data.message +
-            "<br>模型訓練中 <span class=\"spinner\" style=\"display:inline-block;\"></span>";
+            "<br><div style='display:flex; align-items:center;'><span>模型訓練中</span><span class='spinner' style='margin-left:10px;'></span></div>";
           break;
 
         case "iteration":
@@ -243,7 +244,6 @@ document.addEventListener("DOMContentLoaded", function () {
           const progress = (currentIteration / iteration) * 100;
           progressBar.style.width = progress + "%";
 
-          // 新增每次迭代的結果折疊區塊
           const iterationBlock = document.createElement("div");
           iterationBlock.classList.add("iteration-block");
 
@@ -326,7 +326,6 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   }
 
-  // 工具函式：將物件轉成 HTML Table (支援嵌套物件)
   function generateInfoTable(obj) {
     const table = document.createElement("table");
     table.classList.add("info-table");
@@ -352,7 +351,6 @@ document.addEventListener("DOMContentLoaded", function () {
     return table;
   }
 
-  // 遞迴生成嵌套表格
   function generateNestedTable(obj) {
     const nestedTable = document.createElement("table");
     nestedTable.classList.add("nested-info-table");
@@ -376,7 +374,6 @@ document.addEventListener("DOMContentLoaded", function () {
     return nestedTable;
   }
 
-  // 取得目前時間戳記字串
   function getCurrentTimestamp() {
     const now = new Date();
     return `${now.getFullYear()}_${String(now.getMonth() + 1).padStart(2, '0')}_${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}_${String(now.getMinutes()).padStart(2, '0')}_${String(now.getSeconds()).padStart(2, '0')}`;

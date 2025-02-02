@@ -119,6 +119,7 @@ def ai_vs_ai(skill_mgr, professions, model_path_1, model_path_2, pr1, pr2, SameM
                     meta_info = json.load(f)
                     hyperparams = meta_info.get("hyperparams", {})
                     fc_hiddens_1 = hyperparams.get("fcnet_hiddens", [256, 256, 256])
+                    max_seq_len_1  = hyperparams.get("max_seq_len", 10)
             except FileNotFoundError:
                 print(f"找不到 {meta_path1}，將使用預設的 fcnet_hiddens。")
         else:
@@ -134,6 +135,7 @@ def ai_vs_ai(skill_mgr, professions, model_path_1, model_path_2, pr1, pr2, SameM
                 with open(meta_path2, "r", encoding="utf-8") as f:
                     meta_info = json.load(f)
                     hyperparams = meta_info.get("hyperparams", {})
+                    max_seq_len_2  = hyperparams.get("max_seq_len", 10)
                     fc_hiddens_2 = hyperparams.get("fcnet_hiddens", [256, 256, 256])
             except FileNotFoundError:
                 print(f"找不到 {meta_path2}，將使用預設的 fcnet_hiddens。")
@@ -154,7 +156,8 @@ def ai_vs_ai(skill_mgr, professions, model_path_1, model_path_2, pr1, pr2, SameM
                 "custom_model": "my_mask_model",
                 "fcnet_hiddens": fc_hiddens_1,
                 "fcnet_activation": "ReLU",
-                "vf_share_layers": False
+                "vf_share_layers": False,
+                "max_seq_len" : max_seq_len_1
             },
         )
     )
@@ -169,7 +172,8 @@ def ai_vs_ai(skill_mgr, professions, model_path_1, model_path_2, pr1, pr2, SameM
                 "custom_model": "my_mask_model",
                 "fcnet_hiddens": fc_hiddens_2,
                 "fcnet_activation": "ReLU",
-                "vf_share_layers": False
+                "vf_share_layers": False,
+                "max_seq_len" : max_seq_len_2
             },
         )
     )

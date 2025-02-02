@@ -271,7 +271,7 @@ def multi_agent_cross_train(num_iterations,
             "fcnet_hiddens": hyperparams.get("fcnet_hiddens", [256,256]),
             "fcnet_activation": "ReLU",
             "vf_share_layers": False,
-            "max_seq_len": 10,  # 與模型中 LSTM 的步數一致
+            "max_seq_len": hyperparams.get("max_seq_len", 10), # 這邊要與模型中的一致
         },
         use_gae=True,
         lr=hyperparams.get("learning_rate", 1e-4),
@@ -877,6 +877,7 @@ def compute_ai_elo(model_path_1, professions, skill_mgr, base_elo=1500, opponent
                 meta_info = json.load(f)
                 hyperparams = meta_info.get("hyperparams", {})
                 fc_hiddens = hyperparams.get("fcnet_hiddens", [256, 256, 256])
+                max_seq_len  = hyperparams.get("max_seq_len", 10)
         except FileNotFoundError:
             print(f"找不到 {meta_path}，將使用預設的 fcnet_hiddens。")
     else:
@@ -899,7 +900,8 @@ def compute_ai_elo(model_path_1, professions, skill_mgr, base_elo=1500, opponent
             "custom_model": "my_mask_model",
             "fcnet_hiddens": fc_hiddens,
             "fcnet_activation": "ReLU",
-            "vf_share_layers": False
+            "vf_share_layers": False,
+            "max_seq_len" : max_seq_len
         },
         )
     )
@@ -1290,6 +1292,7 @@ def version_test_random_vs_random_sse_ai(professions, skill_mgr, num_battles=100
                 meta_info = json.load(f)
                 hyperparams = meta_info.get("hyperparams", {})
                 fc_hiddens = hyperparams.get("fcnet_hiddens", [256, 256, 256])
+                max_seq_len  = hyperparams.get("max_seq_len", 10)
         except FileNotFoundError:
             print(f"找不到 {meta_path}，將使用預設的 fcnet_hiddens。")
     
@@ -1309,7 +1312,8 @@ def version_test_random_vs_random_sse_ai(professions, skill_mgr, num_battles=100
             "custom_model": "my_mask_model",
             "fcnet_hiddens": fc_hiddens,
             "fcnet_activation": "ReLU",
-            "vf_share_layers": False
+            "vf_share_layers": False,
+            "max_seq_len" : max_seq_len
         },
     )
     )

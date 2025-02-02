@@ -18,7 +18,7 @@
 
 PALADIN_VAR = {
     # BASE STATS
-    'PALADIN_BASE_HP': [387, 387, 100, 999, 'high'],
+    'PALADIN_BASE_HP': [397, 397, 100, 999, 'high'],
     'PALADIN_BASE_ATK': [1.0, 1.0, 0.1, 999, 'high'],
     'PALADIN_BASE_DEF': [1.15, 1.15, 0.1, 999, 'high'],
 
@@ -38,9 +38,9 @@ PALADIN_VAR = {
 
     # SKILL 3 DAMAGE AMOUNT
     # FIRST HEAL AMOUNT FIRST/SECOND/or more
-    'PALADIN_SKILL_2_FIRST_HEAL': [50, 50, 1, 999, 'high'],
-    'PALADIN_SKILL_2_SECOND_HEAL': [35, 35, 1, 999, 'high'],
-    'PALADIN_SKILL_2_MORE_HEAL': [15, 15, 1, 999, 'high'],
+    'PALADIN_SKILL_2_FIRST_HEAL': [60, 50, 1, 999, 'high'],
+    'PALADIN_SKILL_2_SECOND_HEAL': [45, 35, 1, 999, 'high'],
+    'PALADIN_SKILL_2_MORE_HEAL': [25, 15, 1, 999, 'high'],
 
 }
 
@@ -67,7 +67,7 @@ MAGE_VAR = {
 
 ASSASSIN_VAR = {
     # BASE STATS
-    'ASSASSIN_BASE_HP': [258, 258, 100, 999, 'high'],
+    'ASSASSIN_BASE_HP': [267, 267, 100, 999, 'high'],
     'ASSASSIN_BASE_ATK': [1.15, 1.15, 0.1, 999, 'high'],
     'ASSASSIN_BASE_DEF': [1.0, 1.0, 0.1, 999, 'high'],
 
@@ -132,9 +132,9 @@ BERSERKER_VAR = {
     'BERSERKER_BASE_DEF': [0.8, 0.8, 0.1, 999, 'high'],
 
     # PASSIVE EXTRA DAMAGE RATE
-    'BERSERKER_PASSIVE_EXTRA_DAMAGE_RATE': [0.3, 0.3, 0.01, 1, 'high'],
+    'BERSERKER_PASSIVE_EXTRA_DAMAGE_RATE': [0.35, 0.35, 0.01, 1, 'high'],
     # 這邊是用來判斷是否要進行額外傷害的門檻值
-    'BERSERKER_PASSIVE_EXTRA_DAMAGE_THRESHOLD': [0.5, 0.5, 0.01, 1, 'high'],
+    'BERSERKER_PASSIVE_EXTRA_DAMAGE_THRESHOLD': [0.6, 0.6, 0.01, 1, 'high'],
 
     # SKILL 0 DAMAGE AND SELF-MUTILATION
     'BERSERKER_SKILL_0_DAMAGE': [30, 30, 1, 999, 'high'],
@@ -155,7 +155,7 @@ BERSERKER_VAR = {
 
 DRAGONGOD_VAR = {
     # BASE STATS
-    'DRAGONGOD_BASE_HP': [332, 332, 100, 999, 'high'],
+    'DRAGONGOD_BASE_HP': [314, 314, 100, 999, 'high'],
     'DRAGONGOD_BASE_ATK': [1.0, 1.0, 0.1, 999, 'high'],
     'DRAGONGOD_BASE_DEF': [1.0, 1.0, 0.1, 999, 'high'],
 
@@ -183,8 +183,8 @@ DRAGONGOD_VAR = {
 BLOODGOD_VAR = {
     # BASE STATS
     'BLOODGOD_BASE_HP': [266, 266, 100, 999, 'high'],
-    'BLOODGOD_BASE_ATK': [1.5, 1.5, 0.1, 999, 'high'],
-    'BLOODGOD_BASE_DEF': [1.5, 1.5, 0.1, 999, 'high'],
+    'BLOODGOD_BASE_ATK': [1.65, 1.65, 0.1, 999, 'high'],
+    'BLOODGOD_BASE_DEF': [1.65, 1.65, 0.1, 999, 'high'],
 
     # PASSIVE EFFECT
     'BLOODGOD_PASSIVE_DAMAGE_THRESHOLD': [0.25, 0.25, 0.01, 1, 'high'],  # 每受到最大血量的 25% 傷害
@@ -210,9 +210,9 @@ BLOODGOD_VAR = {
 
 STEADFASTWARRIOR_VAR = {
     # BASE STATS
-    'STEADFASTWARRIOR_BASE_HP': [276, 276, 100, 999, 'high'],
+    'STEADFASTWARRIOR_BASE_HP': [263, 263, 100, 999, 'high'],
     'STEADFASTWARRIOR_BASE_ATK': [1.0, 1.0, 0.1, 999, 'high'],
-    'STEADFASTWARRIOR_BASE_DEF': [1.25, 1.25, 0.1, 999, 'high'],
+    'STEADFASTWARRIOR_BASE_DEF': [1.15, 1.15, 0.1, 999, 'high'],
 
     # PASSIVE: HEAL LOST HP PERCENTAGE
     'STEADFASTWARRIOR_PASSIVE_HEAL_PERCENT': [0.07, 0.07, 0.01, 1, 'high'],  # 每回合恢復損失生命值的百分比
@@ -244,11 +244,11 @@ DEVOUR_VAR = {
 
     # SKILL 24: DAMAGE AND FAILURE RATE
     'DEVOUR_SKILL_0_DAMAGE': [70, 70, 1, 999, 'high'],
-    'DEVOUR_SKILL_0_FAILURE_RATE': [0.5, 0.5, 0.01, 1, 'low'],  # 技能失敗的機率
+    'DEVOUR_SKILL_0_FAILURE_RATE': [0.4, 0.4, 0.01, 1, 'low'],  # 技能失敗的機率
 
     # SKILL 25: DAMAGE BASED ON HP DIFFERENCE
     'DEVOUR_SKILL_1_LOST_HP_DAMAGE_MULTIPLIER': [0.15, 0.15, 0.01, 1, 'high'],  # 已損血量傷害倍率
-    'DEVOUR_SKILL_1_CURRENT_HP_DAMAGE_MULTIPLIER': [0.1, 0.1, 0.01, 1, 'high'],  # 當前血量傷害倍率
+    'DEVOUR_SKILL_1_CURRENT_HP_DAMAGE_MULTIPLIER': [0.15, 0.15, 0.01, 1, 'high'],  # 當前血量傷害倍率
     'DEVOUR_SKILL_1_COOLDOWN': [2, 2, 1, 10, 'low'],  # 技能冷卻時間
 
     # SKILL 26: DEFENSE BUFF
@@ -258,8 +258,8 @@ DEVOUR_VAR = {
 
 RANGER_VAR = {
     # BASE STATS
-    'RANGER_BASE_HP': [299, 299, 100, 999, 'high'],
-    'RANGER_BASE_ATK': [1.2, 1.2, 0.1, 999, 'high'],
+    'RANGER_BASE_HP': [279, 279, 100, 999, 'high'],
+    'RANGER_BASE_ATK': [1.14, 1.14, 0.1, 999, 'high'],
     'RANGER_BASE_DEF': [0.95, 0.95, 0.1, 999, 'high'],
 
     # PASSIVE: COLD ARROW
@@ -310,16 +310,16 @@ ELEMENTALMAGE_VAR = {
 
 HUANGSHEN_VAR = {
     # BASE STATS
-    'HUANGSHEN_BASE_HP': [230, 230, 100, 999, 'high'],
-    'HUANGSHEN_BASE_ATK': [1.18, 1.18, 0.1, 999, 'high'],
-    'HUANGSHEN_BASE_DEF': [1.3, 1.3, 0.1, 999, 'high'],
+    'HUANGSHEN_BASE_HP': [248, 248, 100, 999, 'high'],
+    'HUANGSHEN_BASE_ATK': [1.23, 1.23, 0.1, 999, 'high'],
+    'HUANGSHEN_BASE_DEF': [1.15, 1.15, 0.1, 999, 'high'],
 
     # PASSIVE: WITHER BLADE
     'HUANGSHEN_PASSIVE_EXTRA_HIT_THRESHOLD': [2, 2, 1, 5, 'no'],  # 每造成兩次傷害增加一次追打機會
     'HUANGSHEN_PASSIVE_EXTRA_HIT_DAMAGE_PERCENT': [0.05, 0.05, 0.01, 0.1, 'high'],  # 追打造成敵方當前生命的百分比傷害
 
     # SKILL 33: MULTI-HIT DAMAGE
-    'HUANGSHEN_SKILL_0_DAMAGE': [30, 30, 1, 999, 'high'],
+    'HUANGSHEN_SKILL_0_DAMAGE': [35, 35, 1, 999, 'high'],
     'HUANGSHEN_SKILL_0_DAMAGE_REDUCTION_PER_HIT': [0.25, 0.25, 0.01, 1, 'low'],  # 每次額外攻擊傷害減少比例
     'HUANGSHEN_SKILL_0_HIT_RANGE': [1, 3],  # 隨機攻擊次數範圍
 

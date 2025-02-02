@@ -58,7 +58,7 @@ class BattleEnv(MultiAgentEnv):
             self.done = False
             self.battle_log = []
             self.damage_coefficient = 1.0
-            self.size = 143
+            self.size = 160
             self.train_mode = config["train_mode"]
             self.mpro = []
             self.epro = []
@@ -716,93 +716,134 @@ class BattleEnv(MultiAgentEnv):
 
     def _get_obs(self, agent):
         """
-        回傳同時給AI1、AI2的觀測。 
+        回傳同時給 AI1、AI2 的觀測。
         同時要加上 action_mask，表示哪些動作可用(沒進CD) => 1/0
         """
         player_m = self.player_team[0]
         enemy_m = self.enemy_team[0]
 
-        # 定義職業數量，用於 One-Hot 編碼
-        num_professions = 13  # 假設職業 ID 的範圍是 0 ~ 12
-        
-        # One-Hot 編碼職業 ID
+        # 定義職業數量 (假設職業 ID 的範圍是 0 ~ 12)
+        num_professions = 13
+
+        # One-Hot 編碼職業 ID 的輔助函式
         def one_hot_encode(profession_id, num_classes):
             one_hot = np.zeros(num_classes, dtype=np.float32)
             one_hot[profession_id] = 1.0
             return one_hot
 
-        # 編碼 Player 和 Enemy 的 profession_id
+        # 根據該職業計算真實技能 ID，並編碼技能類型
+        def one_hot_encode_skill(profession):
+            # 利用 self.skill_mgr (技能管理器) 取得技能類型
+            sm = self.skill_mgr
+            # 定義 mapping: damage->[1,0,0], effect->[0,1,0], heal->[0,0,1]
+            mapping = {
+                "damage": np.array([1, 0, 0], dtype=np.float32),
+                "effect": np.array([0, 1, 0], dtype=np.float32),
+                "heal":   np.array([0, 0, 1], dtype=np.float32)
+            }
+            one_hot_list = []
+            # 這裡 local 技能 id 為 0,1,2
+            for local_id in [0, 1, 2]:
+                real_skill_id = profession.profession_id * 3 + local_id
+                skill_type = sm.get_skill_type(real_skill_id)
+                if skill_type in mapping:
+                    one_hot_list.append(mapping[skill_type])
+                else:
+                    one_hot_list.append(np.zeros(3, dtype=np.float32))
+            # 串接三個 one-hot 編碼，總長度 9
+            return np.concatenate(one_hot_list)
+
+        # 編碼公共觀測中的 last_skill_used
+        # 輸入的值應為 0, 1, 2，分別對應編碼：[0,0], [1,0], [0,1]
+        def encode_last_skill(last_skill_local):
+            if last_skill_local == 0:
+                return np.array([0, 0], dtype=np.float32)
+            elif last_skill_local == 1:
+                return np.array([1, 0], dtype=np.float32)
+            elif last_skill_local == 2:
+                return np.array([0, 1], dtype=np.float32)
+            else:
+                # 若不在 0,1,2 範圍內則回傳預設 [0,0]
+                return np.array([0, 0], dtype=np.float32)
+
+        # 編碼 Player 與 Enemy 的職業
         player_profession_one_hot = one_hot_encode(player_m["profession"].profession_id, num_professions)
         enemy_profession_one_hot = one_hot_encode(enemy_m["profession"].profession_id, num_professions)
 
-        # 構建觀測值 共有 13 + 8 = 21 個特徵
+        # 取得各角色的技能類型 one-hot 編碼 (長度 9)
+        player_skill_one_hot = one_hot_encode_skill(player_m["profession"])
+        enemy_skill_one_hot = one_hot_encode_skill(enemy_m["profession"])
+
+        # 構建個體觀測值
+        # 原本數值特徵有 8 項，加上職業 one-hot (13 維) 及技能編碼 (9 維) → 13+8+9 = 30 維
         player_obs = np.concatenate([
-            player_profession_one_hot,  # One-Hot 編碼的 profession_id
+            player_profession_one_hot,  # 13 維
             [
-                player_m["hp"]/player_m["max_hp"],
-                player_m["max_hp"]/self.maxProfession_hp,
+                player_m["hp"] / player_m["max_hp"],
+                player_m["max_hp"] / self.maxProfession_hp,
                 player_m["damage_multiplier"],
                 player_m["defend_multiplier"],
                 player_m["heal_multiplier"],
-                np.log(player_m["accumulated_damage"]+1),
+                np.log(player_m["accumulated_damage"] + 1),
                 player_m["profession"].baseAtk,
                 player_m["profession"].baseDef,
-            ],
-            # player_m["last_skill_used"]
+            ],  # 8 維
+            player_skill_one_hot  # 9 維
         ], dtype=np.float32)
 
         enemy_obs = np.concatenate([
-            enemy_profession_one_hot,  # One-Hot 編碼的 profession_id
+            enemy_profession_one_hot,  # 13 維
             [
-                enemy_m["hp"]/enemy_m["max_hp"],
-                enemy_m["max_hp"]/self.maxProfession_hp,
+                enemy_m["hp"] / enemy_m["max_hp"],
+                enemy_m["max_hp"] / self.maxProfession_hp,
                 enemy_m["damage_multiplier"],
                 enemy_m["defend_multiplier"],
                 enemy_m["heal_multiplier"],
-                np.log(enemy_m["accumulated_damage"]+1),
+                np.log(enemy_m["accumulated_damage"] + 1),
                 enemy_m["profession"].baseAtk,
                 enemy_m["profession"].baseDef,
-            ],
-            # enemy_m["last_skill_used"]
+            ],  # 8 維
+            enemy_skill_one_hot  # 9 維
         ], dtype=np.float32)
 
-        # 行動遮罩 共有 3 個特徵
+        # 行動遮罩 (假設共有 3 個特徵)
         player_mask = self._get_action_mask(player_m)
         enemy_mask = self._get_action_mask(enemy_m)
 
-        # 合併 PLAYER_OBS + PLAYER_MASK => 21 + 3 = 24
+        # 合併個體觀測與行動遮罩
+        # 原本個體觀測由 21 維升級到 30 維，加上 3 維遮罩 → 33 維
         flattened_pobs = np.concatenate([player_mask, player_obs])
         flattened_eobs = np.concatenate([enemy_mask, enemy_obs])
 
-        # 公共觀測值 共有 2 個特徵 
+        # 公共觀測值：保留 damage_coefficient 與 round_count，並額外加入對方的 last_skill_used 編碼
+        base_public_obs = np.array(
+            [self.damage_coefficient, self.round_count / self.max_rounds],
+            dtype=np.float32
+        )
         if agent == "player":
-            public_obs = np.array(
-                [self.damage_coefficient
-                 , self.round_count/self.max_rounds],
-                dtype=np.float32
-            )
-            public_obs = np.concatenate([public_obs, enemy_m['last_skill_used']])
+            # 對方是 enemy，假設 enemy_m["last_skill_used"] 為 local 技能 id (0,1,2)
+            last_skill_encoded = encode_last_skill(enemy_m["last_skill_used"])
         else:
-            public_obs = np.array(
-                [self.damage_coefficient
-                 , self.round_count/self.max_rounds],
-                dtype=np.float32
-            )
-            public_obs = np.concatenate([public_obs, player_m['last_skill_used']])
+            last_skill_encoded = encode_last_skill(player_m["last_skill_used"])
+        public_obs = np.concatenate([base_public_obs, last_skill_encoded])
 
-        # 特效管理器觀測值 共有42個特徵
+        # 特效管理器觀測值 (假設各有 42 維)
         pem = player_m["effect_manager"].export_obs()
         eem = enemy_m["effect_manager"].export_obs()
 
-        # 最終觀測值拼接 共有 24 + 24 + 2 + 42 +42 = 134 個特徵
-        pout = np.concatenate([flattened_pobs,pem, flattened_eobs,  eem, public_obs])
-        eout = np.concatenate([flattened_eobs,eem, flattened_pobs,  pem, public_obs])
+        # 最終觀測值拼接：
+        # 例如：若 agent 為 "player"，順序為：
+        # player_mask + player_obs (33 維) + pem (42 維) +
+        # enemy_mask + enemy_obs (33 維) + eem (42 維) + public_obs (2+2=4 維)
+        pout = np.concatenate([flattened_pobs, pem, flattened_eobs, eem, public_obs])
+        eout = np.concatenate([flattened_eobs, eem, flattened_pobs, pem, public_obs])
         
 
         if agent == "player":
             return pout
         else:
             return eout
+
 
 
     def _check_both_defeated(self):

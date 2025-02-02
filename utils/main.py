@@ -199,6 +199,7 @@ def ai_vs_ai(skill_mgr, professions, model_path_1, model_path_2, pr1, pr2, SameM
     env = BattleEnv(config=beconfig)
     done = False
     obs, _ = env.reset()
+    
 
     # 判斷是否需要重新載入模型
     need_reload_1 = (model_path_1 is not None and model_path_1 != current_loaded_model_path_1)
@@ -228,15 +229,27 @@ def ai_vs_ai(skill_mgr, professions, model_path_1, model_path_2, pr1, pr2, SameM
             current_loaded_model_path_2 = model_path_2
         trainer1 = current_trainer_1
         trainer2 = current_trainer_2
+    
+    policy_left = current_trainer_1.get_policy("shared_policy")
+    policy_right = current_trainer_2.get_policy("shared_policy")
+    
+    state_left = policy_left.get_initial_state()
+    state_right = policy_right.get_initial_state()
+    
 
     # 進行對戰
     while not done:
         if SameModel:
-            p_act = trainer1.compute_single_action(obs['player'], policy_id="shared_policy")
-            e_act = trainer1.compute_single_action(obs['enemy'], policy_id="shared_policy")
+            p_act_package = trainer1.compute_single_action(obs['player'],state=state_left ,policy_id="shared_policy")
+            e_act_packate = trainer1.compute_single_action(obs['enemy'], state=state_right,policy_id="shared_policy")
         else:
-            p_act = trainer1.compute_single_action(obs['player'], policy_id="shared_policy")
-            e_act = trainer2.compute_single_action(obs['enemy'], policy_id="shared_policy")
+            p_act_package = trainer1.compute_single_action(obs['player'],state_left ,policy_id="shared_policy")
+            e_act_packate = trainer2.compute_single_action(obs['enemy'],state_right ,policy_id="shared_policy")
+        p_act = p_act_package[0]
+        e_act = e_act_packate[0]
+        state_left = p_act_package[1]
+        state_right = e_act_packate[1]
+        
         actions = {"player": p_act, "enemy": e_act}
         obs, rew, done_dict, tru, info = env.step(actions)
         done = done_dict["__all__"]

@@ -33,46 +33,201 @@ from .skills import build_skill_manager
 import threading
 import time
 
-class MaskedFullyConnectedNetwork(TorchModelV2, nn.Module):
+class MaskedLSTMNetwork(RecurrentNetwork, TorchModelV2, nn.Module):
     """
-    基於 RLlib 的預設 FullyConnectedNetwork，添加動作掩碼處理。
+    自訂模型：結合 MLP + LSTM 與動作 Mask 處理
+    假設觀測空間 (obs) 前 3 維為 mask，其餘為真實特徵。
+    注意：要求動作空間的輸出數 (num_outputs) 與 mask 維度一致。
     """
-    def __init__(self, obs_space, action_space, num_outputs, model_config, name):
-        TorchModelV2.__init__(self, obs_space, action_space, num_outputs, model_config, name)
-        nn.Module.__init__(self)
 
-        # 使用內建 FullyConnectedNetwork 作為基礎模型
-        self.base_model = FullyConnectedNetwork(
-            obs_space, action_space, num_outputs, model_config, name + "_base"
+    def __init__(self, obs_space, action_space, num_outputs, model_config, name):
+        # 先呼叫 nn.Module 的初始化
+        nn.Module.__init__(self)
+        # 再呼叫 TorchModelV2 的初始化（RecurrentNetwork 為 mixin）
+        TorchModelV2.__init__(self, obs_space, action_space, num_outputs, model_config, name)
+
+        # 假設 obs 空間為 1D 張量，前 3 維為 mask
+        self.obs_dim = obs_space.shape[0]
+        self.mask_dim = 3
+        self.real_obs_dim = self.obs_dim - self.mask_dim
+
+        # 若動作輸出數與 mask 維度不一致，則拋出錯誤
+        if num_outputs != self.mask_dim:
+            raise ValueError(
+                f"num_outputs ({num_outputs}) 必須等於 mask 維度 ({self.mask_dim})，請檢查觀測設計。"
+            )
+
+        # 取得 MLP 隱藏層結構 (可由超參數設定，預設 [256, 256, 256])
+        fcnet_hiddens = model_config.get("fcnet_hiddens", [256, 256, 256])
+
+        # -------------------------
+        # 建立 MLP 層：輸入為 real_obs_dim，依序經過各隱藏層
+        # -------------------------
+        mlp_layers = []
+        in_size = self.real_obs_dim
+        for hidden_size in fcnet_hiddens:
+            mlp_layers.append(nn.Linear(in_size, hidden_size))
+            mlp_layers.append(nn.ReLU())
+            in_size = hidden_size
+        self.mlp = nn.Sequential(*mlp_layers)
+        mlp_out_size = in_size  # MLP 的最後輸出維度
+
+        # -------------------------
+        # 建立 LSTM 層
+        # 設定：input_size 與 hidden_size 均為 mlp_out_size，且採用 batch_first=True
+        # -------------------------
+        self.lstm = nn.LSTM(
+            input_size=mlp_out_size,
+            hidden_size=mlp_out_size,
+            batch_first=True,
         )
 
-    @override(ModelV2)
+        # -------------------------
+        # 建立最終輸出層：映射 LSTM 輸出至 action logits
+        # -------------------------
+        self.logits_layer = nn.Linear(mlp_out_size, num_outputs)
+
+        # -------------------------
+        # 建立 Value function 分支
+        # -------------------------
+        self.value_branch = nn.Linear(mlp_out_size, 1)
+
+        # -------------------------
+        # 儲存 forward 時產生的中間特徵，供 value_function() 使用
+        # -------------------------
+        self._features = None
+
+        # 固定 LSTM 的時間步長（此處僅作參考，實際切片由 config 決定）
+        self.max_seq_len = 10
+
+    @override(TorchModelV2)
+    def get_initial_state(self):
+        """
+        回傳單一樣本的初始 RNN state，形狀 [hidden_dim]
+        RLlib 會根據實際 batch size 自行擴展。
+        """
+        # LSTM 的隱藏狀態維度
+        hidden_size = self.logits_layer.in_features
+        h0 = torch.zeros(hidden_size, dtype=torch.float)
+        c0 = torch.zeros(hidden_size, dtype=torch.float)
+        return [h0, c0]
+
+    @override(RecurrentNetwork)
+    def forward_rnn(self, inputs, state, seq_lens):
+        """
+        前向傳播（RNN 部分）：處理單步輸入，並維護 LSTM 狀態。
+        輸入：
+        - inputs: [B, obs_dim]
+        - state: list [hidden_state, cell_state]，每個 shape 為 [B_state, hidden_dim]
+        - seq_lens: 各序列的實際長度（本範例未用到，可忽略）
+        回傳：
+        - masked_logits: [B, num_outputs]
+        - new_state: list [new_hidden_state, new_cell_state]，每個 shape 為 [B, hidden_dim]
+        """
+        # -------------------------------
+        # Debug: 輸入與 state 的形狀資訊
+        # -------------------------------
+        # print("=== forward_rnn debug start ===")
+        # print("inputs shape:", inputs.shape)
+        B_input = inputs.size(0)
+        h_in, c_in = state
+        # print("Initial h_in shape:", h_in.shape)
+        # print("Initial c_in shape:", c_in.shape)
+        B_state = h_in.size(0)
+        # print("B_input (from inputs):", B_input)
+        # print("B_state (from state):", B_state)
+        # print("=== forward_rnn debug end ===")
+
+        # 1. 分離 mask 與真實觀測
+        mask = inputs[:, :self.mask_dim]
+        real_obs = inputs[:, self.mask_dim:]
+
+        # 2. 經過 MLP 產生特徵向量
+        mlp_out = self.mlp(real_obs)
+        # Debug: mlp_out shape
+        # print("mlp_out shape:", mlp_out.shape)
+
+        # 3. 為 LSTM 增加時間軸：變為 [B_input, 1, mlp_out_size]
+        lstm_input = mlp_out.unsqueeze(1)
+        # print("lstm_input shape:", lstm_input.shape)
+
+        # 4. 處理 state：原始 state shape 為 [B_state, hidden_dim]
+        if B_state != B_input:
+            # print(f"State batch size ({B_state}) != inputs batch size ({B_input}). Adjusting state...")
+            if B_state == 1:
+                # 如果 state 只有一個樣本，則用 expand 將其展開（因為該維度是 singleton）
+                h_in = h_in.expand(B_input, -1)
+                c_in = c_in.expand(B_input, -1)
+                # print("After expand, h_in shape:", h_in.shape)
+            elif B_input % B_state == 0:
+                # 如果 inputs 的 batch size 是 state 的整數倍，則使用 repeat
+                repeats = B_input // B_state
+                h_in = h_in.repeat(repeats, 1)
+                c_in = c_in.repeat(repeats, 1)
+                # print("After repeat, h_in shape:", h_in.shape)
+            else:
+                raise RuntimeError(
+                    f"State batch size ({B_state}) cannot be matched to inputs batch size ({B_input})."
+                )
+        else:
+            # print("State batch size matches inputs batch size.")
+            pass
+
+        # Debug: 檢查調整後的 state shape
+        # print("Final h_in shape (before unsqueeze):", h_in.shape)
+
+        # LSTM 要求的 shape 為 [num_layers, B_input, hidden_dim]，所以 unsqueeze 第一個維度
+        h_in = h_in.unsqueeze(0)
+        c_in = c_in.unsqueeze(0)
+        # print("h_in shape after unsqueeze:", h_in.shape)
+        # print("c_in shape after unsqueeze:", c_in.shape)
+
+        # 5. LSTM 前向傳播
+        lstm_out, [h_out, c_out] = self.lstm(lstm_input, [h_in, c_in])
+        # lstm_out: [B_input, 1, hidden_dim] -> 壓縮時間軸
+        lstm_out = lstm_out.squeeze(1)
+        # print("lstm_out shape after squeeze:", lstm_out.shape)
+
+        # 6. 計算動作 logits
+        logits = self.logits_layer(lstm_out)
+        # print("logits shape:", logits.shape)
+
+        # 7. 套用動作 mask（無效動作 logits 加極大負值）
+        inf_mask = (1.0 - mask) * -1e10
+        masked_logits = logits + inf_mask
+        # print("masked_logits shape:", masked_logits.shape)
+
+        # 8. 儲存特徵供 value_function() 使用
+        self._features = lstm_out
+
+        # 9. 回傳新的 state（去除 LSTM 層的 layer 維度）
+        new_state = [h_out.squeeze(0), c_out.squeeze(0)]
+        # print("new_state h_out shape:", new_state[0].shape)
+        # print("new_state c_out shape:", new_state[1].shape)
+
+        return masked_logits, new_state
+
+    @override(TorchModelV2)
     def forward(self, input_dict, state, seq_lens):
         """
-        前向傳播，將掩碼應用到 logits 上。
+        RLlib 在非序列情境下會呼叫 forward()，
+        這裡直接轉接到 forward_rnn()，確保狀態可以正確傳遞。
         """
-        # 基礎模型的輸出 logits
-        base_out, state = self.base_model(input_dict, state, seq_lens)
+        obs = input_dict["obs"]
+        logits, new_state = self.forward_rnn(obs, state, seq_lens)
+        return logits, new_state
 
-        # 提取掩碼：假設 obs 的前 3 維是掩碼
-        mask = input_dict["obs"][:, :3]  # (B, 3)
-
-        # 掩碼處理：將無效的 logits 設為極大負值
-        inf_mask = (1.0 - mask) * -1e10
-        masked_logits = base_out + inf_mask
-
-        self._last_output = masked_logits
-        return masked_logits, state
-
-    @override(ModelV2)
+    @override(TorchModelV2)
     def value_function(self):
         """
-        繼承基礎模型的 value_function。
+        根據 forward_rnn() 中儲存的特徵，計算 state-value V(s)
         """
-        return self.base_model.value_function()
+        assert self._features is not None, "必須先執行 forward()/forward_rnn() 才能取得 value_function!"
+        # value_branch 輸出 shape [B, 1]，reshape 為 [B]
+        return torch.reshape(self.value_branch(self._features), [-1])
 
 
-ModelCatalog.register_custom_model("my_mask_model", MaskedFullyConnectedNetwork)
+ModelCatalog.register_custom_model("my_mask_model", MaskedLSTMNetwork)
 
 
 stop_training_flag = threading.Event()
@@ -113,9 +268,10 @@ def multi_agent_cross_train(num_iterations,
         .training(
         model={
             "custom_model": "my_mask_model",
-            "fcnet_hiddens": hyperparams.get("fcnet_hiddens", [256,256,256]),
+            "fcnet_hiddens": hyperparams.get("fcnet_hiddens", [256,256]),
             "fcnet_activation": "ReLU",
-            "vf_share_layers": False
+            "vf_share_layers": False,
+            "max_seq_len": 10,  # 與模型中 LSTM 的步數一致
         },
         use_gae=True,
         lr=hyperparams.get("learning_rate", 1e-4),
@@ -800,13 +956,19 @@ def compute_ai_elo(model_path_1, professions, skill_mgr, base_elo=1500, opponent
             env = BattleEnv(make_env_config(skill_mgr, professions, show_battlelog=False, pr1=p, pr2=p))
             done = False
             obs, _ = env.reset()
+            policy = trainer.get_policy("shared_policy")
+            state = policy.model.get_initial_state()
 
             while not done:
-                ai_act = trainer.compute_single_action(obs['player'], policy_id="shared_policy")
+                ai_package = trainer.compute_single_action(obs['player'], state=state, policy_id="shared_policy")
+                ai_act = ai_package[0]
+                state = ai_package[1]
+
                 enemy_act = random.choice([0, 1, 2])  # 隨機對手
                 actions = {"player": ai_act, "enemy": enemy_act}
                 obs, rew, done_dict, tru, info = env.step(actions)
                 done = done_dict["__all__"]
+
 
             res = info["__common__"]["result"]
             if res == 1:
@@ -839,10 +1001,17 @@ def compute_ai_elo(model_path_1, professions, skill_mgr, base_elo=1500, opponent
             env = BattleEnv(make_env_config(skill_mgr, professions, show_battlelog=False, pr1=p, pr2=p))
             done = False
             obs, _ = env.reset()
+            policy = trainer.get_policy("shared_policy")
+            state = policy.model.get_initial_state()
 
             while not done:
                 enemy_act = random.choice([0, 1, 2])  # 隨機對手
-                ai_act = trainer.compute_single_action(obs['enemy'], policy_id="shared_policy")
+ 
+                ai_package = trainer.compute_single_action(obs['enemy'], state=state, policy_id="shared_policy")
+                ai_act = ai_package[0]
+                state = ai_package[1]
+                
+                
                 actions = {"player": enemy_act, "enemy": ai_act}
                 obs, rew, done_dict, tru, info = env.step(actions)
                 done = done_dict["__all__"]
@@ -1194,15 +1363,22 @@ def version_test_random_vs_random_sse_ai(professions, skill_mgr, num_battles=100
 
                 done = False
                 obs, _ = env.reset()
+                policy = trainer.get_policy("shared_policy")
+                state_1 = policy.model.get_initial_state()
+                state_2 = policy.model.get_initial_state()
                 
                 rounds = 0  # 計算單場回合數
                 while not done:
                     rounds += 1
  
                     
-                    p_act = trainer.compute_single_action(obs['player'], policy_id="shared_policy")
+                    p_act_pack = trainer.compute_single_action(obs['player'], state=state_1,policy_id="shared_policy")
+                    p_act = p_act_pack[0]
+                    state_1 = p_act_pack[1]
                     # if p act in mask is 0, then choose random action
-                    e_act = trainer.compute_single_action(obs['enemy'] ,policy_id="shared_policy")
+                    e_act_pack = trainer.compute_single_action(obs['enemy'] ,state=state_2,policy_id="shared_policy")
+                    e_act = e_act_pack[0]
+                    state_2 = e_act_pack[1]
                     
                     
                     # 技能使用次數紀錄

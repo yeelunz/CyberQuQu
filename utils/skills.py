@@ -163,7 +163,7 @@ sm.add_skill(Skill(
 
 sm.add_skill(Skill(
     20, "轉生",
-    f"消耗當前生命值的 {int(BLOODGOD_VAR['BLOODGOD_SKILL_2_SELF_DAMAGE_RATIO'][0] * 100)}%，持續 {BLOODGOD_VAR['BLOODGOD_SKILL_2_DURATION'][0]} 回合內，免於致死傷害並回復最大血量的 {int(BLOODGOD_VAR['BLOODGOD_SKILL_2_RESURRECT_HEAL_RATIO'][0] * 100)}%。",
+    f"消耗當前生命值的 {int(BLOODGOD_VAR['BLOODGOD_SKILL_2_SELF_DAMAGE_RATIO'][0] * 100)}%，持續 {BLOODGOD_VAR['BLOODGOD_SKILL_2_DURATION'][0]} 回合內，受到致死傷害時，復活並回復最大血量的 {int(BLOODGOD_VAR['BLOODGOD_SKILL_2_RESURRECT_HEAL_RATIO'][0] * 100)}%。",
     'effect',
     BLOODGOD_VAR['BLOODGOD_SKILL_2_COOLDOWN'][0]
 ))

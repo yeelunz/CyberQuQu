@@ -66,7 +66,6 @@
   <script src="/static/js/cross_battle_generate_pc.js?v=1.0"></script>
   <script src="/static/js/versus_mode.js?v=1.0"></script>
   <script src="/static/js/dev_manage_vars.js?v=1.0"></script>
-  <!-- 模型間對戰專用 JS -->
   <script src="/static/js/model_vs_model_generate.js?v=1.0"></script>
   <script src="/static/js/model_vs_model_result.js?v=1.0"></script>
 
@@ -75,30 +74,30 @@
   </div>
 
   <!-- 初始化所有左側選單事件 -->
-  <script>
-    // 此函式統一掛上各選單的 click 事件
-    function initMenuEvents() {
-      // 綁定其他功能的事件
-      document.getElementById("menu-model-vs-model-generate").addEventListener("click", function(e) {
-        e.preventDefault();
-        mvmg_init();
-      });
-      document.getElementById("menu-model-vs-model-result").addEventListener("click", function(e) {
-        e.preventDefault();
-        mvmr_init();
-      });
-      document.getElementById("menu-manage-vars").addEventListener("click", function(e) {
-        e.preventDefault();
-        loadManageVarsPage();
-      });
-      // 呼叫 versus_mode.js 中的初始化函數
-      if (typeof initVersusMenuEvents === "function") {
-        initVersusMenuEvents();
-      }
+<script>
+  // 此函式統一掛上各選單的 click 事件
+  function initMenuEvents() {
+    // 綁定其他功能的事件
+    document.getElementById("menu-model-vs-model-generate").addEventListener("click", function(e) {
+      e.preventDefault();
+      mvmg_init();
+    });
+    document.getElementById("menu-model-vs-model-result").addEventListener("click", function(e) {
+      e.preventDefault();
+      mvmr_init();
+    });
+    document.getElementById("menu-manage-vars").addEventListener("click", function(e) {
+      e.preventDefault();
+      loadManageVarsPage();
+    });
+    // 呼叫 versus_mode.js 中的初始化函數
+    if (typeof initVersusMenuEvents === "function") {
+      initVersusMenuEvents();
     }
-    
-    // 當 DOM 載入完成後掛上事件監聽
-    window.addEventListener("DOMContentLoaded", initMenuEvents);
-  </script>
+  }
+  
+  // 當 DOM 載入完成後掛上事件監聽
+  window.addEventListener("DOMContentLoaded", initMenuEvents);
+</script>
 </body>
 </html>

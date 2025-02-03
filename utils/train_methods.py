@@ -242,16 +242,38 @@ def multi_agent_cross_train(num_iterations,
 
     professions = build_professions()
     skill_mgr = build_skill_manager()
+    beconfig = make_env_config(skill_mgr, professions, train_mode=True)
 
     if hyperparams is None:
         hyperparams = {}
 
-    print("=== 開始多智能體交叉訓練 ===")
-    print("模型名稱:", model_name)
-    print("超參數:", hyperparams)
-    
+    # 以下依照前端輸入處理超參數的邏輯：
+    # 1. Learning Rate 與 LR Schedule 互斥：若 learning_rate 有值，則 schedule 固定為 None
+    lr = hyperparams.get("learning_rate")
+    lr_schedule = hyperparams.get("lr_schedule")
+    if lr is not None:
+        lr_schedule = None
+    else:
+        lr = 1e-4  # 預設 learning rate
 
-    beconfig = make_env_config(skill_mgr, professions, train_mode=True)
+    # 2. Entropy Coefficient 與 Entropy Schedule 互斥
+    entropy_coeff = hyperparams.get("entropy_coeff")
+    entropy_coeff_schedule = hyperparams.get("entropy_coeff_schedule")
+    if entropy_coeff is not None:
+        entropy_coeff_schedule = None
+    else:
+        entropy_coeff = 0.01  # 預設 entropy coefficient
+
+    # 3. Grad Clip 與 Grad Clip By
+    grad_clip = hyperparams.get("grad_clip", None)
+    if grad_clip is None:
+        grad_clip_by = 'global_norm'  # 當 grad_clip 為 None 時，固定回傳預設值
+    else:
+        grad_clip_by = hyperparams.get("grad_clip_by", 'global_norm')
+
+
+
+    # 修改 config.training() 部分，帶入所有超參數：
     config = (
         PPOConfig()
         .environment(
@@ -266,20 +288,28 @@ def multi_agent_cross_train(num_iterations,
         )
         .framework("torch")
         .training(
-        model={
-            "custom_model": "my_mask_model",
-            "fcnet_hiddens": hyperparams.get("fcnet_hiddens", [256,256]),
-            "fcnet_activation": "ReLU",
-            "vf_share_layers": False,
-            "max_seq_len": hyperparams.get("max_seq_len", 10), # 這邊要與模型中的一致
-        },
-        use_gae=True,
-        lr=hyperparams.get("learning_rate", 1e-4),
-        train_batch_size=hyperparams.get("train_batch_size", 4000),
-        entropy_coeff=hyperparams.get("entropy_coeff", 0.01),
-        entropy_coeff_schedule=hyperparams.get("entropy_coeff_schedule", [[0, 0.01], [1000000, 0.0]])
-        # ... 如果有更多超參數需要動態帶入，可在此處增加 ...
-    )
+            model={
+                "custom_model": "my_mask_model",
+                "fcnet_hiddens": hyperparams.get("fcnet_hiddens", [256, 256]),
+                "fcnet_activation": "ReLU",
+                "vf_share_layers": False,
+                "max_seq_len": hyperparams.get("max_seq_len", 10),  # 與模型一致
+            },
+            use_gae=True,
+            gamma=hyperparams.get("gamma", 0.99),
+            lr=lr,
+            lr_schedule=lr_schedule,
+            train_batch_size=hyperparams.get("train_batch_size", 4000),
+            minibatch_size=hyperparams.get("minibatch_size", 128),
+            entropy_coeff=entropy_coeff,
+            entropy_coeff_schedule=entropy_coeff_schedule,
+            grad_clip=grad_clip,
+            grad_clip_by=grad_clip_by,
+            lambda_=hyperparams.get("lambda", 1.0),
+            clip_param=hyperparams.get("clip_param", 0.3),
+            vf_clip_param=hyperparams.get("vf_clip_param", 10.0),
+            # ... 可根據需要增加更多動態帶入的超參數 ...
+        )
     )
 
     benv = BattleEnv(beconfig)

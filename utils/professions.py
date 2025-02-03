@@ -987,7 +987,7 @@ class GodOfStar(BattleProfession):
             baseAtk=GODOFSTAR_VAR['GODOFSTAR_BASE_ATK'][0],
             baseDef=GODOFSTAR_VAR['GODOFSTAR_BASE_DEF'][0],
             passive_name="天啟星盤",
-            passive_desc="星神在戰鬥中精通增益與減益效果的能量運用。每當場上有一層「能力值增益」或「減益」效果時，每回合會額外對敵方造成 5 點傷害 並恢復 5 點生命值。"
+            passive_desc=f"星神在戰鬥中精通增益與減益效果的能量運用。每當場上有一層「能力值增益」或「減益」效果時，每回合會額外對敵方造成 {GODOFSTAR_VAR['GODOFSTAR_PASSIVE_DAMAGE_PER_EFFECT']} 點傷害 並恢復 {GODOFSTAR_VAR['GODOFSTAR_PASSIVE_HEAL_PER_EFFECT']} 點生命值。"
         )
 
     def passive(self, user, targets, env):

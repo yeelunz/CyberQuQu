@@ -1,0 +1,110 @@
+{
+  "model_name": "my_multiagent_ai_2025_02_03_18_14_13",
+  "num_iterations": 50,
+  "hyperparams": {
+    "learning_rate": 5e-05,
+    "lr_schedule": null,
+    "train_batch_size": 12000,
+    "entropy_coeff": null,
+    "entropy_coeff_schedule": [
+      [
+        0,
+        0.05
+      ],
+      [
+        500000,
+        0
+      ]
+    ],
+    "fcnet_hiddens": [
+      512,
+      512,
+      512,
+      128
+    ],
+    "max_seq_len": 10,
+    "gamma": 0.99,
+    "grad_clip": null,
+    "grad_clip_by": "global_norm",
+    "lambda": 1,
+    "minibatch_size": 128,
+    "clip_param": 0.3,
+    "vf_clip_param": 10,
+    "mask_model": "my_mask_model"
+  },
+  "timestamp": "2025-02-03 20:25:29",
+  "version": 1,
+  "elo_result": {
+    "平均 ELO": 1750,
+    "詳細": {
+      "聖騎士": {
+        "先攻方 ELO": 1780,
+        "後攻方 ELO": 1740,
+        "總和 ELO": 1760
+      },
+      "法師": {
+        "先攻方 ELO": 1727,
+        "後攻方 ELO": 1866,
+        "總和 ELO": 1797
+      },
+      "刺客": {
+        "先攻方 ELO": 1667,
+        "後攻方 ELO": 1743,
+        "總和 ELO": 1705
+      },
+      "弓箭手": {
+        "先攻方 ELO": 1600,
+        "後攻方 ELO": 1627,
+        "總和 ELO": 1614
+      },
+      "狂戰士": {
+        "先攻方 ELO": 1661,
+        "後攻方 ELO": 1786,
+        "總和 ELO": 1723
+      },
+      "龍神": {
+        "先攻方 ELO": 1851,
+        "後攻方 ELO": 1866,
+        "總和 ELO": 1859
+      },
+      "血神": {
+        "先攻方 ELO": 1866,
+        "後攻方 ELO": 1866,
+        "總和 ELO": 1866
+      },
+      "剛毅武士": {
+        "先攻方 ELO": 1770,
+        "後攻方 ELO": 1699,
+        "總和 ELO": 1735
+      },
+      "鯨吞": {
+        "先攻方 ELO": 1509,
+        "後攻方 ELO": 1668,
+        "總和 ELO": 1589
+      },
+      "荒原遊俠": {
+        "先攻方 ELO": 1673,
+        "後攻方 ELO": 1859,
+        "總和 ELO": 1766
+      },
+      "元素法師": {
+        "先攻方 ELO": 1607,
+        "後攻方 ELO": 1647,
+        "總和 ELO": 1627
+      },
+      "荒神": {
+        "先攻方 ELO": 1859,
+        "後攻方 ELO": 1849,
+        "總和 ELO": 1854
+      },
+      "星神": {
+        "先攻方 ELO": 1836,
+        "後攻方 ELO": 1866,
+        "總和 ELO": 1851
+      }
+    },
+    "總和先攻方ELO": 1724,
+    "總和後攻方ELO": 1776,
+    "總和ELO": 1750
+  }
+}

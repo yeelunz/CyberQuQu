@@ -58,7 +58,7 @@ class BattleEnv(MultiAgentEnv):
             self.done = False
             self.battle_log = []
             self.damage_coefficient = 1.0
-            self.size = 160
+            self.size = 158
             self.train_mode = config["train_mode"]
             self.mpro = []
             self.epro = []
@@ -754,17 +754,17 @@ class BattleEnv(MultiAgentEnv):
             return np.concatenate(one_hot_list)
 
         # 編碼公共觀測中的 last_skill_used
-        # 輸入的值應為 0, 1, 2，分別對應編碼：[0,0], [1,0], [0,1]
+        # 輸入的值應為 0, 1, 2，分別對應編碼：[1,0,0], [0,1,0], [0,0,1]
         def encode_last_skill(last_skill_local):
             if last_skill_local == 0:
-                return np.array([0, 0], dtype=np.float32)
+                return np.array([1, 0,0], dtype=np.float32)
             elif last_skill_local == 1:
-                return np.array([1, 0], dtype=np.float32)
+                return np.array([0,1, 0], dtype=np.float32)
             elif last_skill_local == 2:
-                return np.array([0, 1], dtype=np.float32)
+                return np.array([0,0, 1], dtype=np.float32)
             else:
                 # 若不在 0,1,2 範圍內則回傳預設 [0,0]
-                return np.array([0, 0], dtype=np.float32)
+                return np.array([0, 0,0], dtype=np.float32)
 
         # 編碼 Player 與 Enemy 的職業
         player_profession_one_hot = one_hot_encode(player_m["profession"].profession_id, num_professions)
@@ -817,15 +817,19 @@ class BattleEnv(MultiAgentEnv):
 
         # 公共觀測值：保留 damage_coefficient 與 round_count，並額外加入對方的 last_skill_used 編碼
         base_public_obs = np.array(
-            [self.damage_coefficient, self.round_count / self.max_rounds],
+            [self.damage_coefficient,
+             self.round_count / self.max_rounds],
             dtype=np.float32
         )
         if agent == "player":
             # 對方是 enemy，假設 enemy_m["last_skill_used"] 為 local 技能 id (0,1,2)
             last_skill_encoded = encode_last_skill(enemy_m["last_skill_used"])
+            last_skill_encoded_r = encode_last_skill(player_m["last_skill_used"])
+            
         else:
             last_skill_encoded = encode_last_skill(player_m["last_skill_used"])
-        public_obs = np.concatenate([base_public_obs, last_skill_encoded])
+            last_skill_encoded_r = encode_last_skill(enemy_m["last_skill_used"])
+        public_obs = np.concatenate([base_public_obs, last_skill_encoded,last_skill_encoded_r])
 
         # 特效管理器觀測值 (假設各有 42 維)
         pem = player_m["effect_manager"].export_obs()
@@ -879,17 +883,18 @@ class BattleEnv(MultiAgentEnv):
             return
 
         # 應用傷害增減比例
-        dmg = int(dmg * user.get("damage_multiplier", 1.0))
+        dmg = int(dmg * user.get("damage_multiplier", 1.0)) * self.damage_coefficient
 
-        # 處理防禦增減
-        dmg = int(dmg / target.get("defend_multiplier", 1.0))
-        dmg = int(dmg/target['profession'].baseDef)
+        # 應用防禦
+        total_defend = target["profession"].baseDef * target.get("defend_multiplier", 1.0)
         
-        dmg *= self.damage_coefficient  # 考慮戰鬥特性：傷害係數
-        
+        dmg /= total_defend
+  
         dmg = max(1, dmg)  # 至少造成1點傷害
         
-        dmg = int(dmg)
+        # 正負浮動5%
+        dmg = int(dmg * random.uniform(0.95, 1.05))
+
         # 實際減血
         target["hp"] = max(0, target["hp"] - dmg)
         target['accumulated_damage'] += dmg
@@ -1036,14 +1041,14 @@ class BattleEnv(MultiAgentEnv):
         if self.done:
             if player:
                 if all(m["hp"] <= 0 for m in self.player_team) and all(e["hp"] <= 0 for e in self.enemy_team):
-                    return -0.3
+                    return -0.2
                 elif all(m["hp"] <= 0 for m in self.player_team):
                     return -1
                 elif all(e["hp"] <= 0 for e in self.enemy_team):
                     return 1
             else:
                 if all(m["hp"] <= 0 for m in self.player_team) and all(e["hp"] <= 0 for e in self.enemy_team):
-                    return -0.3
+                    return -0.2
                 elif all(m["hp"] <= 0 for m in self.player_team):
                     return 1
                 elif all(e["hp"] <= 0 for e in self.enemy_team):

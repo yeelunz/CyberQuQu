@@ -5,9 +5,9 @@
 # 自定義效果的效果ID 不會有mapping來處理
 # 因為自定義效果依靠source來區分不同狀態
 EFFECT_MAPPING = {
-    1: 0,   # DamageMultiplier
-    2: 3,   # DefenseMultiplier
-    3: 6,   # HealMultiplier
+    1: 0,   # 攻擊力變更
+    2: 3,   # 防禦力變更
+    3: 6,   # HP變更
     4: 9,   # Burn
     5: 12,  # Poison
     6: 15,  # Freeze
@@ -17,10 +17,9 @@ EFFECT_MAPPING = {
     10: 27, # 暈眩
     11: 30, # HP Recovery
     12: 33, # Max HP Increase
-    13: 39, # Track
-    19: 42, # CustomEffect Dot
+    13: 36, # Track
+    19: 39, # CustomEffect Dot
 
-    
 }
 
 # 99: 39, # CustomEffect

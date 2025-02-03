@@ -153,6 +153,7 @@ def get_trainer(model_path, fc_hiddens_default=[256, 256, 256]):
                 hyperparams = meta_info.get("hyperparams", {})
                 fc_hiddens = hyperparams.get("fcnet_hiddens", fc_hiddens_default)
                 max_seq_len = hyperparams.get("max_seq_len", 10)
+                mask_model = hyperparams.get("mask_model", "my_mask_model")
         except Exception as e:
             print(f"讀取 meta 時錯誤: {e}")
     # 建立環境與訓練器配置（請根據你原本的邏輯修改）
@@ -168,7 +169,7 @@ def get_trainer(model_path, fc_hiddens_default=[256, 256, 256]):
         .framework("torch")
         .training(
             model={
-                "custom_model": "my_mask_model",
+                "custom_model": mask_model,
                 "fcnet_hiddens": fc_hiddens,
                 "fcnet_activation": "ReLU",
                 "vf_share_layers": False,

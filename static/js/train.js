@@ -1,3 +1,5 @@
+// trian.js 
+
 document.addEventListener("DOMContentLoaded", function () {
   const menuTrain = document.getElementById("menu-train");
   const contentArea = document.getElementById("content-area");
@@ -111,6 +113,15 @@ document.addEventListener("DOMContentLoaded", function () {
     <div style="flex-basis: 100%;">
       <label for="batchInput">Batch Size：</label>
       <input type="number" id="batchInput" placeholder="4000" min="1" />
+    </div>
+    <!-- 新增模型類型選項 -->
+    <div style="flex-basis: 100%;">
+      <label for="modelTypeSelect">模型類型：</label>
+      <select id="modelTypeSelect">
+        <option value="one_hot">One-hot LSTM model</option>
+        <option value="embedding">Embedding LSTM model</option>
+        <option value="emd_merge">Embedding Merge LSTM model</option>
+      </select>
     </div>
     
     <!-- Learning Rate 與 LR Schedule -->
@@ -384,6 +395,16 @@ document.addEventListener("DOMContentLoaded", function () {
       vf_clip_param: vfClipParam,
     };
 
+    // 根據模型類型選項，設定對應的 mask_model
+    const modelType = document.getElementById("modelTypeSelect").value;
+    if (modelType === "one_hot") {
+      hyperparams.mask_model = "my_mask_model";
+    } else if (modelType === "embedding") {
+      hyperparams.mask_model = "my_mask_model_with_emb";
+    } else if (modelType === "emd_merge") {
+      hyperparams.mask_model = "my_mask_model_with_emb_combined";
+    }
+
     const resultsContainer = document.getElementById("results-container");
     resultsContainer.innerHTML = "";
     const progressBar = document.getElementById("trainProgressBar");
@@ -411,9 +432,10 @@ document.addEventListener("DOMContentLoaded", function () {
         case "initialized":
           initializingStatus.style.display = "none";
           initializedInfo.style.display = "block";
+          // 調整 spinner 與文字的位置：將 spinner 放在文字左側
           initializedInfo.innerHTML =
             data.message +
-            "<br><div style='display:flex; align-items:center;'><span style=\"color: black;\">模型訓練中，請稍後 ...</span><span class='spinner' style='margin-left:10px;'></span></div>";
+            "<br><div style='display:flex; align-items:center;'><span class='spinner' style='margin-right:10px;'></span><span style='color: black;'>模型訓練中，請稍後 ...</span></div>";
           break;
         case "iteration":
           currentIteration = data.iteration;

@@ -14,12 +14,15 @@
   <!-- 模型間對戰功能專用 CSS -->
   <link rel="stylesheet" href="/static/css/model_vs_model_generate.css?v=1.0" />
   <link rel="stylesheet" href="/static/css/model_vs_model_result.css?v=1.0" />
+  
+  <!-- 新增的嵌入向量可視化 CSS (加前綴避免衝突) -->
+  <link rel="stylesheet" href="/static/css/embedding_visualization.css?v=1.0" />
 </head>
 <body>
   <!-- 頂部資訊列 -->
   <header>
     <div id="game-version">版本：v0.0.1</div>
-    <div id="action-times">可行動次數：<span id="action-count">0</span></div>
+    <div id="action-times">剩餘計算資源：<span id="action-count">0</span></div>
     <button id="skip-round-btn">跳過當前回合</button>
   </header>
 
@@ -38,6 +41,8 @@
         <!-- 模型間對戰功能 -->
         <li><a href="#" id="menu-model-vs-model-generate">模型間對戰產生</a></li>
         <li><a href="#" id="menu-model-vs-model-result">模型間對戰資料檢視</a></li>
+        <!-- 新增的嵌入向量可視化選單 -->
+        <li><a href="#" id="menu-embedding-visualization">嵌入向量可視化</a></li>
       </ul>
     </nav>
 
@@ -69,35 +74,44 @@
   <script src="/static/js/model_vs_model_generate.js?v=1.0"></script>
   <script src="/static/js/model_vs_model_result.js?v=1.0"></script>
 
+  <!-- Plotly JS (用於前端視覺化，如果其他地方已有載入則可省略) -->
+  <script src="https://cdn.plot.ly/plotly-2.24.1.min.js"></script>
+
+  <!-- 新增的嵌入向量可視化 JS -->
+  <script src="/static/js/embedding_visualization.js?v=1.0"></script>
+
   <div id="model-loading-spinner">
     <div class="spinner-icon"></div>
   </div>
 
   <!-- 初始化所有左側選單事件 -->
-<script>
-  // 此函式統一掛上各選單的 click 事件
-  function initMenuEvents() {
-    // 綁定其他功能的事件
-    document.getElementById("menu-model-vs-model-generate").addEventListener("click", function(e) {
-      e.preventDefault();
-      mvmg_init();
-    });
-    document.getElementById("menu-model-vs-model-result").addEventListener("click", function(e) {
-      e.preventDefault();
-      mvmr_init();
-    });
-    document.getElementById("menu-manage-vars").addEventListener("click", function(e) {
-      e.preventDefault();
-      loadManageVarsPage();
-    });
-    // 呼叫 versus_mode.js 中的初始化函數
-    if (typeof initVersusMenuEvents === "function") {
-      initVersusMenuEvents();
+  <script>
+    // 統一掛上各選單的 click 事件
+    function initMenuEvents() {
+      // 綁定其他功能的事件
+      document.getElementById("menu-model-vs-model-generate").addEventListener("click", function(e) {
+        e.preventDefault();
+        mvmg_init();
+      });
+      document.getElementById("menu-model-vs-model-result").addEventListener("click", function(e) {
+        e.preventDefault();
+        mvmr_init();
+      });
+      document.getElementById("menu-manage-vars").addEventListener("click", function(e) {
+        e.preventDefault();
+        loadManageVarsPage();
+      });
+      if (typeof initVersusMenuEvents === "function") {
+        initVersusMenuEvents();
+      }
+      // 綁定「嵌入向量可視化」的 click 事件
+      document.getElementById("menu-embedding-visualization").addEventListener("click", function(e){
+        e.preventDefault();
+        embedding_vis_init();
+      });
     }
-  }
-  
-  // 當 DOM 載入完成後掛上事件監聽
-  window.addEventListener("DOMContentLoaded", initMenuEvents);
-</script>
+    
+    window.addEventListener("DOMContentLoaded", initMenuEvents);
+  </script>
 </body>
 </html>

@@ -37,7 +37,7 @@ ALL_PROFESSIONS_VARS = {
 }
 
 import os
-
+import numpy as np
 main_routes = Blueprint('main', __name__)
 
 
@@ -657,3 +657,140 @@ def show_list_model_vs_model_json():
     except Exception as e:
         logger.error(f"讀取檔案 {result_id} 時發生錯誤: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
+    
+from sklearn.manifold import TSNE
+    
+
+# 映射表
+eff_id_to_name = { 
+    1: "攻擊力變更", 2: "防禦力變更", 3: "治癒力變更", 4: "燃燒", 5: "中毒",
+    6: "凍結", 7: "免疫傷害", 8: "免疫控制", 9: "流血", 10: "麻痺",
+    11: "回血", 12: "最大生命值變更", 13: "追蹤", 19: "自定義傷害效果"
+}
+
+skill_id_to_name = {
+    0: "聖光斬", 1: "堅守防禦", 2: "神聖治療", 3: "火焰之球", 4: "冰霜箭",
+    5: "全域爆破", 6: "致命暗殺", 7: "毒爆", 8: "毒刃襲擊", 9: "五連矢",
+    10: "箭矢補充", 11: "吸血箭", 12: "狂暴之力", 13: "熱血", 14: "血怒之泉",
+    15: "神龍之息", 16: "龍血之泉", 17: "神龍燎原", 18: "血刀", 19: "血脈祭儀",
+    20: "轉生", 21: "剛毅打擊", 22: "不屈意志", 23: "絕地反擊", 24: "吞裂",
+    25: "巨口吞世", 26: "堅硬皮膚", 27: "續戰攻擊", 28: "埋伏防禦", 29: "荒原抗性",
+    30: "雷霆護甲", 31: "凍燒雷", 32: "雷擊術", 33: "枯骨", 34: "荒原",
+    35: "生命逆流", 36: "災厄隕星", 37: "光輝流星", 38: "虛擬創星圖"
+}
+
+profession_id_to_name = {
+    0: "聖騎士", 1: "法師", 2: "刺客", 3: "弓箭手", 4: "狂戰士",
+    5: "龍神", 6: "血神", 7: "剛毅武士", 8: "鯨吞", 9: "荒原遊俠",
+    10: "元素法師", 11: "荒神", 12: "星神"
+}
+
+@main_routes.route("/api/embedding/list_models", methods=["GET"])
+def list_embedding_models():
+    """
+    列出 data/saved_models/ 下所有擁有 embeddings.json 的模型資料夾。
+    """
+    base_path = os.path.join("data", "saved_models")
+    if not os.path.exists(base_path):
+        return jsonify([]), 200
+
+    models = []
+    for folder_name in os.listdir(base_path):
+        folder_path = os.path.join(base_path, folder_name)
+        if not os.path.isdir(folder_path):
+            continue
+
+        # 檢查是否有 embeddings.json
+        embed_path = os.path.join(folder_path, "embeddings.json")
+        if not os.path.exists(embed_path):
+            continue
+
+        # 讀取 training_meta.json (若存在)
+        meta_data = {}
+        meta_path = os.path.join(folder_path, "training_meta.json")
+        if os.path.exists(meta_path):
+            with open(meta_path, "r", encoding="utf-8") as f:
+                meta_data = json.load(f)
+        meta_data["has_embedding"] = True
+
+        models.append({
+            "folder_name": folder_name,
+            "meta": meta_data
+        })
+
+    return jsonify(models), 200
+
+@main_routes.route("/api/embedding/get", methods=["GET"])
+def get_embedding():
+    """
+    讀取指定模型資料夾中的 embeddings.json，
+    並依據 query 參數 dim (2 或 3) 使用 t-SNE 降維後回傳資料。
+    """
+    model_name = request.args.get("model", "")
+    dim_str = request.args.get("dim", "2")
+    try:
+        dim = int(dim_str)
+        if dim not in (2, 3):
+            return jsonify({"error": "dim must be 2 or 3"}), 400
+    except Exception:
+        return jsonify({"error": "dim must be 2 or 3"}), 400
+
+    base_path = os.path.join("data", "saved_models", model_name)
+    embed_path = os.path.join(base_path, "embeddings.json")
+    if not os.path.exists(embed_path):
+        return jsonify({"error": f"embeddings.json not found for model: {model_name}"}), 404
+
+    with open(embed_path, "r", encoding="utf-8") as f:
+        embed_data = json.load(f)
+
+    # 根據 JSON 結構決定要處理的 key
+    if "profession_p" in embed_data:
+        keys = ["profession_p", "profession_e", "skill_p", "skill_e", "effect_p", "effect_e"]
+    else:
+        keys = ["profession", "skill", "effect"]
+
+    result_categories = []
+    for key in keys:
+        if key not in embed_data:
+            continue
+
+        # 將原始資料轉為 numpy 陣列
+        arr = np.array(embed_data[key])
+        n_samples = arr.shape[0]
+
+        # 根據不同類別設定預設 perplexity (skill 類較多，預設 15，其它預設 5)
+        default_perplexity = 15 if "skill" in key else 5
+        perplexity = default_perplexity if default_perplexity < n_samples else max(1, n_samples - 1)
+        try:
+            tsne = TSNE(n_components=dim, perplexity=perplexity, random_state=42)
+            reduced = tsne.fit_transform(arr)
+        except Exception as e:
+            return jsonify({"error": f"TSNE failed for {key}: {str(e)}"}), 500
+
+        cat_data = {"name": key}
+        if dim == 2:
+            cat_data["x"] = reduced[:, 0].tolist()
+            cat_data["y"] = reduced[:, 1].tolist()
+        else:
+            cat_data["x"] = reduced[:, 0].tolist()
+            cat_data["y"] = reduced[:, 1].tolist()
+            cat_data["z"] = reduced[:, 2].tolist()
+
+        # 根據 key 類型，為每個點附上中文標籤
+        labels = []
+        for i in range(n_samples):
+            # 預設 label 為索引
+            label = str(i)
+            if "profession" in key:
+                label = profession_id_to_name.get(i, str(i))
+            elif "skill" in key:
+                label = skill_id_to_name.get(i, str(i))
+            elif "effect" in key:
+                # 這裡假設 effect 的順序與 mapping 中 key 值相差 1 (即 index 0 對應 mapping key 1)
+                label = eff_id_to_name.get(i + 1, str(i))
+            labels.append(label)
+        cat_data["labels"] = labels
+
+        result_categories.append(cat_data)
+
+    return jsonify({"categories": result_categories}), 200

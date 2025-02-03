@@ -1,0 +1,86 @@
+/* /static/css/embedding_visualization.css */
+
+/* 外層容器：參考 .mvmr-container */
+.prefix-embedding-container {
+    background-color: #fff;
+    margin-bottom: 20px;
+    padding: 20px 25px;
+    border-radius: 6px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* 標題：參考 .mvmr-container h2 */
+.prefix-embedding-title {
+    margin-bottom: 20px;
+    font-size: 1.4rem;
+    border-left: 4px solid #2c3e50;
+    padding-left: 10px;
+}
+
+/* 控制區塊：參考表單群組 */
+.prefix-embedding-controls {
+    margin-bottom: 15px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+/* 下拉選單：參考 .mvmr-input 與 .mvmr-input select */
+.prefix-embedding-select {
+    margin: 0 10px 10px 0;
+    min-width: 150px;
+    padding: 8px 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box;
+}
+
+/* radio 與勾選框的 label */
+.prefix-embedding-radio-label,
+.prefix-embedding-controls label {
+    margin: 0 10px 10px 0;
+    font-weight: bold;
+}
+
+/* 按鈕：參考 .mvmr-btn */
+.prefix-embedding-button {
+    padding: 10px 15px;
+    background-color: #3498db;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: background-color 0.3s, color 0.3s;
+    margin: 0 10px 10px 0;
+}
+
+.prefix-embedding-button:hover {
+    background-color: #2980b9;
+}
+
+/* Plotly 圖表容器 */
+.prefix-embedding-graph {
+    width: 100%;
+    height: 600px;
+    border: 1px solid #eee;
+    margin-top: 10px;
+    border-radius: 4px;
+}
+
+/* 小螢幕調整 */
+@media (max-width: 768px) {
+    .prefix-embedding-container {
+        padding: 15px 20px;
+    }
+    .prefix-embedding-title {
+        font-size: 1.2rem;
+    }
+    .prefix-embedding-button {
+        padding: 8px 12px;
+        font-size: 0.9rem;
+    }
+    .prefix-embedding-graph {
+        height: 400px;
+    }
+}

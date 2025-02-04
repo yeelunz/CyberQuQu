@@ -32,7 +32,7 @@ class BattleEnv(MultiAgentEnv):
             cooldowns (3個技能),
             effect_manager 輸出 (固定長度，來自 effect_mapping.py)
     - action shape = [3] * (team_size + enemy_team_size)
-        每個角色有3個選項 (0, 1, 2)
+        每個角色有3個選項 (0, 1, 2,3)
     - 20 回合後毒圈 => 每回合扣 10*(回合-20).
     - 每回合結束 => is_defending 重置
     - 戰鬥超過10回合後，每過2回合，雙方的傷害係數增加5%
@@ -73,7 +73,7 @@ class BattleEnv(MultiAgentEnv):
             self.agents = ["player", "enemy"]
             # 為每個代理配置觀察空間和動作空間
             self.observation_space = Box(low=-1e4, high=1e4, shape=(self.size,), dtype=np.float32)
-            self.action_space = Discrete(3)
+            self.action_space = Discrete(4)
 
     def reset(self,*, seed=None, options=None):
         if seed is not None:
@@ -102,7 +102,7 @@ class BattleEnv(MultiAgentEnv):
             m["defend_multiplier"] = 1.0
             m["heal_multiplier"] = 1.0
             m["skills_used"] = {} 
-            m["cooldowns"] = {0:0, 1:0, 2:0}
+            m["cooldowns"] = {0:0, 1:0, 2:0,3:0}
             m["last_skill_used"] = None
             m["skills_used"] = {}  # 用於追蹤技能使用次數
             m["effect_manager"] = EffectManager(target=m, env=self)  # 初始化 EffectManager
@@ -110,7 +110,7 @@ class BattleEnv(MultiAgentEnv):
             m["last_damage_taken"] = 0
             m['accumulated_damage'] = 0
             m['private_info'] = {}
-            m['last_skill_used'] = [0,0,0]
+            m['last_skill_used'] = [0,0,0,0]
         
         # 重置敵方
         for e in self.enemy_team:
@@ -125,7 +125,7 @@ class BattleEnv(MultiAgentEnv):
             e["damage_multiplier"] = 1.0
             e["defend_multiplier"] = 1.0
             e["heal_multiplier"] = 1.0
-            e["cooldowns"] = {0:0, 1:0, 2:0}
+            e["cooldowns"] = {0:0, 1:0, 2:0,3:0}
             e["last_skill_used"] = None 
             e["skills_used"] = {} 
             e["effect_manager"] = EffectManager(target=e, env=self)  # 初始化 EffectManager
@@ -133,7 +133,7 @@ class BattleEnv(MultiAgentEnv):
             e["last_damage_taken"] = 0
             e['accumulated_damage'] = 0
             e['private_info'] = {}
-            e['last_skill_used'] = [0,0,0]
+            e['last_skill_used'] = [0,0,0,0]
 
         infos = {
              "player": {"professions":self.mpro},
@@ -393,14 +393,12 @@ class BattleEnv(MultiAgentEnv):
                 # 處理其他事件類型
                 self.battle_log.append(event)
 
-
-        
-        
+ 
     def _get_action_mask(self, member):
       """
-      回傳 [3]，其中 1 代表該技能可用，0 代表在冷卻或其他條件無法使用
+      回傳 [4]，其中 1 代表該技能可用，0 代表在冷卻或其他條件無法使用
       """
-      mask = np.array([1,1,1], dtype=np.int8)
+      mask = np.array([1,1,1,1], dtype=np.int8)
       for skill_id, cd_val in member["cooldowns"].items():
           if cd_val > 0:
               mask[skill_id] = 0
@@ -842,6 +840,7 @@ class BattleEnv(MultiAgentEnv):
         pout = np.concatenate([flattened_pobs, pem, flattened_eobs, eem, public_obs])
         eout = np.concatenate([flattened_eobs, eem, flattened_pobs, pem, public_obs])
         
+        print("pout",pout.shape)
 
         if agent == "player":
             return pout
@@ -858,7 +857,7 @@ class BattleEnv(MultiAgentEnv):
         enemy_defeated = all(e["hp"] <= 0 for e in self.enemy_team)
         return player_defeated and enemy_defeated
 
-    def deal_damage(self, user, target, dmg, can_be_blocked=True):
+    def deal_damage(self, user, target, dmg, can_be_blocked=True, ignore_defense=0):
         """
         處理傷害邏輯，包括防禦、buff效果等
         """
@@ -887,6 +886,11 @@ class BattleEnv(MultiAgentEnv):
 
         # 應用防禦
         total_defend = target["profession"].baseDef * target.get("defend_multiplier", 1.0)
+        
+        # ign def process
+        if ignore_defense > 0 and total_defend > 1:
+            total_defend = (total_defend -1)*ignore_defense + 1
+
         
         dmg /= total_defend
   
@@ -920,7 +924,10 @@ class BattleEnv(MultiAgentEnv):
         # 首先進行治療增減比例的應用
         if self_mutilation and heal_damage:
             raise ValueError("heal_damage 與 self_mutilation 不能同時為True")
-        
+        # if 
+
+            
+        #  應用治療
         if not self_mutilation:
             heal_amount = int(heal_amount * user.get("heal_multiplier", 1.0))
             # 超出最大血量的治療量

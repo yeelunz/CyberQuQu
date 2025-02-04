@@ -595,29 +595,6 @@ class BleedEffect(StatusEffect):
         target['hp'] = max(0, target['hp'] - dmg)
 
 
-
-# class Stun(StatusEffect):
-#     def __init__(self, duration: int = 1, stackable: bool = False):
-#         super().__init__(
-#             name='眩暈',
-#             duration=duration,
-#             stackable=False,
-#             max_stack=1,
-#             type='control',
-#             id=10
-#         )
-
-#     def on_apply(self, target):
-#         super().on_apply(target)
-#         target["skip_turn"] = True
-
-
-#     def on_remove(self, target):
-#         target["skip_turn"] = False
-
-#         super().on_remove(target)
-
-
 class Paralysis(StatusEffect):
     def __init__(self, duration: int = 1, stackable: bool = False):
         super().__init__(
@@ -638,50 +615,6 @@ class Paralysis(StatusEffect):
         target["skip_turn"] = False
 
         super().on_remove(target)
-
-
-class CustomizeDoT(StatusEffect):
-    # 自定義的dot效果
-    # 自定義效果不會被observer觀察到
-    """
-        你只被允許使用以下參數(且必須使用):
-        name: 效果名稱
-        duration: 持續回合數
-        max_duration: 最大持續回合數
-        stacks: 單次使用堆疊數
-        stackable: 是否可疊加
-        max_stack: 最大堆疊數
-        dmg: 每回合傷害
-        source: 效果來源
-            如果是同一技能分別給敵方及我方使用時
-            需要額外設定p 或是 e 來區分
-    """
-    def __init__(self, name, duration: int = 5, stackable: bool = True, max_stack: int = 99, dmg: int = 1,source=None,stacks:int = 1,max_duration: int = 5):
-        super().__init__(
-            name=name,
-            duration=duration,
-            stackable=stackable,
-            max_stack=max_stack,
-            stacks=stacks,
-            type='dot',
-            id = 19 ,
-            source=source,
-            max_duration=max_duration
-        )
-        self.dmg = dmg
-        # check source
-        if not source:
-            # 如果source為空，會無法追蹤效果的來源
-            raise ValueError("自定義類 source 不能為空")
-
-    def on_apply(self, target):
-        super().on_apply(target)
-
-
-    def on_tick(self, target):
-        dmg = random.randint(1, 10)
-        dmg = min(dmg, 10)
-        target['hp'] = max(0, target['hp'] - dmg)
 
 
 class Track(StatusEffect):
@@ -738,7 +671,6 @@ EFFECT_NAME_MAPPING = {
     11: "回血",
     12: "最大生命值變更",
     13: "追蹤",
-    19: "自定義傷害效果"
 }
     
     

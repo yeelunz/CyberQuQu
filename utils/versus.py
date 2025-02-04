@@ -18,27 +18,12 @@ from .train_methods import make_env_config
 from ray.rllib.algorithms.ppo import PPOConfig
 from ray.rllib.algorithms import ppo  # 或其他使用的算法
 import os
-from ray.rllib.utils.checkpoints import get_checkpoint_info
+
 import ray
 from .global_var import globalVar as gl
 
 
-#---------------------------------------
-# (8) 各職業介紹
-#---------------------------------------
-def show_profession_info(profession_list, skill_mgr):
-    print("\n========== 職業介紹 ==========")
-    for p in profession_list:
-        print(f"{p.name} (HP={p.base_hp})")
-        print(f"攻擊係數{p.baseAtk} 防禦係數{p.baseDef}")
-        print(f"  被動: {p.passive_desc}")
-        skill_ids = p.get_available_skill_ids({0:0,1:0,2:0})
-        for sid in skill_ids:
-            desc = skill_mgr.get_skill_desc(sid)
-            skill = skill_mgr.skills[sid]
-            print(f"    技能 {skill.name} => {desc}")
-        print("----------------------------------")
-    input("按Enter返回主選單...")
+
 
 #---------------------------------------
 # (5) 電腦 VS 電腦
@@ -259,38 +244,6 @@ def ai_vs_ai(skill_mgr, professions, model_path_1, model_path_2, pr1, pr2, SameM
     return env.battle_log
 
    
-# backend/main.py
-def get_professions_data(profession_list, skill_mgr):
-    """
-    將職業資訊轉換為結構化的資料格式，不包含 skill_id。
-    """
-    professions_data = []
-    for p in profession_list:
-        profession = {
-            "name": p.name,
-            "hp": p.base_hp,
-            "attack_coeff": p.baseAtk,
-            "defense_coeff": p.baseDef,
-            "passive": {
-                "name": p.passive_name,
-                "description": p.passive_desc
-            },
-            "skills": []
-        }
-        skill_ids = p.get_available_skill_ids({0: 0, 1: 0, 2: 0})
-        for sid in skill_ids:
-            skill = skill_mgr.skills.get(sid)
-            if skill:
-                skill_info = {
-                    "name": skill.name,
-                    "description": skill.desc,
-                    "cooldown": skill.cool_down if skill.cool_down > 0 else None,
-                    "type": skill.type
-                }
-                profession["skills"].append(skill_info)
-        professions_data.append(profession)
-    return professions_data
-
 
 
 

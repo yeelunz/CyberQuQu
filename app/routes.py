@@ -1,5 +1,10 @@
-from flask import Blueprint, request, jsonify, render_template , Response,stream_with_context
-from utils.main import (
+from sklearn.manifold import TSNE
+import random
+import logging
+import numpy as np
+import os
+from flask import Blueprint, request, jsonify, render_template, Response, stream_with_context
+from utils.versus import (
 
     computer_vs_computer,
     ai_vs_ai,
@@ -8,8 +13,10 @@ from utils.main import (
 )
 from utils.skills import build_skill_manager
 from utils.professions import build_professions
-from utils.train_methods import multi_agent_cross_train , stop_training_flag,compute_ai_elo
-from utils.train_methods import version_test_random_vs_random_sse, version_test_random_vs_random_sse_ai
+from utils.train_methods import multi_agent_cross_train, stop_training_flag
+from utils.cross_model_evaluation import version_test_model_vs_model_generate_sse
+from utils.single_model_evaluation import version_test_random_vs_random_sse_ai, compute_ai_elo
+from utils.pc_evaluaiton import version_test_random_vs_random_sse
 
 from utils.data_stamp import Gdata
 import json
@@ -36,8 +43,6 @@ ALL_PROFESSIONS_VARS = {
     'GODOFSTAR': GODOFSTAR_VAR,
 }
 
-import os
-import numpy as np
 main_routes = Blueprint('main', __name__)
 
 
@@ -53,7 +58,7 @@ def manage_vars_page():
 def update_var():
     """
     API: 更新指定職業變數的「當前值」
-    
+
     傳入的 JSON 格式：
     {
        "profession": "PALADIN",
@@ -65,7 +70,7 @@ def update_var():
     profession = data.get("profession")
     var_key = data.get("var_key")
     new_value = data.get("new_value")
-    
+
     if profession not in ALL_PROFESSIONS_VARS:
         return jsonify({"status": "error", "message": "無效的職業名稱"}), 400
 
@@ -221,8 +226,6 @@ def compute_elo_sse():
     return Response(generate_stream(), mimetype='text/event-stream')
 
 
-
-
 @main_routes.route('/api/train_sse')
 def train_sse():
     """
@@ -261,14 +264,12 @@ def stop_train():
         return jsonify({"message": "訓練已經在終止中。"}), 400
 
 
-
 @main_routes.route('/')
 def index():
     """
     回傳前端的 index.html
     """
     return render_template('index.html')
-
 
 
 @main_routes.route("/api/list_professions", methods=["GET"])
@@ -308,7 +309,6 @@ def find_profession_by_name(name: str, prof_list):
             return p
     return None
 
-import random
 
 @main_routes.route("/api/computer_vs_computer", methods=["GET"])
 def api_computer_vs_computer():
@@ -352,7 +352,7 @@ def api_ai_vs_ai():
     """
     pr1_name = request.args.get("pr1", "Random")
     pr2_name = request.args.get("pr2", "Random")
-    print("pr1_name",pr1_name,"pr2_name",pr2_name)
+    print("pr1_name", pr1_name, "pr2_name", pr2_name)
     model1 = request.args.get("model1", "")  # 可能是空
     model2 = request.args.get("model2", "")  # 可能是空
 
@@ -384,8 +384,10 @@ def api_ai_vs_ai():
     same_model = (model1 == model2)
 
     # 轉成絕對路徑 => 解決 pyarrow fs 無法辨識相對路徑
-    model_path_1 = os.path.abspath(os.path.join("data", "saved_models", model1))
-    model_path_2 = os.path.abspath(os.path.join("data", "saved_models", model2))
+    model_path_1 = os.path.abspath(
+        os.path.join("data", "saved_models", model1))
+    model_path_2 = os.path.abspath(
+        os.path.join("data", "saved_models", model2))
 
     # 檢查檔案/資料夾是否存在(避免出錯)
     if not os.path.exists(model_path_1):
@@ -411,7 +413,7 @@ def api_ai_vs_ai():
         print("AI vs AI 發生例外：", e)
         return jsonify({"error": str(e)}), 500
 
-    
+
 @main_routes.route("/api/version_test_generate", methods=["GET"])
 def api_version_test_generate_sse():
     """
@@ -435,8 +437,7 @@ def api_version_test_generate_sse():
 
     if mode == "ai":
         # 檢查 model_path 是否真的存在
-        
-   
+
         base_path = os.path.join("data", "saved_models")
         model_path = os.path.join(base_path, model_path)
         if not os.path.exists(model_path):
@@ -448,19 +449,19 @@ def api_version_test_generate_sse():
                 }
                 yield f"data: {json.dumps(err, ensure_ascii=False)}\n\n"
             return Response(stream_with_context(error_stream()), mimetype='text/event-stream')
-        
-        print("model_full_path",model_path)
+
+        print("model_full_path", model_path)
         generator = version_test_random_vs_random_sse_ai(
-            professions, 
-            skill_mgr, 
-            num_battles=num_battles, 
+            professions,
+            skill_mgr,
+            num_battles=num_battles,
             model_path_1=model_path
         )
     else:
         # mode == "pc"
         generator = version_test_random_vs_random_sse(
-            professions, 
-            skill_mgr, 
+            professions,
+            skill_mgr,
             num_battles=num_battles
         )
 
@@ -471,7 +472,8 @@ def api_version_test_generate_sse():
             yield f"data: {json.dumps(info, ensure_ascii=False)}\n\n"
 
     # 4) 回傳 SSE
-    response = Response(stream_with_context(sse_stream()), mimetype='text/event-stream')
+    response = Response(stream_with_context(sse_stream()),
+                        mimetype='text/event-stream')
     response.headers["Cache-Control"] = "no-cache"
     response.headers["X-Accel-Buffering"] = "no"  # 關閉 nginx buffering (若有用到)
     return response
@@ -484,7 +486,6 @@ def api_version_test():
     不再自動產生，而是直接去 data/cross_validation_pc/ 搜尋並顯示。
     """
 
-    
     all_data = []
     for i in os.listdir("data/cross_validation_pc"):
         with open(f"data/cross_validation_pc/{i}", 'r') as f:
@@ -494,11 +495,42 @@ def api_version_test():
         with open(f"data/cross_validation_ai/{i}", 'r') as f:
             data = json.load(f)
             all_data.append(data)
-    
 
     return jsonify({"message": all_data})
-    
-    
+
+
+def get_professions_data(profession_list, skill_mgr):
+    """
+    將職業資訊轉換為結構化的資料格式，不包含 skill_id。
+    """
+    professions_data = []
+    for p in profession_list:
+        profession = {
+            "name": p.name,
+            "hp": p.base_hp,
+            "attack_coeff": p.baseAtk,
+            "defense_coeff": p.baseDef,
+            "passive": {
+                "name": p.passive_name,
+                "description": p.passive_desc
+            },
+            "skills": []
+        }
+        skill_ids = p.get_available_skill_ids({0: 0, 1: 0, 2: 0})
+        for sid in skill_ids:
+            skill = skill_mgr.skills.get(sid)
+            if skill:
+                skill_info = {
+                    "name": skill.name,
+                    "description": skill.desc,
+                    "cooldown": skill.cool_down if skill.cool_down > 0 else None,
+                    "type": skill.type
+                }
+                profession["skills"].append(skill_info)
+        professions_data.append(profession)
+    return professions_data
+
+
 @main_routes.route("/api/show_professions", methods=["GET"])
 def api_show_professions():
     """
@@ -528,6 +560,8 @@ def api_model_vs_model_result():
     return jsonify(data), 200
 
 # 請自行實作或調整 load_model_vs_model_result 函式
+
+
 def load_model_vs_model_result(result_id):
     # 範例：從檔案中讀取 (實際請依你存檔邏輯調整)
     result_file = os.path.join("data", "results", f"{result_id}.json")
@@ -536,8 +570,6 @@ def load_model_vs_model_result(result_id):
             return json.load(f)
     return None
 
-
-from utils.model_evaluation import version_test_model_vs_model_generate_sse
 
 @main_routes.route("/api/version_test_generate_model_vs_model", methods=["GET"])
 def api_version_test_generate_model_vs_model():
@@ -558,8 +590,10 @@ def api_version_test_generate_model_vs_model():
     if not modelA or not modelB:
         return jsonify({"error": "必須選擇模型A與模型B"}), 400
 
-    model_path_A = os.path.abspath(os.path.join("data", "saved_models", modelA))
-    model_path_B = os.path.abspath(os.path.join("data", "saved_models", modelB))
+    model_path_A = os.path.abspath(
+        os.path.join("data", "saved_models", modelA))
+    model_path_B = os.path.abspath(
+        os.path.join("data", "saved_models", modelB))
     if not os.path.exists(model_path_A):
         return jsonify({"error": f"模型 {modelA} 不存在"}), 400
     if not os.path.exists(model_path_B):
@@ -569,22 +603,23 @@ def api_version_test_generate_model_vs_model():
     professions = build_professions()
     skill_mgr = build_skill_manager()
 
-    generator = version_test_model_vs_model_generate_sse(professions, skill_mgr, num_battles, model_path_A, model_path_B)
+    generator = version_test_model_vs_model_generate_sse(
+        professions, skill_mgr, num_battles, model_path_A, model_path_B)
 
     def sse_stream():
         for info in generator:
             yield f"data: {json.dumps(info, ensure_ascii=False)}\n\n"
 
-    response = Response(stream_with_context(sse_stream()), mimetype='text/event-stream')
+    response = Response(stream_with_context(sse_stream()),
+                        mimetype='text/event-stream')
     response.headers["Cache-Control"] = "no-cache"
     response.headers["X-Accel-Buffering"] = "no"
     return response
 
 
-
-import logging
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
+
 
 @main_routes.route("/api/list_model_vs_results", methods=["GET"])
 def show_list_model_vs_model():
@@ -621,7 +656,6 @@ def show_list_model_vs_model():
     return jsonify({"results": results})
 
 
-
 @main_routes.route("/api/model_vs_model_result_json", methods=["GET"])
 def show_list_model_vs_model_json():
     """
@@ -632,11 +666,10 @@ def show_list_model_vs_model_json():
     if not result_id:
         # logger.debug("缺少 result_id")
         return jsonify({"error": "缺少 result_id"}), 400
-    
+
     # 強制print 這個result_id
     # logger.debug(f"強制print 這個result_id: {result_id}")
-    
-    
+
     base_dir = os.path.join(os.getcwd(), "data", "model_vs")
     # logger.debug(f"base_dir: {base_dir}")
     # 列出目前可用的檔案，方便除錯
@@ -645,7 +678,7 @@ def show_list_model_vs_model_json():
 
     filepath = os.path.join(base_dir, result_id)
     # logger.debug(f"組成的 filepath: {filepath}")
-    
+
     if not os.path.exists(filepath):
         logger.debug(f"檔案 {filepath} 不存在")
         return jsonify({"error": f"檔案 {result_id} 不存在. Available files: {available_files}"}), 404
@@ -657,26 +690,25 @@ def show_list_model_vs_model_json():
     except Exception as e:
         logger.error(f"讀取檔案 {result_id} 時發生錯誤: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
-    
-from sklearn.manifold import TSNE
-    
+
 
 # 映射表
-eff_id_to_name = { 
+eff_id_to_name = {
     1: "攻擊力變更", 2: "防禦力變更", 3: "治癒力變更", 4: "燃燒", 5: "中毒",
     6: "凍結", 7: "免疫傷害", 8: "免疫控制", 9: "流血", 10: "麻痺",
-    11: "回血", 12: "最大生命值變更", 13: "追蹤", 19: "自定義傷害效果"
+    11: "回血", 12: "最大生命值變更", 13: "追蹤"
 }
 
 skill_id_to_name = {
-    0: "聖光斬", 1: "堅守防禦", 2: "神聖治療", 3: "火焰之球", 4: "冰霜箭",
-    5: "全域爆破", 6: "致命暗殺", 7: "毒爆", 8: "毒刃襲擊", 9: "五連矢",
-    10: "箭矢補充", 11: "吸血箭", 12: "狂暴之力", 13: "熱血", 14: "血怒之泉",
-    15: "神龍之息", 16: "龍血之泉", 17: "神龍燎原", 18: "血刀", 19: "血脈祭儀",
-    20: "轉生", 21: "剛毅打擊", 22: "不屈意志", 23: "絕地反擊", 24: "吞裂",
-    25: "巨口吞世", 26: "堅硬皮膚", 27: "續戰攻擊", 28: "埋伏防禦", 29: "荒原抗性",
-    30: "雷霆護甲", 31: "凍燒雷", 32: "雷擊術", 33: "枯骨", 34: "荒原",
-    35: "生命逆流", 36: "災厄隕星", 37: "光輝流星", 38: "虛擬創星圖"
+    0: "聖光斬", 1: "堅守防禦", 2: "神聖治療",
+    3: "決一死戰", 4: "火焰之球", 5: "冰霜箭", 6: "全域爆破", 7: "無詠唱魔法", 8: "致命暗殺",
+    9: "毒爆", 10: "毒刃襲擊", 11: "致命藥劑", 12: "五連矢", 13: "箭矢補充", 14: "吸血箭",
+    15: "驟雨", 16: "狂暴之力", 17: "熱血", 18: "血怒之泉", 19: "嗜血本能", 20: "神龍之息", 21: "龍血之泉",
+    22: "神龍燎原", 23: "預借", 24: "血刀", 25: "血脈祭儀", 26: "轉生", 27: "新生", 28: "剛毅打擊", 29: "不屈意志",
+    30: "絕地反擊", 31: "破魂斬", 32: "吞裂", 33: "巨口吞世", 34: "堅硬皮膚", 35: "觸電反應",
+    36: "續戰攻擊", 37: "埋伏防禦", 38: "荒原抗性", 39: "地雷", 40: "雷霆護甲", 41: "凍燒雷",
+    42: "雷擊術", 43: "天啟", 44: "枯骨",  45: "荒原", 46: "生命逆流", 47: "風化", 48: "災厄隕星",  49: "光輝流星",
+    50: "虛擬創星圖", 51: "無序聯星"
 }
 
 profession_id_to_name = {
@@ -684,6 +716,7 @@ profession_id_to_name = {
     5: "龍神", 6: "血神", 7: "剛毅武士", 8: "鯨吞", 9: "荒原遊俠",
     10: "元素法師", 11: "荒神", 12: "星神"
 }
+
 
 @main_routes.route("/api/embedding/list_models", methods=["GET"])
 def list_embedding_models():
@@ -720,6 +753,7 @@ def list_embedding_models():
 
     return jsonify(models), 200
 
+
 @main_routes.route("/api/embedding/get", methods=["GET"])
 def get_embedding():
     """
@@ -745,7 +779,8 @@ def get_embedding():
 
     # 根據 JSON 結構決定要處理的 key
     if "profession_p" in embed_data:
-        keys = ["profession_p", "profession_e", "skill_p", "skill_e", "effect_p", "effect_e"]
+        keys = ["profession_p", "profession_e",
+                "skill_p", "skill_e", "effect_p", "effect_e"]
     else:
         keys = ["profession", "skill", "effect"]
 
@@ -760,9 +795,11 @@ def get_embedding():
 
         # 根據不同類別設定預設 perplexity (skill 類較多，預設 15，其它預設 5)
         default_perplexity = 15 if "skill" in key else 5
-        perplexity = default_perplexity if default_perplexity < n_samples else max(1, n_samples - 1)
+        perplexity = default_perplexity if default_perplexity < n_samples else max(
+            1, n_samples - 1)
         try:
-            tsne = TSNE(n_components=dim, perplexity=perplexity, random_state=42)
+            tsne = TSNE(n_components=dim,
+                        perplexity=perplexity, random_state=42)
             reduced = tsne.fit_transform(arr)
         except Exception as e:
             return jsonify({"error": f"TSNE failed for {key}: {str(e)}"}), 500

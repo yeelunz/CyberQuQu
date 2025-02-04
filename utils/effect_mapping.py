@@ -18,8 +18,6 @@ EFFECT_MAPPING = {
     11: 30, # HP Recovery
     12: 33, # Max HP Increase
     13: 36, # Track
-    19: 39, # CustomEffect Dot
-
 }
 
 # 99: 39, # CustomEffect

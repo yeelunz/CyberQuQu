@@ -136,7 +136,7 @@ def version_test_model_vs_model_generate_sse(professions, skill_mgr, num_battles
     }
 from datetime import datetime
 
-# 以下為輔助函式，請依你原專案實作調整
+# 以下為輔助函式
 def get_trainer(model_path, fc_hiddens_default=[256, 256, 256]):
     """
     根據模型路徑讀取 training_meta.json，並建立 PPOConfig 與 trainer，

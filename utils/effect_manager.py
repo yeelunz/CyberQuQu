@@ -209,10 +209,11 @@ class EffectManager:
                     else:
                         result.append(effect)
         return result
-
+    
+        
     def remove_all_effects(self, effect_name: str,source = None):
         """
-        移除所有指定名稱的效果。
+        移除所有指定名稱的效果。如果指定source，則僅移除來源相同的效果。
         """
         for effect_id, effects in list(self.active_effects.items()):
             for effect in effects:
@@ -239,7 +240,7 @@ class EffectManager:
         :param sources: 效果的來源，用於區分不同來源的效果。
         """
         # 對於特定的效果ID，需要指定來源
-        if effect_name in ["攻擊力","防禦力","治癒力","龍神buff"]:  # 到需要source的效果ID列表
+        if effect_name in ["攻擊力","防禦力","治癒力"]:  # 到需要source的效果ID列表
             # 只有：同名字，但效果不同的效果才需要sourc來區分
             if not sources:
                 raise ValueError(f"Effect ID {effect_name} 必須指定 source。")

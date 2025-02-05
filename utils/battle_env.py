@@ -57,8 +57,9 @@ class BattleEnv(MultiAgentEnv):
             self.round_count = 1
             self.done = False
             self.battle_log = []
+            self.cur_round_battle_log = []
             self.damage_coefficient = 1.0
-            self.size = 158
+            self.size = 170
             self.train_mode = config["train_mode"]
             self.mpro = []
             self.epro = []
@@ -82,6 +83,7 @@ class BattleEnv(MultiAgentEnv):
         self.round_count = 1
         self.done = False
         self.battle_log.clear()
+        self.cur_round_battle_log.clear()
         self.damage_coefficient = 1.0
         all_professions = self.config["all_professions"]
         if self.train_mode:
@@ -202,6 +204,7 @@ class BattleEnv(MultiAgentEnv):
                 # 1. event.target 使用受傷動畫 (在前端js處理)
                 # 2. 啟用傷害數字動畫，數字在event.applendix["amount"] (在前端js處理)
                 self.battle_log.append(event)
+                self.cur_round_battle_log.append(event)
                 # 3. 啟用狀態刷新動畫
                 self.add_event(event=BattleEvent(type="refresh_status"))
                 
@@ -220,6 +223,7 @@ class BattleEnv(MultiAgentEnv):
                 
                 
                 self.battle_log.append(event)
+                self.cur_round_battle_log.append(event)
                 # 3. 啟用狀態刷新動畫
                 self.add_event(event=BattleEvent(type="refresh_status"))
             
@@ -231,6 +235,7 @@ class BattleEnv(MultiAgentEnv):
                 # 1. event.user 使用受傷動畫 (在前端js處理)
                 # 2. 啟用傷害數字動畫，數字在event.applendix["amount"] (在前端js處理)
                 self.battle_log.append(event)
+                self.cur_round_battle_log.append(event)
                 # 3. 啟用狀態刷新動畫
                 
                 self.add_event(event=BattleEvent(type="refresh_status"))
@@ -241,10 +246,10 @@ class BattleEnv(MultiAgentEnv):
                     event.text = f"{user['profession'].name} 被施加了 {event.appendix['effect_name']} 狀態"
                 # 動畫格式為： 無
                 self.battle_log.append(event)
+                self.cur_round_battle_log.append(event)
                 
                 self.add_event(event=BattleEvent(type="refresh_status"))
-                
-                  
+                      
             case "status_tick":
                 # 額外處理異常狀態持續事件
                 # 需要status type
@@ -256,12 +261,14 @@ class BattleEnv(MultiAgentEnv):
                         event.text = f"{user['profession'].name} 的 {event.appendix['effect_name']} 持續中，造成 {event.appendix['amount']} 點傷害"
                     # 動畫格式為： event.target 使用受傷動畫 (在前端js處理)
                     self.battle_log.append(event)
+                    self.cur_round_battle_log.append(event)
                 else:
                     # 文字格式為 user 的 {event.appendix["effect_name"]} 持續中
                     if event.text is None:
                         event.text = f"{user['profession'].name} 的 {event.appendix['effect_name']} 持續中"
                     # 動畫格式為：無
                     self.battle_log.append(event)
+                    self.cur_round_battle_log.append(event)
                     
                 self.add_event(event=BattleEvent(type="refresh_status"))
                 
@@ -271,6 +278,7 @@ class BattleEnv(MultiAgentEnv):
                 if event.text is None:
                     event.text = f"{user['profession'].name} 被施加 {event.appendix['effect_name']} 狀態失敗"
                 self.battle_log.append(event)
+                self.cur_round_battle_log.append(event)
                 # 無動畫
                 self.add_event(event=BattleEvent(type="refresh_status"))
                 
@@ -280,6 +288,7 @@ class BattleEnv(MultiAgentEnv):
                 if event.text is None:
                     event.text = f"{user['profession'].name} 的 {event.appendix['effect_name']} 狀態被移除"
                 self.battle_log.append(event)
+                self.cur_round_battle_log.append(event)
                 # 無動畫
                 self.add_event(event=BattleEvent(type="refresh_status"))
                 
@@ -290,6 +299,7 @@ class BattleEnv(MultiAgentEnv):
                     event.text = f"{user['profession'].name} 的 {event.appendix['effect_name']} 狀態剩餘回合數更新為 {event.appendix['duration']}"
                     
                 self.battle_log.append(event)
+                self.cur_round_battle_log.append(event)
                 
                 self.add_event(event=BattleEvent(type="refresh_status"))
             case "status_stack_update":
@@ -299,6 +309,7 @@ class BattleEnv(MultiAgentEnv):
                     event.text = f"{user['profession'].name} 的 {event.appendix['effect_name']} 效果堆疊數量更新為 {event.appendix['stacks']}"
                 #  動畫格式為： 不顯示動畫
                 self.battle_log.append(event) 
+                self.cur_round_battle_log.append(event)
                 
                 self.add_event(event=BattleEvent(type="refresh_status"))
                 
@@ -306,6 +317,7 @@ class BattleEnv(MultiAgentEnv):
                 
                 # 處理異常狀態堆疊設置事件
                 self.battle_log.append(event)
+                self.cur_round_battle_log.append(event)
                 
                 self.add_event(event=BattleEvent(type="refresh_status"))
                 
@@ -316,6 +328,7 @@ class BattleEnv(MultiAgentEnv):
                     event.text = f"【{user['profession'].name}】，因 {event.appendix['effect_name']} 跳過行動" 
                 # 動畫格式為： 不顯示動畫
                 self.battle_log.append(event)
+                self.cur_round_battle_log.append(event)
 
             case "skill":
                 # 文字格式為： f"{self.name} 使用了技能 {sm.get_skill_name(skill_id)}。"
@@ -323,6 +336,7 @@ class BattleEnv(MultiAgentEnv):
                     event.text = f"{user['profession'].name} 使用了技能 {self.skill_mgr.get_skill_name(event.appendix['skill_id'])}。"
                 # 動畫格式為： event.user 使用技能動畫 (在前端js處理)
                 self.battle_log.append(event)
+                self.cur_round_battle_log.append(event)
             
             case "text":
                 # 文字格式為： event.text
@@ -330,6 +344,7 @@ class BattleEnv(MultiAgentEnv):
                 if not event.text:
                     raise ValueError("text is None")
                 self.battle_log.append(event)
+                self.cur_round_battle_log.append(event)
                 
             case "refresh_status":
                 # 文字格式為： 不顯示文字
@@ -377,23 +392,26 @@ class BattleEnv(MultiAgentEnv):
                 event.text = None
                 # 動畫格式為： 刷新狀態動畫 (在前端js處理)
                 self.battle_log.append(event)
+                self.cur_round_battle_log.append(event)
             
             case "turn_start":
                 # add refresh_status
                 self.battle_log.append(event)
+                self.cur_round_battle_log.append(event)
                 self.add_event(event=BattleEvent(type="refresh_status"))
                 
             case "turn_end":
                 # add refresh_status
                 self.battle_log.append(event)
+                self.cur_round_battle_log.append(event)
                 self.add_event(event=BattleEvent(type="refresh_status"))
 
             
             case "other":
                 # 處理其他事件類型
                 self.battle_log.append(event)
+                self.cur_round_battle_log.append(event)
 
- 
     def _get_action_mask(self, member):
       """
       回傳 [4]，其中 1 代表該技能可用，0 代表在冷卻或其他條件無法使用
@@ -407,6 +425,7 @@ class BattleEnv(MultiAgentEnv):
     def step(self, actions):
         self._print_round_header()
         self._print_teams_hp()
+        self.cur_round_battle_log.clear()
         
         # print("\n",actions,"\n")
 
@@ -416,8 +435,8 @@ class BattleEnv(MultiAgentEnv):
         # last skill used by one-hot encoding
         m = self.player_team[0]
         e = self.enemy_team[0]
-        m['last_skill_used'] = [0,0,0]
-        e['last_skill_used'] = [0,0,0]
+        m['last_skill_used'] = [0,0,0,0]
+        e['last_skill_used'] = [0,0,0,0]
         m['last_skill_used'][p_action] = 1
         e['last_skill_used'][e_action] = 1
 
@@ -467,15 +486,15 @@ class BattleEnv(MultiAgentEnv):
             skill_index = int(player_actions[i])
             # 根據職業ID計算實際技能ID
             profession_id = user["profession"].profession_id
-            skill_id = 3 * profession_id + skill_index
+            skill_id = 4 * profession_id + skill_index
 
             available_skills = user["profession"].get_available_skill_ids(user["cooldowns"])
             if skill_id not in available_skills:
                 # 如果選擇的技能不可用，隨機選擇可用技能
-                available_skill_indices = [sid - 3 * profession_id for sid in available_skills]
+                available_skill_indices = [sid - 4 * profession_id for sid in available_skills]
                 if available_skill_indices:
                     skill_index = random.choice(available_skill_indices)
-                    skill_id = 3 * profession_id + skill_index
+                    skill_id = 4 * profession_id + skill_index
                     skill_name = self.skill_mgr.get_skill_name(skill_id)
                     self.add_event(user,event=BattleEvent(type="text",text=f"P隊伍{i}({user['profession'].name}) 選擇的技能不可用，隨機選擇 {skill_name}"))
   
@@ -522,15 +541,15 @@ class BattleEnv(MultiAgentEnv):
             skill_index = int(enemy_actions[j])
             # 根據職業ID計算實際技能ID
             profession_id = e["profession"].profession_id
-            skill_id = 3 * profession_id + skill_index
+            skill_id = 4 * profession_id + skill_index
 
             available_skills = e["profession"].get_available_skill_ids(e["cooldowns"])
             if skill_id not in available_skills:
                 # 如果選擇的技能不可用，隨機選擇可用技能
-                available_skill_indices = [sid - 3 * profession_id for sid in available_skills]
+                available_skill_indices = [sid - 4 * profession_id for sid in available_skills]
                 if available_skill_indices:
                     skill_index = random.choice(available_skill_indices)
-                    skill_id = 3 * profession_id + skill_index
+                    skill_id = 4 * profession_id + skill_index
                     skill_name = self.skill_mgr.get_skill_name(skill_id)
                     self.add_event(e,event=BattleEvent(type="text",text=f"E隊伍{j}({e['profession'].name}) 選擇的技能不可用，隨機選擇 {skill_name}"))
 
@@ -740,9 +759,9 @@ class BattleEnv(MultiAgentEnv):
                 "heal":   np.array([0, 0, 1], dtype=np.float32)
             }
             one_hot_list = []
-            # 這裡 local 技能 id 為 0,1,2
-            for local_id in [0, 1, 2]:
-                real_skill_id = profession.profession_id * 3 + local_id
+            # 這裡 local 技能 id 為 0,1,2,3
+            for local_id in [0, 1, 2 ,3]:
+                real_skill_id = profession.profession_id * 4 + local_id
                 skill_type = sm.get_skill_type(real_skill_id)
                 if skill_type in mapping:
                     one_hot_list.append(mapping[skill_type])
@@ -751,31 +770,20 @@ class BattleEnv(MultiAgentEnv):
             # 串接三個 one-hot 編碼，總長度 9
             return np.concatenate(one_hot_list)
 
-        # 編碼公共觀測中的 last_skill_used
-        # 輸入的值應為 0, 1, 2，分別對應編碼：[1,0,0], [0,1,0], [0,0,1]
-        def encode_last_skill(last_skill_local):
-            if last_skill_local == 0:
-                return np.array([1, 0,0], dtype=np.float32)
-            elif last_skill_local == 1:
-                return np.array([0,1, 0], dtype=np.float32)
-            elif last_skill_local == 2:
-                return np.array([0,0, 1], dtype=np.float32)
-            else:
-                # 若不在 0,1,2 範圍內則回傳預設 [0,0]
-                return np.array([0, 0,0], dtype=np.float32)
+
 
         # 編碼 Player 與 Enemy 的職業
         player_profession_one_hot = one_hot_encode(player_m["profession"].profession_id, num_professions)
         enemy_profession_one_hot = one_hot_encode(enemy_m["profession"].profession_id, num_professions)
 
-        # 取得各角色的技能類型 one-hot 編碼 (長度 9)
+        # 取得各角色的技能類型 one-hot 編碼 (長度 12)
         player_skill_one_hot = one_hot_encode_skill(player_m["profession"])
         enemy_skill_one_hot = one_hot_encode_skill(enemy_m["profession"])
 
         # 構建個體觀測值
-        # 原本數值特徵有 8 項，加上職業 one-hot (13 維) 及技能編碼 (9 維) → 13+8+9 = 30 維
+        # 
         player_obs = np.concatenate([
-            player_profession_one_hot,  # 13 維
+            player_profession_one_hot,  #
             [
                 player_m["hp"] / player_m["max_hp"],
                 player_m["max_hp"] / self.maxProfession_hp,
@@ -786,11 +794,11 @@ class BattleEnv(MultiAgentEnv):
                 player_m["profession"].baseAtk,
                 player_m["profession"].baseDef,
             ],  # 8 維
-            player_skill_one_hot  # 9 維
+            player_skill_one_hot  #
         ], dtype=np.float32)
 
         enemy_obs = np.concatenate([
-            enemy_profession_one_hot,  # 13 維
+            enemy_profession_one_hot,  
             [
                 enemy_m["hp"] / enemy_m["max_hp"],
                 enemy_m["max_hp"] / self.maxProfession_hp,
@@ -801,10 +809,10 @@ class BattleEnv(MultiAgentEnv):
                 enemy_m["profession"].baseAtk,
                 enemy_m["profession"].baseDef,
             ],  # 8 維
-            enemy_skill_one_hot  # 9 維
+            enemy_skill_one_hot  
         ], dtype=np.float32)
 
-        # 行動遮罩 (假設共有 3 個特徵)
+        # 行動遮罩 
         player_mask = self._get_action_mask(player_m)
         enemy_mask = self._get_action_mask(enemy_m)
 
@@ -819,28 +827,45 @@ class BattleEnv(MultiAgentEnv):
              self.round_count / self.max_rounds],
             dtype=np.float32
         )
+        # real cooldowns
+        real_cd_p = np.array(list(player_m["cooldowns"].values()),dtype=np.float32)/self.max_rounds
+        real_cd_e = np.array(list(enemy_m["cooldowns"].values()),dtype=np.float32)/self.max_rounds
+        
+        
         if agent == "player":
-            # 對方是 enemy，假設 enemy_m["last_skill_used"] 為 local 技能 id (0,1,2)
-            last_skill_encoded = encode_last_skill(enemy_m["last_skill_used"])
-            last_skill_encoded_r = encode_last_skill(player_m["last_skill_used"])
+            # 這裡的已經是one-hot編碼過後的了
+            last_skill_encoded = enemy_m["last_skill_used"]
+            last_skill_encoded_r = player_m["last_skill_used"]
+            real_cd = np.concatenate([real_cd_p,real_cd_e])
             
         else:
-            last_skill_encoded = encode_last_skill(player_m["last_skill_used"])
-            last_skill_encoded_r = encode_last_skill(enemy_m["last_skill_used"])
-        public_obs = np.concatenate([base_public_obs, last_skill_encoded,last_skill_encoded_r])
+            last_skill_encoded = player_m["last_skill_used"]
+            last_skill_encoded_r = enemy_m["last_skill_used"]
+            real_cd = np.concatenate([real_cd_e,real_cd_p])
+        public_obs = np.concatenate([base_public_obs, last_skill_encoded,last_skill_encoded_r,real_cd])
 
-        # 特效管理器觀測值 (假設各有 42 維)
+        # 特效管理器觀測值 
+        # 這邊只會處理最多只會處理一個特效的存在
+        # 當存在多個特效時，會只取第一個特效的資訊
+        # obs是一個3維向量 [exist , stack , duration]，其中位置資訊代表特效的eff id
+        # 
         pem = player_m["effect_manager"].export_obs()
         eem = enemy_m["effect_manager"].export_obs()
 
         # 最終觀測值拼接：
-        # 例如：若 agent 為 "player"，順序為：
-        # player_mask + player_obs (33 維) + pem (42 維) +
-        # enemy_mask + enemy_obs (33 維) + eem (42 維) + public_obs (2+2=4 維)
+        # obs[162] =  self real cd skill 0
+        # obs[163] =  self real cd skill 1
+        # obs[164] =  self real cd skill 2
+        # obs[165] =  self real cd skill 3
+        # obs[166] =  enemy real cd skill 0
+        # obs[167] =  enemy real cd skill 1
+        # obs[168] =  enemy real cd skill 2
+        # obs[169] =  enemy real cd skill 3
+        
         pout = np.concatenate([flattened_pobs, pem, flattened_eobs, eem, public_obs])
         eout = np.concatenate([flattened_eobs, eem, flattened_pobs, pem, public_obs])
         
-        print("pout",pout.shape)
+        # print("pout",pout.shape)
 
         if agent == "player":
             return pout
@@ -978,24 +1003,15 @@ class BattleEnv(MultiAgentEnv):
         # 重置一次性buff
         for m in alist:
             m["is_defending"] = False
-            
 
-
-        # 合併各角色的 battle_log 到 env.battle_log
-        for m in alist:
-            if m["battle_log"]:
-                self.battle_log.extend(m["battle_log"])
-                m["battle_log"] = []  # 清空角色的 battle_log
 
     def _process_passives(self):
         """
         處理每回合開始時的被動技能
         """
         for member in self.player_team:
-
             left = member
         for member in self.enemy_team:
-
             right = member
         left["profession"].on_turn_start(left,right,self,-1)
         right["profession"].on_turn_start(right,left,self,-1)
@@ -1068,11 +1084,6 @@ class BattleEnv(MultiAgentEnv):
             print(f"\n---\n回合 {self.round_count} :\n")
 
     def _print_round_footer(self):
-        if self.show_battle_log:
-            for line in self.battle_log:
-                pass
-                # print(line.type, line.text)
-            # self.battle_log = []
         self.add_event(event=BattleEvent(type="turn_end"))
 
     def _print_teams_hp(self):

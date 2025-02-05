@@ -406,7 +406,7 @@ function renderSkillUsageFrequency(skillusedFreq, container) {
   skillTitle.textContent = "技能使用頻率分析 (Skill Usage Frequency Analysis)";
   skillSection.appendChild(skillTitle);
 
-  // 建立表格
+  // 建立表格，將技能欄位從3個改為4個（colspan 由 3 改成 4）
   const skillTable = document.createElement("table");
   skillTable.classList.add("cross-battle-table");
 
@@ -414,13 +414,14 @@ function renderSkillUsageFrequency(skillusedFreq, container) {
       <thead>
         <tr>
           <th>職業</th>
-          <th colspan="3">技能</th>
+          <th colspan="4">技能</th>
         </tr>
         <tr>
           <th></th>
           <th>技能 0</th>
           <th>技能 1</th>
           <th>技能 2</th>
+          <th>技能 3</th>
         </tr>
       </thead>
       <tbody>
@@ -430,11 +431,11 @@ function renderSkillUsageFrequency(skillusedFreq, container) {
   const skillTbody = skillTable.querySelector("tbody");
 
   for (const [profession, skills] of Object.entries(skillusedFreq)) {
-    // 計算該職業的總技能使用次數
+    // 計算該職業的總技能使用次數，假設 skills 物件中包含 0,1,2,3 四個欄位
     const totalSkillUsage = Object.values(skills).reduce(
       (sum, freq) => sum + freq,
       0
-    );
+    ) || 1; // 避免除以 0
 
     const tr = document.createElement("tr");
     tr.innerHTML = `
@@ -445,28 +446,25 @@ function renderSkillUsageFrequency(skillusedFreq, container) {
           <img src="/static/images/${encodeURIComponent(
             profession
           )}_skill_0.png" alt="Skill 0" class="skill-avatar-small" /><br>
-          次數: ${skills[0] || 0} (${(
-      ((skills[0] || 0) / totalSkillUsage) *
-      100
-    ).toFixed(2)}%)
+          次數: ${skills[0] || 0} (${(((skills[0] || 0) / totalSkillUsage) * 100).toFixed(2)}%)
         </td>
         <td>
           <img src="/static/images/${encodeURIComponent(
             profession
           )}_skill_1.png" alt="Skill 1" class="skill-avatar-small" /><br>
-          次數: ${skills[1] || 0} (${(
-      ((skills[1] || 0) / totalSkillUsage) *
-      100
-    ).toFixed(2)}%)
+          次數: ${skills[1] || 0} (${(((skills[1] || 0) / totalSkillUsage) * 100).toFixed(2)}%)
         </td>
         <td>
           <img src="/static/images/${encodeURIComponent(
             profession
           )}_skill_2.png" alt="Skill 2" class="skill-avatar-small" /><br>
-          次數: ${skills[2] || 0} (${(
-      ((skills[2] || 0) / totalSkillUsage) *
-      100
-    ).toFixed(2)}%)
+          次數: ${skills[2] || 0} (${(((skills[2] || 0) / totalSkillUsage) * 100).toFixed(2)}%)
+        </td>
+        <td>
+          <img src="/static/images/${encodeURIComponent(
+            profession
+          )}_skill_3.png" alt="Skill 3" class="skill-avatar-small" /><br>
+          次數: ${skills[3] || 0} (${(((skills[3] || 0) / totalSkillUsage) * 100).toFixed(2)}%)
         </td>
       `;
     skillTbody.appendChild(tr);

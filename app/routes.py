@@ -9,17 +9,19 @@ from utils.versus import (
     computer_vs_computer,
     ai_vs_ai,
 
-    get_professions_data
 )
 from utils.skills import build_skill_manager
 from utils.professions import build_professions
-from utils.train_methods import multi_agent_cross_train, stop_training_flag
+from utils.train_methods import multi_agent_cross_train, stop_training_flag , make_env_config
 from utils.cross_model_evaluation import version_test_model_vs_model_generate_sse
 from utils.single_model_evaluation import version_test_random_vs_random_sse_ai, compute_ai_elo
 from utils.pc_evaluaiton import version_test_random_vs_random_sse
-
+import time
+from utils.battle_env import BattleEnv
 from utils.data_stamp import Gdata
 import json
+import uuid
+import queue
 from utils.global_var import globalVar
 from utils.profession_var import (
     PALADIN_VAR, MAGE_VAR, ASSASSIN_VAR, ARCHER_VAR, BERSERKER_VAR,
@@ -341,6 +343,7 @@ def api_computer_vs_computer():
         pr1=pr1_obj,
         pr2=pr2_obj
     )
+
     return jsonify({"battle_log": battle_log})
 
 
@@ -516,7 +519,7 @@ def get_professions_data(profession_list, skill_mgr):
             },
             "skills": []
         }
-        skill_ids = p.get_available_skill_ids({0: 0, 1: 0, 2: 0})
+        skill_ids = p.get_available_skill_ids({0: 0, 1: 0, 2: 0, 3:0})
         for sid in skill_ids:
             skill = skill_mgr.skills.get(sid)
             if skill:
@@ -692,16 +695,15 @@ def show_list_model_vs_model_json():
         return jsonify({"error": str(e)}), 500
 
 
-# 映射表
 eff_id_to_name = {
     1: "攻擊力變更", 2: "防禦力變更", 3: "治癒力變更", 4: "燃燒", 5: "中毒",
     6: "凍結", 7: "免疫傷害", 8: "免疫控制", 9: "流血", 10: "麻痺",
-    11: "回血", 12: "最大生命值變更", 13: "追蹤"
+    11: "回血", 12: "無效效果", 13: "追蹤"
 }
 
 skill_id_to_name = {
     0: "聖光斬", 1: "堅守防禦", 2: "神聖治療",
-    3: "決一死戰", 4: "火焰之球", 5: "冰霜箭", 6: "全域爆破", 7: "無詠唱魔法", 8: "致命暗殺",
+    3: "決一死戰", 4: "火焰之球", 5: "冰霜箭", 6: "全域爆破", 7: "詠唱破棄．全域爆破", 8: "致命暗殺",
     9: "毒爆", 10: "毒刃襲擊", 11: "致命藥劑", 12: "五連矢", 13: "箭矢補充", 14: "吸血箭",
     15: "驟雨", 16: "狂暴之力", 17: "熱血", 18: "血怒之泉", 19: "嗜血本能", 20: "神龍之息", 21: "龍血之泉",
     22: "神龍燎原", 23: "預借", 24: "血刀", 25: "血脈祭儀", 26: "轉生", 27: "新生", 28: "剛毅打擊", 29: "不屈意志",
@@ -831,3 +833,290 @@ def get_embedding():
         result_categories.append(cat_data)
 
     return jsonify({"categories": result_categories}), 200
+
+def get_skill_info(skill_id):
+    """
+    取得技能的資訊，包含名稱、描述、冷卻時間、效果類型。
+    這邊的skill id 是 global skill id，不是 profession 內的 skill id。
+    """
+    skill = skill_mgr.skills.get(skill_id)
+    if skill:
+        return {
+            "name": skill.name,
+            "description": skill.desc,
+            "cooldown": skill.cool_down if skill.cool_down > 0 else None,
+            "type": skill.type
+        }
+    return None
+
+
+
+
+pva_sessions = {}  # 用 session_id -> {env, trainer_enemy, state_enemy, ...} 做儲存
+
+
+def create_pva_environment(skill_mgr, professions, model_path, pr_player, pr_enemy):
+    """
+    建立「玩家 vs AI」模式所需的環境 & 訓練器等。
+    - pr_player: 玩家職業 (Profession物件)
+    - pr_enemy:  AI職業
+    - model_path: AI模型路徑
+    回傳: (env, trainer_enemy, state_enemy)
+    """
+    from ray.rllib.algorithms.ppo import PPOConfig
+
+    # === 讀取 model_path 的超參數 ===
+    fc_hiddens = [256, 256, 256]  # 預設
+    max_seq_len = 10
+    mask_model = "my_mask_model"
+    cp_path = os.path.abspath(model_path)
+    if os.path.exists(cp_path):
+        meta_path = os.path.join(cp_path, "training_meta.json")
+        if os.path.exists(meta_path):
+            try:
+                with open(meta_path, "r", encoding="utf-8") as f:
+                    meta_info = json.load(f)
+                    hyperparams = meta_info.get("hyperparams", {})
+                    fc_hiddens = hyperparams.get("fcnet_hiddens", [256, 256, 256])
+                    max_seq_len = hyperparams.get("max_seq_len", 10)
+                    mask_model = hyperparams.get("mask_model", "my_mask_model")
+            except:
+                print("讀取 training_meta.json 失敗，使用預設。")
+
+    # === 建立環境配置 ===
+    beconfig = make_env_config(
+        skill_mgr=skill_mgr,
+        professions=professions,
+        show_battlelog=True,
+        pr1=pr_player,
+        pr2=pr_enemy,
+    )
+
+    # === 建立 config (只需要給「敵人」使用) ===
+    config_enemy = (
+        PPOConfig()
+        .environment(env=BattleEnv, env_config=beconfig)
+        .env_runners(num_env_runners=1, sample_timeout_s=120)
+        .framework("torch")
+        .training(
+            model={
+                "custom_model": mask_model,
+                "fcnet_hiddens": fc_hiddens,
+                "fcnet_activation": "ReLU",
+                "vf_share_layers": False,
+                "max_seq_len": max_seq_len,
+            },
+        )
+    )
+    config_enemy = config_enemy.multi_agent(
+        policies={
+            # 敵人用 shared_policy
+            "enemy_policy": (None, BattleEnv(beconfig).observation_space, BattleEnv(beconfig).action_space, {}),
+        },
+        policy_mapping_fn=lambda agent_id, episode, worker=None, **kwargs:
+            "enemy_policy" if agent_id == "enemy" else None,
+    )
+
+    # 關閉部分 api stack
+    config_enemy.api_stack(enable_rl_module_and_learner=False, enable_env_runner_and_connector_v2=False)
+
+    # === 建立 env ===
+    env = BattleEnv(beconfig)
+    # 重置環境
+    obs, _ = env.reset()
+
+    # === 建立敵人AI 的 trainer ===
+    trainer_enemy = config_enemy.build()
+    print("載入模型:", model_path)
+    trainer_enemy.restore(model_path)
+
+    # 取得敵人policy初始狀態
+    policy_enemy = trainer_enemy.get_policy("enemy_policy")
+    state_enemy = policy_enemy.get_initial_state()
+
+    return env, trainer_enemy, state_enemy
+
+
+@main_routes.route("/api/player_vs_ai_init", methods=["POST"])
+def player_vs_ai_init():
+    """
+    初始化玩家 vs AI 的戰鬥:
+      - 前端傳來 JSON: { "player_profession": "...", "enemy_profession": "...", "model": "..." }
+      - 建立環境 & 訓練器
+      - 產生 session_id 並儲存於 pva_sessions
+    回傳 { "session_id": "...", "msg": "ok" }
+    """
+    data = request.json
+    if not data:
+        return jsonify({"error": "no data"}), 400
+
+    pr_name_player = data.get("player_profession", "Random")
+    pr_name_enemy = data.get("enemy_profession", "Random")
+    model_name = data.get("model", "")
+
+    if not model_name:
+        return jsonify({"error": "必須提供 model"}), 400
+
+    # 尋找對應的 Profession
+    professions = build_professions()
+    if pr_name_player == "Random":
+        pr_player = random.choice(professions)
+    else:
+        pr_player = find_profession_by_name(pr_name_player, professions) or random.choice(professions)
+
+    if pr_name_enemy == "Random":
+        pr_enemy = random.choice(professions)
+    else:
+        pr_enemy = find_profession_by_name(pr_name_enemy, professions) or random.choice(professions)
+
+    # 模型路徑
+    model_path = os.path.abspath(os.path.join("data", "saved_models", model_name))
+    if not os.path.exists(model_path):
+        return jsonify({"error": f"模型 {model_name} 不存在"}), 400
+
+    # 建立 Environment
+    skill_mgr = build_skill_manager()
+    env, trainer_enemy, state_enemy = create_pva_environment(
+        skill_mgr=skill_mgr,
+        professions=professions,
+        model_path=model_path,
+        pr_player=pr_player,
+        pr_enemy=pr_enemy,
+    )
+
+    # 建立一個可以存放 SSE message 的 queue (或 list)，此處示範 queue
+    msg_queue = queue.Queue()
+
+    # 把當前環境、trainer 等存起來
+    session_id = str(uuid.uuid4())
+    pva_sessions[session_id] = {
+        "env": env,
+        "trainer_enemy": trainer_enemy,
+        "state_enemy": state_enemy,
+        "msg_queue": msg_queue,
+        "skill_mgr": skill_mgr,
+        "professions": professions,
+        "done": False,
+    }
+
+    return jsonify({"session_id": session_id, "msg": "ok"}), 200
+
+
+@main_routes.route("/api/player_vs_ai_stream/<session_id>", methods=["GET"])
+def player_vs_ai_stream(session_id):
+    """
+    SSE：前端用 EventSource("/api/player_vs_ai_stream/<session_id>") 連線後，
+    後端持續把當回合產生的 battle log 推送給前端。
+    """
+    if session_id not in pva_sessions:
+        return jsonify({"error": "invalid session_id"}), 400
+
+    def sse_stream():
+        q = pva_sessions[session_id]["msg_queue"]
+        while True:
+            # 若 queue 裏有訊息，就 pop 出並送給前端
+            data = q.get()  # 會阻塞直到拿到資料
+            yield f"data: {json.dumps(data)}\n\n"
+            time.sleep(0.01)
+
+    return Response(sse_stream(), mimetype="text/event-stream")
+
+
+@main_routes.route("/api/player_vs_ai_step/<session_id>", methods=["POST"])
+def player_vs_ai_step(session_id):
+    """
+    進行一個回合:
+      - 前端傳來要使用的技能 skill_idx (0~3)
+      - 後端讓玩家使用該技能，敵人用AI決定技能
+      - env.step => 獲得當前回合的 battle log => 推進 SSE
+      - 回傳回合是否結束 done
+    """
+    if session_id not in pva_sessions:
+        return jsonify({"error": "invalid session_id"}), 400
+
+    data = request.json
+    skill_idx = data.get("skill_idx", 0)  # 預設用0
+
+    storage = pva_sessions[session_id]
+    if storage["done"]:
+        return jsonify({"message": "battle already ended"}), 200
+
+    env = storage["env"]
+    trainer_enemy = storage["trainer_enemy"]
+    state_enemy = storage["state_enemy"]
+
+    # 取出觀察
+    obs, _ = env.last_obs, env.last_info  # 你在BattleEnv實作裡面記錄 last_obs/last_info，也可以用 env.observation() 取
+    # 1) 玩家 action = skill_idx
+    p_act = skill_idx
+
+    # 2) 敵人 action
+    policy_enemy = trainer_enemy.get_policy("enemy_policy")
+    e_act_package = policy_enemy.compute_single_action(obs["enemy"], state_enemy, policy_id="enemy_policy")
+    e_act = e_act_package[0]
+    new_state_enemy = e_act_package[1]
+
+    actions = {"player": p_act, "enemy": e_act}
+    obs, rew, done_dict, _, info = env.step(actions)
+    done = done_dict["__all__"]
+    storage["state_enemy"] = new_state_enemy
+
+    # 取出當回合的 battle log
+    cur_log = env.cur_round_battle_log  # 你在 BattleEnv 實作裡面，每回合開始清空 env.cur_round_battle_log
+    # 推給 SSE
+    storage["msg_queue"].put({
+        "type": "round_result",
+        "round_battle_log": cur_log,
+    })
+
+    if done:
+        res = info["__common__"]["result"]
+        result_text = "玩家贏了" if res == 1 else ("AI贏了" if res == -1 else "平手/回合耗盡")
+        # 推給 SSE
+        storage["msg_queue"].put({
+            "type": "battle_end",
+            "winner": res,
+            "winner_text": result_text,
+        })
+        storage["done"] = True
+
+    return jsonify({"done": done}), 200
+
+
+@main_routes.route("/api/player_vs_ai_hint/<session_id>", methods=["GET"])
+def player_vs_ai_hint(session_id):
+    """
+    給玩家一個 Hint: 假設玩家也是用同樣的 AI policy，會選哪個技能？
+    - 從 obs["player"] 丟進同一個 policy 做計算
+    - 回傳 action (0~3)，以及該技能詳細資訊(若需要)
+    """
+    if session_id not in pva_sessions:
+        return jsonify({"error": "invalid session_id"}), 400
+    storage = pva_sessions[session_id]
+    if storage["done"]:
+        return jsonify({"message": "battle ended"}), 200
+
+    env = storage["env"]
+    trainer_enemy = storage["trainer_enemy"]
+
+    # 這裡偷用 "enemy_policy" 來算玩家的 hint
+    policy_enemy = trainer_enemy.get_policy("enemy_policy")
+
+    # 取出obs(玩家)
+    obs, _ = env.last_obs, env.last_info
+    if "player" not in obs:
+        return jsonify({"error": "obs not found"}), 400
+
+    # compute_single_action
+    # (這樣做非常簡易，但實務可另開 policy 或另開 trainer。這裡是示範)
+    action_package = policy_enemy.compute_single_action(obs["player"], policy_id="enemy_policy")
+    action = action_package[0]
+
+    # 你可用 get_skill_info(action對應的skill id) 做更多描述
+    # 但在此我們簡化 => action 就是 0~3
+    skill_info = get_skill_info(env.config["professions"]["player"].skills[action])  # skill_mgr 或 profession 取真實 skill_id
+    return jsonify({
+        "action": action,
+        "skill_name": skill_info["name"] if skill_info else f"Skill {action}",
+        "skill_desc": skill_info["description"] if skill_info else "",
+    }), 200

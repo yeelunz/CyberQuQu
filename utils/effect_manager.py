@@ -35,10 +35,6 @@ class EffectManager:
         if effect.type in ['dot']:
             # 此處差別是不可疊加是會不會更新duration
             # 並且無論可不可以疊加，的效果不會有多個同名效果
-            
-            # TODO 缺少自定義效果功能(尚不支援同名效果並從source區分)
-            # TODO 如果是自定義效果的話，僅能從source區分，不可從效果名稱區分
-            # TODO refactor
             if effect.stackable:
                 if existing_effects:
                     existing = existing_effects[0]  # 假設所有同名效果堆疊在第一個
@@ -92,7 +88,7 @@ class EffectManager:
             # track效果不需要去判斷是否可以堆疊，直接添加
             if effect.stackable:
                 if existing_effects:
-                    same_source = any(e.source == effect.source for e in existing_effects)
+                    same_source = any(e.source == effect.source and e.type == 'track' for e in existing_effects)
                     if same_source:
                         for e in existing_effects:
                             # refresh duration
@@ -112,14 +108,18 @@ class EffectManager:
                     self.env.add_event(user = self.target, event = BattleEvent(type="status_apply",appendix={"effect_name":effect.name}))
                     effect.on_apply(self.target)
             else:
-                same_source = any(e.source == effect.source for e in existing_effects)
+                # 
+                same_source = any(e.source == effect.source and e.type == 'track' for e in existing_effects)
+                
                 if same_source:
                     for e in existing_effects:
+                        
                         # refresh duration
                         e.duration = max(e.duration, effect.duration)
 
                         self.env.add_event(user = self.target, event = BattleEvent(type="status_duration_update",appendix={"effect_name":effect.name,"duration":e.duration}))
                 else:
+
                     self.active_effects[effect_id].append(effect)
                     effect.on_apply(self.target)
 
@@ -261,8 +261,9 @@ class EffectManager:
     def get_effect_vector(self):
         """
         將當前所有的效果導出為向量，包括同名效果。
-        格式為：[effect id, effect_stack, effect_max_stack, effect_duration, effect_multiplier] * 當前effect數量
-        當effect是 'buff' 類型時，包含 multiplier；否則，effect_multiplier 填 0。
+        格式為：[effect id, effect_stack, effect_max_stack, effect_duration, eff_special] * 當前effect數量
+        當effect是 'buff' 類型時，eff_special 為multiplier之值。
+        當effect是 'track' 類型時，eff_special 為track 之name，以供前端辨識。
         """
         effect_vector = []
         for effect_id, effects in self.active_effects.items():
@@ -273,11 +274,13 @@ class EffectManager:
                 duration = effect.duration
                 # 檢查是否為 'buff' 類型且具有 multiplier 屬性
                 if effect.type == 'buff' and hasattr(effect, 'multiplier'):
-                    multiplier = effect.multiplier
+                    eff_special = effect.multiplier
+                if effect.type == 'track':
+                    eff_special = effect.name
                 else:
-                    multiplier = 0
+                    eff_special = 0
                 # 將效果資訊添加到向量中
-                effect_vector.extend([eff_id, stacks, max_stack, duration, multiplier])
+                effect_vector.extend([eff_id, stacks, max_stack, duration, eff_special])
         return effect_vector
         
     def export_obs(self):

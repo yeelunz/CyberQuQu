@@ -27,7 +27,6 @@ const EFFECT_DATA = {
   11: { name: "生命值持續變更", type: "buff" },
   12: { name: "最大生命值變更", type: "buff" },
   13: { name: "追蹤", type: "track" },
-  19: { name: "自定義傷害效果", type: "dot" },
 };
 
 /* 事件類型 -> 文字樣式 */
@@ -67,7 +66,7 @@ function initBattleView() {
   battleContainer.style.height = "80vh";
   battleContainer.style.minHeight = "600px";
 
-  // (1) 最上方: 回合 / 全域傷害倍率 / 速度控制
+  // (1) 最上方: 回合 / 全域傷害倍率 / 進度條 / 速度控制
   const topControls = document.createElement("div");
   topControls.id = "battle-top-controls";
   topControls.innerHTML = `
@@ -75,14 +74,18 @@ function initBattleView() {
       <span id="round-indicator">回合 0/0</span>
       <span id="global-damage-coeff">全域傷害倍率: 1.00</span>
     </div>
+    <div id="battle-progress-container">
+      <input type="range" id="battle-progress-bar" min="0" max="0" value="0">
+    </div>
     <div id="speed-control-panel">
+    <button id="pause-btn">繼續/暫停</button>
         <button class="speed-btn" data-speed="2000">0.5x</button>
         <button class="speed-btn" data-speed="1000">1x</button>
         <button class="speed-btn" data-speed="500">2x</button>
         <button class="speed-btn" data-speed="333">3x</button>
         <button class="speed-btn" data-speed="200">5x</button>
         <button class="speed-btn" data-speed="100">10x</button>
-        <button id="pause-btn">暫停</button>
+        <button class="speed-btn" data-speed="50">20x</button>
         <button id="skip-all-btn">跳過全部</button>
         <button id="replay-btn" disabled>Replay</button>
     </div>
@@ -194,9 +197,17 @@ function initBattleView() {
 
   function skipAllEvents() {
     clearTimeout(battleTimerGlobal);
-    battleIndexGlobal = battleLogGlobal.length; // 等於直接跳到結束
+    battleIndexGlobal = battleLogGlobal.length; // 直接跳到結束
+    updateProgressBar();
     showBattleEnd();
   }
+
+  // 新增：進度條拖動控制 (這裡使用 change 事件，若想即時反映可改用 input 事件)
+  const progressBar = document.getElementById("battle-progress-bar");
+  progressBar.addEventListener("change", (e) => {
+    const newIndex = parseInt(e.target.value, 10);
+    seekBattle(newIndex);
+  });
 
   contentArea.appendChild(battleContainer);
 }
@@ -220,6 +231,9 @@ function startBattle(battleLog) {
   const replayBtn = document.getElementById("replay-btn");
   if (replayBtn) replayBtn.disabled = true;
 
+  // 初始化進度條最大值與目前進度
+  updateProgressBar();
+
   advanceBattle();
 }
 
@@ -232,6 +246,7 @@ function advanceBattle() {
   const event = battleLogGlobal[battleIndexGlobal];
   handleBattleEvent(event);
   battleIndexGlobal++;
+  updateProgressBar(); // 每次處理後更新進度條
 
   battleTimerGlobal = setTimeout(() => {
     advanceBattle();
@@ -250,10 +265,10 @@ function togglePause() {
   battlePausedGlobal = !battlePausedGlobal;
   const pauseBtn = document.getElementById("pause-btn");
   if (battlePausedGlobal) {
-    pauseBtn.textContent = "繼續";
+    pauseBtn.textContent = "繼續/暫停";
     clearTimeout(battleTimerGlobal);
   } else {
-    pauseBtn.textContent = "暫停";
+    pauseBtn.textContent = "繼續/暫停";
     advanceBattle();
   }
 }
@@ -269,6 +284,39 @@ function showBattleEnd() {
   addTextLog("【戰鬥結束】", "log-end");
   const replayBtn = document.getElementById("replay-btn");
   if (replayBtn) replayBtn.disabled = false;
+}
+
+/* 
+  ================
+  進度條與拖動尋找功能
+  ================
+*/
+
+// 更新進度條狀態
+function updateProgressBar() {
+  const progressBar = document.getElementById("battle-progress-bar");
+  if (progressBar && battleLogGlobal.length > 0) {
+    progressBar.max = battleLogGlobal.length;
+    progressBar.value = battleIndexGlobal;
+  }
+}
+
+// 當進度條拖動時，從頭依序重播所有事件到指定位置
+function seekBattle(newIndex) {
+  // 暫停戰鬥
+  battlePausedGlobal = true;
+  clearTimeout(battleTimerGlobal);
+
+  // 清空文字日誌與回合廣播（其他區塊可依需求重置）
+  document.getElementById("text-log").innerHTML = "";
+  document.getElementById("turn-broadcast-log").innerHTML = "";
+
+  // 依序執行從 0 到 newIndex 的所有事件（不使用延遲）
+  for (let i = 0; i < newIndex; i++) {
+    handleBattleEvent(battleLogGlobal[i]);
+  }
+  battleIndexGlobal = newIndex;
+  updateProgressBar();
 }
 
 /* 
@@ -409,9 +457,7 @@ function updateStatusBars(appendix) {
     }
     const gdc = document.getElementById("global-damage-coeff");
     if (gdc) {
-      const val = parseFloat(appendix.global.damage_coefficient || 1).toFixed(
-        2
-      );
+      const val = parseFloat(appendix.global.damage_coefficient || 1).toFixed(2);
       gdc.textContent = `全域傷害倍率: ${val}`;
     }
   }
@@ -467,7 +513,7 @@ function updateStatusBars(appendix) {
       leftEffects.innerHTML = parseEffects(appendix.left.effects);
     }
 
-    // 技能列表 + 冷卻
+    // 技能列表 + 冷卻 (注意：此處已調整為 4 個技能)
     const leftSkills = document.getElementById("left-skills");
     if (leftSkills && appendix.left.cooldowns) {
       const prof = appendix.global.left_profession;
@@ -530,7 +576,7 @@ function updateStatusBars(appendix) {
       rightEffects.innerHTML = parseEffects(appendix.right.effects);
     }
 
-    // 技能列表 + 冷卻
+    // 技能列表 + 冷卻 (此處同樣調整為 4 個技能)
     const rightSkills = document.getElementById("right-skills");
     if (rightSkills && appendix.right.cooldowns) {
       const prof = appendix.global.right_profession;
@@ -549,29 +595,33 @@ function parseEffects(effectVector) {
     return `<div class="no-effects">無狀態</div>`;
   }
   let htmlStr = "";
+  // 每五個數值代表一組效果：[effect id, stacks, max stacks, duration, eff_special]
   for (let i = 0; i < effectVector.length; i += 5) {
     const effId = effectVector[i];
     const stacks = effectVector[i + 1];
     const maxStacks = effectVector[i + 2];
     const duration = effectVector[i + 3];
-    const multiplier = effectVector[i + 4];
+    const effSpecial = effectVector[i + 4]; // 當 buff 類型時為 multiplier；當 track 類型時為 track 的真實名稱
 
-    const effData = EFFECT_DATA[effId] || {
-      name: `效果ID:${effId}`,
-      type: "other",
-    };
-    const effName = effData.name;
+    // 取出效果的基本資料，如果找不到則顯示效果ID
+    const effData = EFFECT_DATA[effId] || { name: `效果ID:${effId}`, type: "other" };
+    // 預設名稱為 EFFECT_DATA 裡的名稱
+    let effName = effData.name;
+    // 若效果類型為 track，則使用 effSpecial（track 的真實名稱）
+    if (effData.type === "track" && typeof effSpecial === "string") {
+      effName = effSpecial;
+    }
+
+    // 根據效果類型決定 badge 顏色
     let baseClass = getEffectColorClass(effData.type);
 
-    // 客製化攻/防/治 buff 的外框顏色
+    // 如果是 buff 類型（攻/防/治），依 multiplier 判斷顏色變化
     if (effId === 1) {
-      baseClass =
-        multiplier < 1 ? "badge-buff-attack-lower" : "badge-buff-attack";
+      baseClass = effSpecial < 1 ? "badge-buff-attack-lower" : "badge-buff-attack";
     } else if (effId === 2) {
-      baseClass =
-        multiplier < 1 ? "badge-buff-defense-lower" : "badge-buff-defense";
+      baseClass = effSpecial < 1 ? "badge-buff-defense-lower" : "badge-buff-defense";
     } else if (effId === 3) {
-      baseClass = multiplier < 1 ? "badge-buff-heal-lower" : "badge-buff-heal";
+      baseClass = effSpecial < 1 ? "badge-buff-heal-lower" : "badge-buff-heal";
     }
 
     htmlStr += `
@@ -603,16 +653,17 @@ function getEffectColorClass(effType) {
   }
 }
 
-/* 生成技能列表HTML(帶冷卻) */
+/* 生成技能列表HTML(帶冷卻)
+   調整說明：
+   由於每個職業的技能數量由 3 個變為 4 個，
+   因此這裡改成固定從索引 0 迭代至 3，若某個技能在 cooldowns 中沒有值則預設為 0
+*/
 function buildSkillsHTML(professionName, cooldowns) {
-  // cooldowns 範例: { "0": 2, "1": 0, "2": 5 }
   let htmlStr = "";
-  for (let i in cooldowns) {
-    if (i === "passive") continue; // 假如你有被動
-    const skillIndex = parseInt(i, 10);
-    const skillUrl = `/static/images/${professionName}_skill_${skillIndex}.png`;
-    const cdVal = cooldowns[i];
-    htmlStr += createSkillIcon(skillUrl, cdVal, false, skillIndex);
+  for (let i = 0; i < 4; i++) {
+    const cdVal = cooldowns[i] !== undefined ? cooldowns[i] : 0;
+    const skillUrl = `/static/images/${professionName}_skill_${i}.png`;
+    htmlStr += createSkillIcon(skillUrl, cdVal, false, i);
   }
   return htmlStr;
 }
@@ -783,38 +834,35 @@ function handleEffectAddOrTick(event) {
     const particleCount = 12; // 粒子數量可自行調整
     // 根據不同效果，產生不同 class
     if (effectType === "burning") {
-        // 清除之前的燃燒效果（如果有的話）
-        effDiv.innerHTML = '';
-      
-        // 添加燃燒火焰容器
-        const burningEffect = document.createElement("div");
-        burningEffect.className = "burning-effect";
-        effDiv.appendChild(burningEffect);
-      
-        // 添加燃燒火焰
+      // 清除之前的燃燒效果（如果有的話）
+      effDiv.innerHTML = '';
 
-      
-        // 添加火星粒子
-        const sparkCount = 30; // 增加火星數量
-        for (let i = 0; i < sparkCount; i++) {
-          const spark = document.createElement("span");
-          spark.className = "spark";
-          // 隨機水平位置
-          spark.style.left = Math.random() * 100 + "%";
-          // 起始位置在火焰上方
-          spark.style.bottom = Math.random() * -10 + "%";
-          // 隨機延遲，讓火星不會同步飛出
-          spark.style.animationDelay = Math.random() * 2 + "s"; // 增加延遲範圍
-          // 隨機大小
-          spark.style.width = spark.style.height = (2 + Math.random() * 3) + "px";
-          // 隨機顏色
-          const colors = ['#FFD700', '#FFA500', '#FF4500', '#FF6347'];
-          spark.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
-          // 隨機水平偏移
-          spark.style.setProperty('--rand-x', Math.random() * 2 - 1); // -1 到 1 之間
-          burningEffect.appendChild(spark);
-        }
-      } else if (effectType === "poison") {
+      // 添加燃燒火焰容器
+      const burningEffect = document.createElement("div");
+      burningEffect.className = "burning-effect";
+      effDiv.appendChild(burningEffect);
+
+      // 添加火星粒子
+      const sparkCount = 30; // 增加火星數量
+      for (let i = 0; i < sparkCount; i++) {
+        const spark = document.createElement("span");
+        spark.className = "spark";
+        // 隨機水平位置
+        spark.style.left = Math.random() * 100 + "%";
+        // 起始位置在火焰上方
+        spark.style.bottom = Math.random() * -10 + "%";
+        // 隨機延遲，讓火星不會同步飛出
+        spark.style.animationDelay = Math.random() * 2 + "s";
+        // 隨機大小
+        spark.style.width = spark.style.height = (2 + Math.random() * 3) + "px";
+        // 隨機顏色
+        const colors = ['#FFD700', '#FFA500', '#FF4500', '#FF6347'];
+        spark.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+        // 隨機水平偏移
+        spark.style.setProperty('--rand-x', Math.random() * 2 - 1);
+        burningEffect.appendChild(spark);
+      }
+    } else if (effectType === "poison") {
       for (let i = 0; i < particleCount; i++) {
         const bubble = document.createElement("span");
         bubble.className = "poison-bubble";
@@ -839,17 +887,16 @@ function handleEffectAddOrTick(event) {
         effDiv.appendChild(shard);
       }
     }
-    // 其他效果也可類似做
+    // 其他效果可依需求擴充
   }
 
-  // 如果是 tick，你可以再加其他特效閃動...
-  // (目前先不做，保留)
+  // 若是 tick 時，可在此額外添加閃動或其他效果
 }
 
 /* 
   ================
   導出
-  ================
+  ================ 
 */
 window.initBattleView = initBattleView;
 window.startBattle = startBattle;

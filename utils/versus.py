@@ -37,8 +37,8 @@ def computer_vs_computer(skill_mgr, professions,pr1,pr2):
     obs, _ = env.reset()
     
     while not done:
-        pmask = obs["player"][0:3]
-        emask = obs["enemy"][0:3]
+        pmask = obs["player"][0:4]
+        emask = obs["enemy"][0:4]
         p_actions = np.where(pmask == 1)[0]
         e_actions = np.where(emask == 1)[0]
         p_act = random.choice(p_actions) if len(p_actions) > 0 else 0

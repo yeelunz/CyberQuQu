@@ -124,6 +124,7 @@ class DamageMultiplier(StatusEffect):
 
     def on_apply(self, target):
         super().on_apply(target)
+        
         target['damage_multiplier'] *= self.multiplier  # 直接設置倍率
 
     def set_stack(self, stacks, target):
@@ -634,12 +635,14 @@ class Track(StatusEffect):
             max_stack=max_stack,
             stacks=stacks,
             type='track',
-            id = 13
+            id = 13,
+            source=source
         )
         # check source
         if not source:
             # 如果source為空，會無法追蹤效果的來源
             raise ValueError("source 不能為空")
+
 
     def on_apply(self, target):
         super().on_apply(target)

@@ -19,7 +19,7 @@ class MaskedLSTMNetwork(RecurrentNetwork, TorchModelV2, nn.Module):
         # 再呼叫 TorchModelV2 的初始化（RecurrentNetwork 為 mixin）
         TorchModelV2.__init__(self, obs_space, action_space, num_outputs, model_config, name)
 
-        # 假設 obs 空間為 1D 張量，前 3 維為 mask
+        # 假設 obs 空間為 1D 張量，前 4 維為 mask
         self.obs_dim = obs_space.shape[0]
         self.mask_dim = 4
         self.real_obs_dim = self.obs_dim - self.mask_dim
@@ -202,7 +202,7 @@ class MaskedLSTMNetworkWithEmb(RecurrentNetwork, TorchModelV2, nn.Module):
         TorchModelV2.__init__(self, obs_space, action_space, num_outputs, model_config, name)
 
         # =============== 基本設定 ===============
-        self.mask_dim = 3
+        self.mask_dim = 4
         self.obs_dim = obs_space.shape[0]
         if num_outputs != self.mask_dim:
             raise ValueError(
@@ -211,11 +211,11 @@ class MaskedLSTMNetworkWithEmb(RecurrentNetwork, TorchModelV2, nn.Module):
 
         # =============== Embedding 設定 ===============
         self.num_professions = 13
-        self.num_global_skills = 39
-        self.num_effects = 20
+        self.num_global_skills = 52
+        self.num_effects = 13
         
         profession_emb_dim = 8
-        skill_emb_dim = 8
+        skill_emb_dim = 12
         effect_emb_dim = 4
 
         # 我方/敵方 embedding
@@ -231,9 +231,9 @@ class MaskedLSTMNetworkWithEmb(RecurrentNetwork, TorchModelV2, nn.Module):
         self._mlp_input_dim = (
             profession_emb_dim * 2 +  # 我方+敵方職業
             skill_emb_dim * 2 +       # 我方+敵方技能
-            14 * (effect_emb_dim + 3) * 2 +  # 我方+敵方特效 (每個特效含3個數值)
-            3 + 1 + 3 + 1 +           # 我方冷卻、HP%、乘子、累積傷害
-            3 + 1 + 3 + 1 +           # 敵方冷卻、HP%、乘子、累積傷害
+            13 * (effect_emb_dim + 3) * 2 +  # 我方+敵方特效 (每個特效含3個數值)
+            4 + 1 + 3 + 1 +           # 我方冷卻、HP%、乘子、累積傷害
+            4 + 1 + 3 + 1 +           # 敵方冷卻、HP%、乘子、累積傷害
             2                         # 公共觀測
         )
 
@@ -260,16 +260,7 @@ class MaskedLSTMNetworkWithEmb(RecurrentNetwork, TorchModelV2, nn.Module):
 
         self._features = None
         self.max_seq_len = model_config.get("max_seq_len", 10)
-        self.effect_id_list = [1,2,3,4,5,6,7,8,9,10,11,12,13,19]
-
-    @override(TorchModelV2)
-    def get_initial_state(self):
-        hidden_size = self.lstm.hidden_size
-        return [
-            torch.zeros(hidden_size, dtype=torch.float),
-            torch.zeros(hidden_size, dtype=torch.float)
-        ]
-
+        self.effect_id_list = [0,1,2,3,4,5,6,7,8,9,10,11,12]
 
     @override(TorchModelV2)
     def get_initial_state(self):
@@ -328,42 +319,42 @@ class MaskedLSTMNetworkWithEmb(RecurrentNetwork, TorchModelV2, nn.Module):
         c_in = c_in.unsqueeze(0)
 
         # 4. 解析觀測 (inputs) 的各個部分
-        # 4.1 取動作 mask (前 3 維)
+        # 4.1 取動作 mask (前 4 維)
         mask = inputs[:, :self.mask_dim]
 
         # 4.2 解析「我方職業」(profession_p)
-        profession_p_one_hot = inputs[:, 3:16]  # one-hot: obs[3..15] (共 13 維)
+        profession_p_one_hot = inputs[:, 4:17]  # one-hot: obs[4..17] (共 16 維)
         prof_p_id = torch.argmax(profession_p_one_hot, dim=1)  # 轉成 id
         prof_p_emb = self.profession_embedding_p(prof_p_id)  # [B, profession_emb_dim]
 
         # 4.3 解析「敵方職業」(profession_e)
-        profession_e_one_hot = inputs[:, 78:91]  # one-hot: obs[78..90]
+        profession_e_one_hot = inputs[:, 80:93]  # 
         prof_e_id = torch.argmax(profession_e_one_hot, dim=1)
         prof_e_emb = self.profession_embedding_e(prof_e_id)  # [B, profession_emb_dim]
 
         # 4.4 解析「我方上次使用技能」(skill_p)
-        local_skill_p_one_hot = inputs[:, 155:158]  # one-hot: obs[155..157]
+        local_skill_p_one_hot = inputs[:, 158:162]  # one-hot: obs[155..157]
         local_skill_p_id = torch.argmax(local_skill_p_one_hot, dim=1)
-        global_skill_p_id = prof_p_id * 3 + local_skill_p_id  # 轉成 global skill id
+        global_skill_p_id = prof_p_id * 4 + local_skill_p_id  # 轉成 global skill id
         skill_p_emb = self.skill_embedding_p(global_skill_p_id)  # [B, skill_emb_dim]
 
         # 4.5 解析「敵方上次使用技能」(skill_e)
-        local_skill_e_one_hot = inputs[:, 152:155]  # one-hot: obs[152..154]
+        local_skill_e_one_hot = inputs[:, 154:158]  # one-hot: obs[152..154]
         local_skill_e_id = torch.argmax(local_skill_e_one_hot, dim=1)
-        global_skill_e_id = prof_e_id * 3 + local_skill_e_id
+        global_skill_e_id = prof_e_id * 4 + local_skill_e_id
         skill_e_emb = self.skill_embedding_e(global_skill_e_id)  # [B, skill_emb_dim]
 
         # 4.6 解析「我方特效」(effect_p)
         effect_p_features = []
-        for i in range(14):  # 14 種特效
+        for i in range(13):  # 14 種特效
             eff_id = self.effect_id_list[i]  # 特效 ID
             eff_emb = self.effect_embedding_p(torch.tensor([eff_id], device=inputs.device))
             eff_emb = eff_emb.expand(B, -1)  # [B, effect_emb_dim]
 
             # 取得特效的數值 (exist, stack, remain)
-            exist = inputs[:, 33 + i * 3]
-            stack = inputs[:, 34 + i * 3]
-            remain = inputs[:, 35 + i * 3]
+            exist = inputs[:, 37 + i * 3]
+            stack = inputs[:, 38 + i * 3]
+            remain = inputs[:, 39 + i * 3]
 
             # 拼接 embedding 和數值
             eff_i = torch.cat([
@@ -374,34 +365,33 @@ class MaskedLSTMNetworkWithEmb(RecurrentNetwork, TorchModelV2, nn.Module):
             ], dim=1)  # [B, effect_emb_dim + 3]
             effect_p_features.append(eff_i)
 
-        # 將 14 個特效拼接成一個向量
+        # 將 13 個特效拼接成一個向量
         effect_p_vec = torch.cat(effect_p_features, dim=1)  # [B, 14 * (effect_emb_dim + 3)]
 
         # 4.7 解析「敵方特效」(effect_e)
         effect_e_features = []
-        for i in range(14):
+        for i in range(13):
             eff_id = self.effect_id_list[i]
             eff_emb = self.effect_embedding_e(torch.tensor([eff_id], device=inputs.device))
             eff_emb = eff_emb.expand(B, -1)
-            exist = inputs[:, 108 + i * 3]
-            stack = inputs[:, 109 + i * 3]
-            remain = inputs[:, 110 + i * 3]
+            exist = inputs[:, 113 + i * 3]
+            stack = inputs[:, 114 + i * 3]
+            remain = inputs[:, 115 + i * 3]
             eff_i = torch.cat([eff_emb, exist.unsqueeze(1), stack.unsqueeze(1), remain.unsqueeze(1)], dim=1)
             effect_e_features.append(eff_i)
         effect_e_vec = torch.cat(effect_e_features, dim=1)  # [B, 14 * (effect_emb_dim + 3)]
 
         # 4.8 解析其他連續特徵
-        cont_p_cooldown = inputs[:, 0:3]  # 我方冷卻
-        cont_p_hp_ratio = inputs[:, 16:17]  # 我方 HP%
-        cont_p_multipliers = inputs[:, 18:21]  # 我方乘子
-        cont_p_accDmg = inputs[:, 21:22]  # 我方累積傷害
+        cont_p_cooldown = inputs[:, 162:166]  # 我方冷卻
+        cont_p_hp_ratio = inputs[:, 17:18]  # 我方 HP%
+        cont_p_multipliers = inputs[:, 19:22]  # 我方乘子
+        cont_p_accDmg = inputs[:, 22:23]  # 我方累積傷害
 
-        cont_e_cooldown = inputs[:, 75:78]  # 敵方冷卻
-        cont_e_hp_ratio = inputs[:, 91:92]  # 敵方 HP%
-        cont_e_multipliers = inputs[:, 93:96]  # 敵方乘子
-        cont_e_accDmg = inputs[:, 96:97]  # 敵方累積傷害
-
-        cont_pub_obs = inputs[:, 150:152]  # 公共觀測
+        cont_e_cooldown = inputs[:, 166:170]  # 敵方冷卻
+        cont_e_hp_ratio = inputs[:, 93:94]  # 敵方 HP%
+        cont_e_multipliers = inputs[:,95:98]  # 敵方乘子
+        cont_e_accDmg = inputs[:, 98:99]  # 敵方累積傷害
+        cont_pub_obs = inputs[:, 152:154]  # 公共觀測
 
         # 拼接所有連續特徵
         cont_features = torch.cat([
@@ -467,56 +457,354 @@ class MaskedLSTMNetworkWithEmb(RecurrentNetwork, TorchModelV2, nn.Module):
         }
 
 
-class MaskedLSTMNetworkWithMergedEmb(RecurrentNetwork, TorchModelV2, nn.Module):
+class MaskedLSTMNetworkWithEmbV2(RecurrentNetwork, TorchModelV2, nn.Module):
     """
-    此版本將玩家與敵方對應的 embedding 合併為同一組。
-    包含：
-      - 職業 embedding：共 13 個向量
-      - 技能 embedding：共 39 個向量 (global skill id)
-      - 特效 embedding：共 20 個向量
-    其它部分保持與原本設計類似，最終拼接玩家/敵方的特徵後進行 MLP -> LSTM -> 輸出 logits。
+    此模型示範如何解析自訂的觀測資料，並針對職業、技能、特效進行嵌入，
+    且在職業與技能部分融合額外資訊：
+      - 職業部分：融合 profession id 與額外資訊（最大HP、baseAtk、baseDef）
+      - 技能部分：融合 skill id 與 skill type（來自 one-hot 轉換後的 id）
+    融合方式採用串接後線性映射，而非算術加法。
     """
     def __init__(self, obs_space, action_space, num_outputs, model_config, name):
         nn.Module.__init__(self)
         TorchModelV2.__init__(self, obs_space, action_space, num_outputs, model_config, name)
 
         # =============== 基本設定 ===============
-        self.mask_dim = 3
+        self.mask_dim = 4
         self.obs_dim = obs_space.shape[0]
         if num_outputs != self.mask_dim:
             raise ValueError(f"num_outputs({num_outputs}) != mask_dim({self.mask_dim})")
 
         # =============== Embedding 設定 ===============
         self.num_professions = 13
-        self.num_global_skills = 39
-        self.num_effects = 20
+        self.num_global_skills = 52
+        self.num_effects = 13
 
+        # 嵌入向量維度設定
         profession_emb_dim = 8
-        skill_emb_dim = 8
+        skill_emb_dim = 12
         effect_emb_dim = 4
 
-        # 合併玩家與敵方：共用同一組 embedding table
+        # --------------------
+        # 職業 embedding（依據 id），並融合額外資訊：maxHP、baseAtk、baseDef (各1維)
+        self.profession_embedding_p = nn.Embedding(self.num_professions, profession_emb_dim)
+        self.profession_embedding_e = nn.Embedding(self.num_professions, profession_emb_dim)
+        # 融合層：串接後映射回原職業嵌入向量維度
+        self.profession_fusion_p = nn.Linear(profession_emb_dim + 3, profession_emb_dim)
+        self.profession_fusion_e = nn.Linear(profession_emb_dim + 3, profession_emb_dim)
+
+        # --------------------
+        # 技能 embedding（依據 global skill id），並融合技能類型資訊（假設轉換後有 3 種可能）
+        self.skill_embedding_p = nn.Embedding(self.num_global_skills, skill_emb_dim)
+        self.skill_embedding_e = nn.Embedding(self.num_global_skills, skill_emb_dim)
+        self.skill_type_embedding_p = nn.Embedding(3, skill_emb_dim)
+        self.skill_type_embedding_e = nn.Embedding(3, skill_emb_dim)
+        # 融合層：串接技能 id 與技能類型嵌入後映射成同樣的維度
+        self.skill_fusion_p = nn.Linear(skill_emb_dim * 2, skill_emb_dim)
+        self.skill_fusion_e = nn.Linear(skill_emb_dim * 2, skill_emb_dim)
+
+        # --------------------
+        # 特效 embedding（每個特效包含嵌入向量及 3 個數值：exist, stack, remain）
+        self.effect_embedding_p = nn.Embedding(self.num_effects, effect_emb_dim)
+        self.effect_embedding_e = nn.Embedding(self.num_effects, effect_emb_dim)
+
+        # =============== 網路層架構 ===============
+        # 計算 MLP 輸入維度：
+        # - 職業部分：我方與敵方各一個向量 (profession_emb_dim * 2)
+        # - 技能部分：我方與敵方各一個向量 (skill_emb_dim * 2)
+        # - 特效部分：我方與敵方各 13 個特效，每個特效 (effect_emb_dim + 3)
+        # - 連續特徵：我方 4+1+3+1，敵方 4+1+3+1，再加上公共觀測 2
+        self._mlp_input_dim = (
+            profession_emb_dim * 2 +    # 我方 + 敵方職業
+            skill_emb_dim * 2 +         # 我方 + 敵方技能
+            13 * (effect_emb_dim + 3) * 2 +   # 我方 + 敵方特效
+            4 + 1 + 3 + 1 +             # 我方連續特徵：冷卻, HP%, 乘子, 累積傷害
+            4 + 1 + 3 + 1 +             # 敵方連續特徵：冷卻, HP%, 乘子, 累積傷害
+            2                           # 公共觀測
+        )
+
+        # MLP 層：預設兩層，每層 256 單位 (可由 model_config 調整)
+        fcnet_hiddens = model_config.get("fcnet_hiddens", [256, 256])
+        layers = []
+        in_size = self._mlp_input_dim
+        for hidden_size in fcnet_hiddens:
+            layers.append(nn.Linear(in_size, hidden_size))
+            layers.append(nn.ReLU())
+            in_size = hidden_size
+        self.mlp = nn.Sequential(*layers)
+
+        # LSTM 層
+        self.lstm = nn.LSTM(
+            input_size=in_size,
+            hidden_size=in_size,
+            batch_first=True
+        )
+
+        # 輸出層：動作 logits 與 value branch
+        self.logits_layer = nn.Linear(in_size, num_outputs)
+        self.value_branch = nn.Linear(in_size, 1)
+
+        self._features = None
+        self.max_seq_len = model_config.get("max_seq_len", 10)
+        self.effect_id_list = list(range(self.num_effects))
+
+    @override(TorchModelV2)
+    def get_initial_state(self):
+        hidden_size = self.logits_layer.in_features
+        h0 = torch.zeros(hidden_size, dtype=torch.float)
+        c0 = torch.zeros(hidden_size, dtype=torch.float)
+        return [h0, c0]
+
+    @override(TorchModelV2)
+    def forward(self, input_dict, state, seq_lens):
+        """RLlib 在非 RNN 部分呼叫 forward()，此處轉接至 forward_rnn()。"""
+        obs = input_dict["obs"]
+        logits, new_state = self.forward_rnn(obs, state, seq_lens)
+        return logits, new_state
+
+    @override(RecurrentNetwork)
+    def forward_rnn(self, inputs, state, seq_lens):
+        """
+        前向傳播（RNN 部分）：處理單步輸入並維護 LSTM 狀態。
+        """
+        # 1. 取得批次大小
+        B = inputs.shape[0]
+        h_in, c_in = state
+
+        # 2. 處理狀態批次不匹配
+        if h_in.dim() == 1:
+            h_in = h_in.unsqueeze(0)
+            c_in = c_in.unsqueeze(0)
+        B_state = h_in.size(0)
+        if B_state != B:
+            if B_state == 1:
+                h_in = h_in.expand(B, -1)
+                c_in = c_in.expand(B, -1)
+            elif B % B_state == 0:
+                repeats = B // B_state
+                h_in = h_in.repeat(repeats, 1)
+                c_in = c_in.repeat(repeats, 1)
+            else:
+                raise RuntimeError(f"State batch ({B_state}) must be 1 or divide input batch ({B})")
+        # 調整 LSTM 輸入狀態形狀為 [num_layers, B, hidden_dim]
+        h_in = h_in.unsqueeze(0)
+        c_in = c_in.unsqueeze(0)
+
+        # 3. 解析觀測資料
+        # 3.1 取動作 mask (前 4 維)
+        mask = inputs[:, :self.mask_dim]
+
+        # 3.2 解析「我方職業」
+        # 假設 obs[4:17] 為 one-hot 編碼，共 13 維
+        profession_p_one_hot = inputs[:, 4:17]
+        prof_p_id = torch.argmax(profession_p_one_hot, dim=1)
+        prof_p_emb = self.profession_embedding_p(prof_p_id)
+        # 額外資訊：最大HP (index 18)、baseAtk (index 23)、baseDef (index 24)
+        extra_prof_p = torch.cat([
+            inputs[:, 18:19],
+            inputs[:, 23:24],
+            inputs[:, 24:25]
+        ], dim=1)
+        # 融合資訊
+        prof_p_combined = self.profession_fusion_p(torch.cat([prof_p_emb, extra_prof_p], dim=1))
+
+        # 3.3 解析「敵方職業」
+        profession_e_one_hot = inputs[:, 80:93]
+        prof_e_id = torch.argmax(profession_e_one_hot, dim=1)
+        prof_e_emb = self.profession_embedding_e(prof_e_id)
+        # 敵方額外資訊分別位於 indices 94, 95, 96
+        extra_prof_e = torch.cat([
+            inputs[:, 94:95],
+            inputs[:, 95:96],
+            inputs[:, 96:97]
+        ], dim=1)
+        prof_e_combined = self.profession_fusion_e(torch.cat([prof_e_emb, extra_prof_e], dim=1))
+
+        # 3.4 解析「我方技能」：融合 skill id 與 skill type
+        # 取得玩家選擇的技能槽：假設 obs[158:162] 為 one-hot (四個槽位)
+        local_skill_p_one_hot = inputs[:, 158:162]
+        local_skill_p_id = torch.argmax(local_skill_p_one_hot, dim=1)  # 值介於 0～3
+        global_skill_p_id = prof_p_id * 4 + local_skill_p_id  # 轉換成 global skill id
+        skill_id_emb_p = self.skill_embedding_p(global_skill_p_id)
+
+        # 取得玩家各技能槽的 skill type：假設分別位於 obs[25:28], [28:31], [31:34], [34:37]
+        skill0_type = torch.argmax(inputs[:, 25:28], dim=1)
+        skill1_type = torch.argmax(inputs[:, 28:31], dim=1)
+        skill2_type = torch.argmax(inputs[:, 31:34], dim=1)
+        skill3_type = torch.argmax(inputs[:, 34:37], dim=1)
+        all_skill_types = torch.stack([skill0_type, skill1_type, skill2_type, skill3_type], dim=1)  # [B, 4]
+        # 根據玩家選擇的技能槽 (local_skill_p_id) 取得對應 skill type
+        selected_skill_type = all_skill_types.gather(1, local_skill_p_id.unsqueeze(1)).squeeze(1)
+        skill_type_emb_p = self.skill_type_embedding_p(selected_skill_type)
+        # 融合 skill id 與 skill type 的資訊
+        skill_p_combined = self.skill_fusion_p(torch.cat([skill_id_emb_p, skill_type_emb_p], dim=1))
+
+        # 3.5 解析「敵方技能」：同樣融合 skill id 與 skill type
+        local_skill_e_one_hot = inputs[:, 154:158]
+        local_skill_e_id = torch.argmax(local_skill_e_one_hot, dim=1)
+        global_skill_e_id = prof_e_id * 4 + local_skill_e_id
+        skill_id_emb_e = self.skill_embedding_e(global_skill_e_id)
+
+        # 假設敵方 skill type 分別位於 obs[101:104], [104:107], [107:110], [110:113]
+        enemy_skill0_type = torch.argmax(inputs[:, 101:104], dim=1)
+        enemy_skill1_type = torch.argmax(inputs[:, 104:107], dim=1)
+        enemy_skill2_type = torch.argmax(inputs[:, 107:110], dim=1)
+        enemy_skill3_type = torch.argmax(inputs[:, 110:113], dim=1)
+        all_enemy_skill_types = torch.stack([enemy_skill0_type, enemy_skill1_type, enemy_skill2_type, enemy_skill3_type], dim=1)
+        selected_enemy_skill_type = all_enemy_skill_types.gather(1, local_skill_e_id.unsqueeze(1)).squeeze(1)
+        skill_type_emb_e = self.skill_type_embedding_e(selected_enemy_skill_type)
+        skill_e_combined = self.skill_fusion_e(torch.cat([skill_id_emb_e, skill_type_emb_e], dim=1))
+
+        # 3.6 解析「我方特效」
+        effect_p_features = []
+        for i in range(self.num_effects):
+            # 固定特效 id 為 i
+            eff_emb = self.effect_embedding_p(torch.tensor([i], device=inputs.device))
+            eff_emb = eff_emb.expand(B, -1)
+            # 取出 exist, stack, remain，假設分別位於 obs[37 + i*3], [38 + i*3], [39 + i*3]
+            exist = inputs[:, 37 + i * 3]
+            stack = inputs[:, 38 + i * 3]
+            remain = inputs[:, 39 + i * 3]
+            eff_feature = torch.cat([eff_emb,
+                                     exist.unsqueeze(1),
+                                     stack.unsqueeze(1),
+                                     remain.unsqueeze(1)], dim=1)
+            effect_p_features.append(eff_feature)
+        effect_p_vec = torch.cat(effect_p_features, dim=1)
+
+        # 3.7 解析「敵方特效」
+        effect_e_features = []
+        for i in range(self.num_effects):
+            eff_emb = self.effect_embedding_e(torch.tensor([i], device=inputs.device))
+            eff_emb = eff_emb.expand(B, -1)
+            exist = inputs[:, 113 + i * 3]
+            stack = inputs[:, 114 + i * 3]
+            remain = inputs[:, 115 + i * 3]
+            eff_feature = torch.cat([eff_emb,
+                                     exist.unsqueeze(1),
+                                     stack.unsqueeze(1),
+                                     remain.unsqueeze(1)], dim=1)
+            effect_e_features.append(eff_feature)
+        effect_e_vec = torch.cat(effect_e_features, dim=1)
+
+        # 3.8 解析其他連續特徵
+        # 我方：冷卻 (obs[162:166]), HP% (obs[17:18]), 乘子 (obs[19:22]), 累積傷害 (obs[22:23])
+        cont_p_cooldown    = inputs[:, 162:166]
+        cont_p_hp_ratio    = inputs[:, 17:18]
+        cont_p_multipliers = inputs[:, 19:22]
+        cont_p_accDmg      = inputs[:, 22:23]
+        # 敵方：冷卻 (obs[166:170]), HP% (obs[93:94]), 乘子 (obs[95:98]), 累積傷害 (obs[98:99])
+        cont_e_cooldown    = inputs[:, 166:170]
+        cont_e_hp_ratio    = inputs[:, 93:94]
+        cont_e_multipliers = inputs[:, 95:98]
+        cont_e_accDmg      = inputs[:, 98:99]
+        # 公共觀測：假設在 obs[152:154]
+        cont_pub_obs       = inputs[:, 152:154]
+
+        cont_features = torch.cat([
+            cont_p_cooldown,
+            cont_p_hp_ratio,
+            cont_p_multipliers,
+            cont_p_accDmg,
+            cont_e_cooldown,
+            cont_e_hp_ratio,
+            cont_e_multipliers,
+            cont_e_accDmg,
+            cont_pub_obs
+        ], dim=1)
+
+        # 4. 拼接所有特徵，作為 MLP 輸入
+        combined = torch.cat([
+            prof_p_combined,
+            prof_e_combined,
+            skill_p_combined,
+            skill_e_combined,
+            effect_p_vec,
+            effect_e_vec,
+            cont_features
+        ], dim=1)
+
+        # 5. 透過 MLP
+        mlp_out = self.mlp(combined)
+
+        # 6. 透過 LSTM (增加時間維度)
+        lstm_in = mlp_out.unsqueeze(1)  # [B, 1, hidden_dim]
+        lstm_out, (h_out, c_out) = self.lstm(lstm_in, (h_in, c_in))
+        lstm_out = lstm_out.squeeze(1)
+
+        # 7. 產生動作 logits 並套用 mask
+        logits = self.logits_layer(lstm_out)
+        inf_mask = (1.0 - mask) * -1e10
+        masked_logits = logits + inf_mask
+
+        # 儲存特徵以供 value_function 使用
+        self._features = lstm_out
+
+        # 回傳 logits 與新的 RNN state
+        new_state = [h_out.squeeze(0), c_out.squeeze(0)]
+        return masked_logits, new_state
+
+    @override(TorchModelV2)
+    def value_function(self):
+        assert self._features is not None
+        return torch.reshape(self.value_branch(self._features), [-1])
+
+    def get_all_embeddings(self):
+        """
+        取得本模型裡面所有 embedding 的 weight，並以 dict 形式回傳，方便你存成 JSON。
+        """
+        return {
+            "profession_p": self.profession_embedding_p.weight.detach().cpu().numpy().tolist(),
+            "profession_e": self.profession_embedding_e.weight.detach().cpu().numpy().tolist(),
+            "skill_p": self.skill_embedding_p.weight.detach().cpu().numpy().tolist(),
+            "skill_e": self.skill_embedding_e.weight.detach().cpu().numpy().tolist(),
+            "effect_p": self.effect_embedding_p.weight.detach().cpu().numpy().tolist(),
+            "effect_e": self.effect_embedding_e.weight.detach().cpu().numpy().tolist(),
+        }
+
+
+
+
+class MaskedLSTMNetworkWithMergedEmb(RecurrentNetwork, TorchModelV2, nn.Module):
+    """
+    合併玩家與敵方 embedding 的版本，結構與新版程式碼對齊。
+    - 職業/技能/特效共用同一組 embedding
+    - 調整特徵索引與新版觀測空間一致
+    - 統一狀態處理與 LSTM 流程
+    """
+
+    def __init__(self, obs_space, action_space, num_outputs, model_config, name):
+        nn.Module.__init__(self)
+        TorchModelV2.__init__(self, obs_space, action_space, num_outputs, model_config, name)
+
+        # =============== 基本設定 ===============
+        self.mask_dim = 4
+        self.obs_dim = obs_space.shape[0]
+        if num_outputs != self.mask_dim:
+            raise ValueError(f"num_outputs({num_outputs}) != mask_dim({self.mask_dim})")
+
+        # =============== Embedding 設定 (合併版) ===============
+        self.num_professions = 13
+        self.num_global_skills = 52  # 注意與新版對齊 (13職業*4技能)
+        self.num_effects = 13        # 與新版特效數一致
+
+        profession_emb_dim = 8
+        skill_emb_dim = 12           # 與新版技能嵌入維度一致
+        effect_emb_dim = 4
+
+        # 合併玩家與敵方的 embedding 表
         self.profession_embedding = nn.Embedding(self.num_professions, profession_emb_dim)
         self.skill_embedding = nn.Embedding(self.num_global_skills, skill_emb_dim)
         self.effect_embedding = nn.Embedding(self.num_effects, effect_emb_dim)
 
         # =============== 網路層架構 ===============
-        # 計算 MLP 輸入維度 (需手動計算)
-        # 說明：
-        #  - 玩家職業與敵方職業：各 profession_emb_dim (2*profession_emb_dim)
-        #  - 玩家上次使用技能與敵方上次使用技能：各 skill_emb_dim (2*skill_emb_dim)
-        #  - 玩家特效：14 個特效，每個特效拼接 (effect_emb_dim + 3)，共 14*(effect_emb_dim+3)
-        #  - 敵方特效：同上，另加 14*(effect_emb_dim+3)
-        #  - 其他連續特徵：玩家部分：冷卻 (3) + HP% (1) + 乘子 (3) + 累積傷害 (1)
-        #                    敵方部分：冷卻 (3) + HP% (1) + 乘子 (3) + 累積傷害 (1)
-        #  - 公共觀測：2
+        # MLP 輸入維度計算 (需與特徵拼接結果一致)
         self._mlp_input_dim = (
-            profession_emb_dim * 2 + 
-            skill_emb_dim * 2 +       
-            14 * (effect_emb_dim + 3) * 2 +  
-            (3 + 1 + 3 + 1) +  # 玩家連續特徵
-            (3 + 1 + 3 + 1) +  # 敵方連續特徵
-            2                # 公共觀測
+            profession_emb_dim * 2 +    # 玩家+敵方職業
+            skill_emb_dim * 2 +         # 玩家+敵方技能
+            13 * (effect_emb_dim + 3) * 2 +  # 雙方特效各13個 (新版結構)
+            (4 + 1 + 3 + 1) * 2 +       # 雙方連續特徵 (冷卻4維)
+            2                           # 公共觀測
         )
 
         # MLP 層
@@ -536,38 +824,32 @@ class MaskedLSTMNetworkWithMergedEmb(RecurrentNetwork, TorchModelV2, nn.Module):
             batch_first=True
         )
 
-        # 輸出層 (動作 logits 與 value branch)
+        # 輸出層
         self.logits_layer = nn.Linear(in_size, num_outputs)
         self.value_branch = nn.Linear(in_size, 1)
 
         self._features = None
         self.max_seq_len = model_config.get("max_seq_len", 10)
-        # 特效 ID 列表 (依照觀測順序：共 14 種，分別為 1..13 與 19)
-        self.effect_id_list = [1,2,3,4,5,6,7,8,9,10,11,12,13,19]
+        self.effect_id_list = list(range(13))  # 特效ID 0~12 (與新版對齊)
 
     @override(TorchModelV2)
     def get_initial_state(self):
         hidden_size = self.logits_layer.in_features
-        h0 = torch.zeros(hidden_size, dtype=torch.float)
-        c0 = torch.zeros(hidden_size, dtype=torch.float)
-        return [h0, c0]
+        return [torch.zeros(hidden_size), torch.zeros(hidden_size)]
 
     @override(TorchModelV2)
     def forward(self, input_dict, state, seq_lens):
-        """RLlib 在非 RNN 的情況下呼叫 forward()，這裡直接轉接到 forward_rnn()。"""
+        """轉接到 forward_rnn"""
         obs = input_dict["obs"]
         logits, new_state = self.forward_rnn(obs, state, seq_lens)
         return logits, new_state
 
     @override(RecurrentNetwork)
     def forward_rnn(self, inputs, state, seq_lens):
-        """
-        前向傳播：解析各部分的觀測，查詢 embedding，拼接後送入 MLP -> LSTM -> 輸出 logits。
-        """
-        B = inputs.shape[0]  # 批次大小
+        B = inputs.shape[0]
         h_in, c_in = state
 
-        # 處理狀態批次不匹配問題
+        # 狀態批次處理 (與新版邏輯一致)
         if h_in.dim() == 1:
             h_in = h_in.unsqueeze(0)
             c_in = c_in.unsqueeze(0)
@@ -581,137 +863,340 @@ class MaskedLSTMNetworkWithMergedEmb(RecurrentNetwork, TorchModelV2, nn.Module):
                 h_in = h_in.repeat(repeats, 1)
                 c_in = c_in.repeat(repeats, 1)
             else:
-                raise RuntimeError(f"State batch ({B_state}) must be 1 or divide input batch ({B})")
-        h_in = h_in.unsqueeze(0)
-        c_in = c_in.unsqueeze(0)
+                raise RuntimeError(f"State batch ({B_state}) must divide input batch ({B})")
+        h_in, c_in = h_in.unsqueeze(0), c_in.unsqueeze(0)
 
-        # 4. 解析各部分觀測
-        # 4.1 取動作 mask (前 3 維)
+        # 1. 動作 mask
         mask = inputs[:, :self.mask_dim]
 
-        # 4.2 玩家職業 (obs[3:16]) -> one-hot 轉 id -> embedding
-        profession_p_one_hot = inputs[:, 3:16]
+        # 2. 解析職業 (索引與新版對齊)
+        profession_p_one_hot = inputs[:, 4:17]  # 玩家職業 one-hot [4..16]
         prof_p_id = torch.argmax(profession_p_one_hot, dim=1)
         prof_p_emb = self.profession_embedding(prof_p_id)
 
-        # 4.3 敵方職業 (obs[78:91])
-        profession_e_one_hot = inputs[:, 78:91]
+        profession_e_one_hot = inputs[:, 80:93]  # 敵方職業 [80..92]
         prof_e_id = torch.argmax(profession_e_one_hot, dim=1)
         prof_e_emb = self.profession_embedding(prof_e_id)
 
-        # 4.4 玩家上次使用技能 (obs[155:158]) -> 先取 local skill id，再轉 global skill id -> embedding
-        local_skill_p_one_hot = inputs[:, 155:158]
+        # 3. 解析技能 (使用新版索引與計算方式)
+        # 玩家技能 (obs[158:162] 對應 local_skill_p)
+        local_skill_p_one_hot = inputs[:, 158:162]
         local_skill_p_id = torch.argmax(local_skill_p_one_hot, dim=1)
-        global_skill_p_id = prof_p_id * 3 + local_skill_p_id
+        global_skill_p_id = prof_p_id * 4 + local_skill_p_id  # 4技能/職業
         skill_p_emb = self.skill_embedding(global_skill_p_id)
 
-        # 4.5 敵方上次使用技能 (obs[152:155])
-        local_skill_e_one_hot = inputs[:, 152:155]
+        # 敵方技能 (obs[154:158])
+        local_skill_e_one_hot = inputs[:, 154:158]
         local_skill_e_id = torch.argmax(local_skill_e_one_hot, dim=1)
-        global_skill_e_id = prof_e_id * 3 + local_skill_e_id
+        global_skill_e_id = prof_e_id * 4 + local_skill_e_id
         skill_e_emb = self.skill_embedding(global_skill_e_id)
 
-        # 4.6 玩家特效 (obs[33:74]) -> 每 3 維一組，共 14 組
-        effect_p_features = []
-        for i in range(14):
-            eff_id = self.effect_id_list[i]
-            # 查詢 embedding (用同一個 effect_embedding)
-            eff_emb = self.effect_embedding(torch.tensor([eff_id], device=inputs.device))
-            eff_emb = eff_emb.expand(B, -1)
-            exist = inputs[:, 33 + i * 3]
-            stack = inputs[:, 34 + i * 3]
-            remain = inputs[:, 35 + i * 3]
-            eff_i = torch.cat([eff_emb,
-                               exist.unsqueeze(1),
-                               stack.unsqueeze(1),
-                               remain.unsqueeze(1)], dim=1)
-            effect_p_features.append(eff_i)
-        effect_p_vec = torch.cat(effect_p_features, dim=1)
+        # 4. 解析特效 (索引與新版對齊)
+        def process_effects(start_idx, batch_size):
+            features = []
+            for i in range(13):
+                eff_id = self.effect_id_list[i]
+                emb = self.effect_embedding(torch.tensor([eff_id], device=inputs.device)).expand(batch_size, -1)
+                exist = inputs[:, start_idx + i*3]
+                stack = inputs[:, start_idx + i*3 + 1]
+                remain = inputs[:, start_idx + i*3 + 2]
+                features.append(torch.cat([emb, 
+                                         exist.unsqueeze(1),
+                                         stack.unsqueeze(1),
+                                         remain.unsqueeze(1)], dim=1))
+            return torch.cat(features, dim=1)
 
-        # 4.7 敵方特效 (obs[108:149])
-        effect_e_features = []
-        for i in range(14):
-            eff_id = self.effect_id_list[i]
-            eff_emb = self.effect_embedding(torch.tensor([eff_id], device=inputs.device))
-            eff_emb = eff_emb.expand(B, -1)
-            exist = inputs[:, 108 + i * 3]
-            stack = inputs[:, 109 + i * 3]
-            remain = inputs[:, 110 + i * 3]
-            eff_i = torch.cat([eff_emb,
-                               exist.unsqueeze(1),
-                               stack.unsqueeze(1),
-                               remain.unsqueeze(1)], dim=1)
-            effect_e_features.append(eff_i)
-        effect_e_vec = torch.cat(effect_e_features, dim=1)
+        # 玩家特效起始索引 37 (新版)
+        effect_p_vec = process_effects(37, B)
+        # 敵方特效起始索引 113
+        effect_e_vec = process_effects(113, B)
 
-        # 4.8 解析其他連續特徵
-        cont_p_cooldown = inputs[:, 0:3]      # 玩家冷卻
-        cont_p_hp_ratio = inputs[:, 16:17]      # 玩家 HP%
-        cont_p_multipliers = inputs[:, 18:21]     # 玩家乘子
-        cont_p_accDmg = inputs[:, 21:22]        # 玩家累積傷害
+        # 5. 連續特徵 (索引與新版對齊)
+        cont_p_cooldown = inputs[:, 162:166]    # 玩家冷卻4維
+        cont_p_hp_ratio = inputs[:, 17:18]      # HP%
+        cont_p_multipliers = inputs[:, 19:22]   # 乘子3維
+        cont_p_accDmg = inputs[:, 22:23]        # 累積傷害
 
-        cont_e_cooldown = inputs[:, 75:78]      # 敵方冷卻
-        cont_e_hp_ratio = inputs[:, 91:92]        # 敵方 HP%
-        cont_e_multipliers = inputs[:, 93:96]       # 敵方乘子
-        cont_e_accDmg = inputs[:, 96:97]        # 敵方累積傷害
+        cont_e_cooldown = inputs[:, 166:170]    # 敵方冷卻
+        cont_e_hp_ratio = inputs[:, 93:94]
+        cont_e_multipliers = inputs[:, 95:98]
+        cont_e_accDmg = inputs[:, 98:99]
 
-        cont_pub_obs = inputs[:, 150:152]       # 公共觀測
+        cont_pub_obs = inputs[:, 152:154]       # 公共觀測
 
         cont_features = torch.cat([
-            cont_p_cooldown,
-            cont_p_hp_ratio,
-            cont_p_multipliers,
-            cont_p_accDmg,
-            cont_e_cooldown,
-            cont_e_hp_ratio,
-            cont_e_multipliers,
-            cont_e_accDmg,
+            cont_p_cooldown, cont_p_hp_ratio, cont_p_multipliers, cont_p_accDmg,
+            cont_e_cooldown, cont_e_hp_ratio, cont_e_multipliers, cont_e_accDmg,
             cont_pub_obs
         ], dim=1)
 
-        # 5. 拼接所有特徵
+        # 特徵拼接
         combined = torch.cat([
-            prof_p_emb,
-            prof_e_emb,
-            skill_p_emb,
-            skill_e_emb,
-            effect_p_vec,
-            effect_e_vec,
-            cont_features,
+            prof_p_emb, prof_e_emb,
+            skill_p_emb, skill_e_emb,
+            effect_p_vec, effect_e_vec,
+            cont_features
         ], dim=1)
 
-        # 6. 通過 MLP
+        # 網路前傳
         mlp_out = self.mlp(combined)
-
-        # 7. 通過 LSTM
         lstm_in = mlp_out.unsqueeze(1)
         lstm_out, (h_out, c_out) = self.lstm(lstm_in, (h_in, c_in))
         lstm_out = lstm_out.squeeze(1)
 
-        # 8. 動作 logits (並套用動作 mask)
+        # 輸出處理
         logits = self.logits_layer(lstm_out)
-        inf_mask = (1.0 - mask) * -1e10
-        masked_logits = logits + inf_mask
+        masked_logits = logits + (1.0 - mask) * -1e10
 
         self._features = lstm_out
-        new_state = [h_out.squeeze(0), c_out.squeeze(0)]
-        return masked_logits, new_state
+        return masked_logits, [h_out.squeeze(0), c_out.squeeze(0)]
 
     @override(TorchModelV2)
     def value_function(self):
-        assert self._features is not None
-        return torch.reshape(self.value_branch(self._features), [-1])
+        return self.value_branch(self._features).squeeze(1)
 
-    # 為方便視覺化，回傳所有 embedding 的權重 (合併版本)
     def get_all_embeddings(self):
+        """合併版嵌入權重"""
+        return {
+            "profession": self.profession_embedding.weight.detach().cpu().tolist(),
+            "skill": self.skill_embedding.weight.detach().cpu().tolist(),
+            "effect": self.effect_embedding.weight.detach().cpu().tolist(),
+        }
+        
+        
+
+class MaskedLSTMNetworkWithMergedEmbV2(RecurrentNetwork, TorchModelV2, nn.Module):
+    """
+    合併玩家與敵方 embedding 的版本，結構與新版程式碼對齊。
+    - 職業/技能/特效共用同一組 embedding 表
+    - 調整特徵索引與新版觀測空間一致
+    - 技能部分融合 skill id 與 skill type 資訊（透過串接後線性融合）
+    - 統一狀態處理與 LSTM 流程
+    """
+    def __init__(self, obs_space, action_space, num_outputs, model_config, name):
+        nn.Module.__init__(self)
+        TorchModelV2.__init__(self, obs_space, action_space, num_outputs, model_config, name)
+
+        # =============== 基本設定 ===============
+        self.mask_dim = 4
+        self.obs_dim = obs_space.shape[0]
+        if num_outputs != self.mask_dim:
+            raise ValueError(f"num_outputs({num_outputs}) != mask_dim({self.mask_dim})")
+
+        # =============== Embedding 設定 (合併版) ===============
+        self.num_professions = 13
+        self.num_global_skills = 52  # 注意：13 職業 * 4 技能
+        self.num_effects = 13        # 與新版特效數一致
+
+        profession_emb_dim = 8
+        skill_emb_dim = 12           # 與新版技能嵌入維度一致
+        effect_emb_dim = 4
+
+        # 合併玩家與敵方的 embedding 表
+        self.profession_embedding = nn.Embedding(self.num_professions, profession_emb_dim)
+        self.skill_embedding = nn.Embedding(self.num_global_skills, skill_emb_dim)
+        self.effect_embedding = nn.Embedding(self.num_effects, effect_emb_dim)
+
+        # ---- 新增：技能類型相關 embedding 與融合層 ----
+        # 假設 skill type 轉成 id 後共有 3 種可能
+        self.skill_type_embedding = nn.Embedding(3, skill_emb_dim)
+        # 融合層：將 skill id 與 skill type 的 embedding 串接後映射回 skill_emb_dim
+        self.skill_fusion = nn.Linear(skill_emb_dim * 2, skill_emb_dim)
+
+        # =============== 網路層架構 ===============
+        # MLP 輸入維度計算 (需與特徵拼接結果一致)
+        # - 職業：玩家 + 敵方 (profession_emb_dim * 2)
+        # - 技能：玩家 + 敵方 (skill_emb_dim * 2) ※ 這裡使用融合後的技能向量
+        # - 特效：雙方各 13 個特效，每個特效 (effect_emb_dim + 3)
+        # - 連續特徵：雙方 (4+1+3+1) 維，再加上公共觀測 2
+        self._mlp_input_dim = (
+            profession_emb_dim * 2 +              # 玩家 + 敵方職業
+            skill_emb_dim * 2 +                   # 玩家 + 敵方技能 (融合後)
+            13 * (effect_emb_dim + 3) * 2 +         # 雙方特效
+            (4 + 1 + 3 + 1) * 2 +                 # 雙方連續特徵
+            2                                     # 公共觀測
+        )
+
+        # MLP 層 (預設兩層，每層 256 單位，可由 model_config 調整)
+        fcnet_hiddens = model_config.get("fcnet_hiddens", [256, 256])
+        layers = []
+        in_size = self._mlp_input_dim
+        for hidden_size in fcnet_hiddens:
+            layers.append(nn.Linear(in_size, hidden_size))
+            layers.append(nn.ReLU())
+            in_size = hidden_size
+        self.mlp = nn.Sequential(*layers)
+
+        # LSTM 層
+        self.lstm = nn.LSTM(
+            input_size=in_size,
+            hidden_size=in_size,
+            batch_first=True
+        )
+
+        # 輸出層
+        self.logits_layer = nn.Linear(in_size, num_outputs)
+        self.value_branch = nn.Linear(in_size, 1)
+
+        self._features = None
+        self.max_seq_len = model_config.get("max_seq_len", 10)
+        self.effect_id_list = list(range(self.num_effects))  # 特效 ID 0~12
+
+    @override(TorchModelV2)
+    def get_initial_state(self):
+        hidden_size = self.logits_layer.in_features
+        return [torch.zeros(hidden_size), torch.zeros(hidden_size)]
+
+    @override(TorchModelV2)
+    def forward(self, input_dict, state, seq_lens):
+        """轉接到 forward_rnn"""
+        obs = input_dict["obs"]
+        logits, new_state = self.forward_rnn(obs, state, seq_lens)
+        return logits, new_state
+
+    @override(RecurrentNetwork)
+    def forward_rnn(self, inputs, state, seq_lens):
+        B = inputs.shape[0]
+        h_in, c_in = state
+
+        # 處理狀態批次 (與新版邏輯一致)
+        if h_in.dim() == 1:
+            h_in = h_in.unsqueeze(0)
+            c_in = c_in.unsqueeze(0)
+        B_state = h_in.size(0)
+        if B_state != B:
+            if B_state == 1:
+                h_in = h_in.expand(B, -1)
+                c_in = c_in.expand(B, -1)
+            elif B % B_state == 0:
+                repeats = B // B_state
+                h_in = h_in.repeat(repeats, 1)
+                c_in = c_in.repeat(repeats, 1)
+            else:
+                raise RuntimeError(f"State batch ({B_state}) must divide input batch ({B})")
+        h_in, c_in = h_in.unsqueeze(0), c_in.unsqueeze(0)
+
+        # 1. 取得動作 mask (前 4 維)
+        mask = inputs[:, :self.mask_dim]
+
+        # 2. 解析職業 (索引與新版對齊)
+        # 玩家職業：obs[4:17] (one-hot)
+        profession_p_one_hot = inputs[:, 4:17]
+        prof_p_id = torch.argmax(profession_p_one_hot, dim=1)
+        prof_p_emb = self.profession_embedding(prof_p_id)
+
+        # 敵方職業：obs[80:93] (one-hot)
+        profession_e_one_hot = inputs[:, 80:93]
+        prof_e_id = torch.argmax(profession_e_one_hot, dim=1)
+        prof_e_emb = self.profession_embedding(prof_e_id)
+
+        # 3. 解析技能 (融合 skill id 與 skill type)
+        # 玩家技能：
+        #   - 選擇槽位 one-hot: obs[158:162]
+        local_skill_p_one_hot = inputs[:, 158:162]
+        local_skill_p_id = torch.argmax(local_skill_p_one_hot, dim=1)  # 值介於 0～3
+        global_skill_p_id = prof_p_id * 4 + local_skill_p_id   # 每個職業 4 個技能
+        # 取得 skill id 的 embedding
+        skill_id_emb_p = self.skill_embedding(global_skill_p_id)
+        # 取得玩家各技能槽的 skill type (one-hot 轉 id)
+        # 分別位於 obs[25:28], [28:31], [31:34], [34:37]
+        skill0_type = torch.argmax(inputs[:, 25:28], dim=1)
+        skill1_type = torch.argmax(inputs[:, 28:31], dim=1)
+        skill2_type = torch.argmax(inputs[:, 31:34], dim=1)
+        skill3_type = torch.argmax(inputs[:, 34:37], dim=1)
+        all_skill_types = torch.stack([skill0_type, skill1_type, skill2_type, skill3_type], dim=1)  # [B, 4]
+        # 根據玩家選擇的技能槽取得對應的 skill type
+        selected_skill_type = all_skill_types.gather(1, local_skill_p_id.unsqueeze(1)).squeeze(1)
+        skill_type_emb_p = self.skill_type_embedding(selected_skill_type)
+        # 融合：串接後線性映射
+        skill_p_emb = self.skill_fusion(torch.cat([skill_id_emb_p, skill_type_emb_p], dim=1))
+
+        # 敵方技能：
+        #   - 選擇槽位 one-hot: obs[154:158]
+        local_skill_e_one_hot = inputs[:, 154:158]
+        local_skill_e_id = torch.argmax(local_skill_e_one_hot, dim=1)
+        global_skill_e_id = prof_e_id * 4 + local_skill_e_id
+        skill_id_emb_e = self.skill_embedding(global_skill_e_id)
+        # 敵方 skill type 分別位於 obs[101:104], [104:107], [107:110], [110:113]
+        enemy_skill0_type = torch.argmax(inputs[:, 101:104], dim=1)
+        enemy_skill1_type = torch.argmax(inputs[:, 104:107], dim=1)
+        enemy_skill2_type = torch.argmax(inputs[:, 107:110], dim=1)
+        enemy_skill3_type = torch.argmax(inputs[:, 110:113], dim=1)
+        all_enemy_skill_types = torch.stack([enemy_skill0_type, enemy_skill1_type, enemy_skill2_type, enemy_skill3_type], dim=1)
+        selected_enemy_skill_type = all_enemy_skill_types.gather(1, local_skill_e_id.unsqueeze(1)).squeeze(1)
+        skill_type_emb_e = self.skill_type_embedding(selected_enemy_skill_type)
+        skill_e_emb = self.skill_fusion(torch.cat([skill_id_emb_e, skill_type_emb_e], dim=1))
+
+        # 4. 解析特效 (索引與新版對齊)
+        def process_effects(start_idx, batch_size):
+            features = []
+            for i in range(self.num_effects):
+                eff_id = self.effect_id_list[i]
+                emb = self.effect_embedding(torch.tensor([eff_id], device=inputs.device)).expand(batch_size, -1)
+                exist = inputs[:, start_idx + i*3]
+                stack = inputs[:, start_idx + i*3 + 1]
+                remain = inputs[:, start_idx + i*3 + 2]
+                features.append(torch.cat([emb,
+                                           exist.unsqueeze(1),
+                                           stack.unsqueeze(1),
+                                           remain.unsqueeze(1)], dim=1))
+            return torch.cat(features, dim=1)
+
+        # 玩家特效起始索引 37 (新版)
+        effect_p_vec = process_effects(37, B)
+        # 敵方特效起始索引 113
+        effect_e_vec = process_effects(113, B)
+
+        # 5. 解析連續特徵 (索引與新版對齊)
+        cont_p_cooldown    = inputs[:, 162:166]   # 玩家冷卻 (4維)
+        cont_p_hp_ratio    = inputs[:, 17:18]     # HP%
+        cont_p_multipliers = inputs[:, 19:22]     # 乘子 (3維)
+        cont_p_accDmg      = inputs[:, 22:23]     # 累積傷害
+
+        cont_e_cooldown    = inputs[:, 166:170]   # 敵方冷卻
+        cont_e_hp_ratio    = inputs[:, 93:94]
+        cont_e_multipliers = inputs[:, 95:98]
+        cont_e_accDmg      = inputs[:, 98:99]
+
+        cont_pub_obs       = inputs[:, 152:154]   # 公共觀測 (2維)
+
+        cont_features = torch.cat([
+            cont_p_cooldown, cont_p_hp_ratio, cont_p_multipliers, cont_p_accDmg,
+            cont_e_cooldown, cont_e_hp_ratio, cont_e_multipliers, cont_e_accDmg,
+            cont_pub_obs
+        ], dim=1)
+
+        # 6. 拼接所有特徵
+        combined = torch.cat([
+            prof_p_emb, prof_e_emb,
+            skill_p_emb, skill_e_emb,
+            effect_p_vec, effect_e_vec,
+            cont_features
+        ], dim=1)
+
+        # 7. 網路前向傳播：MLP -> LSTM -> 輸出層
+        mlp_out = self.mlp(combined)
+        lstm_in = mlp_out.unsqueeze(1)  # [B, 1, hidden_dim]
+        lstm_out, (h_out, c_out) = self.lstm(lstm_in, (h_in, c_in))
+        lstm_out = lstm_out.squeeze(1)  # [B, hidden_dim]
+
+        logits = self.logits_layer(lstm_out)
+        masked_logits = logits + (1.0 - mask) * -1e10
+
+        self._features = lstm_out
+        return masked_logits, [h_out.squeeze(0), c_out.squeeze(0)]
+
+    @override(TorchModelV2)
+    def value_function(self):
+        return self.value_branch(self._features).squeeze(1)
+
+    def get_all_embeddings(self):
+        """
+        取得本模型裡面所有 embedding 的 weight，並以 dict 形式回傳，方便你存成 JSON。
+        注意：此方法僅回傳原始 embedding 表，不含融合層參數。
+        """
         return {
             "profession": self.profession_embedding.weight.detach().cpu().numpy().tolist(),
             "skill": self.skill_embedding.weight.detach().cpu().numpy().tolist(),
             "effect": self.effect_embedding.weight.detach().cpu().numpy().tolist(),
         }
-
-
-
-ModelCatalog.register_custom_model("my_mask_model", MaskedLSTMNetwork)
-ModelCatalog.register_custom_model("my_mask_model_with_emb", MaskedLSTMNetworkWithEmb)
-ModelCatalog.register_custom_model("my_mask_model_with_emb_combined", MaskedLSTMNetworkWithMergedEmb)

@@ -79,7 +79,7 @@ sm.add_skill(Skill(
 sm.add_skill(Skill(
     2, "神聖治療", f"首次使用恢復 {PALADIN_VAR['PALADIN_SKILL_2_FIRST_HEAL'][0]} 點生命值；第二次使用恢復 {PALADIN_VAR['PALADIN_SKILL_2_SECOND_HEAL'][0]} 點生命值；其後使用恢復 {PALADIN_VAR['PALADIN_SKILL_2_MORE_HEAL'][0]} 點生命值。", 'heal'))
 sm.add_skill(Skill(
-    3, "決一死戰", f"2 回合內，自身受到致死傷害時，回復最大血量的 {PALADIN_VAR['PALADIN_SKILL_3_MAX_HP_HEAL'][0]*100} %， 並提升自身 {(PALADIN_VAR['PALADIN_SKILL_3_DAMAGE_BUFF'][0]-1) *100} %的攻擊力，以及降低自身 {(1-PALADIN_VAR['PALADIN_SKILL_3_DEFENSE_DEBUFF'][0])*100} %的防禦力。", 'effect',PALADIN_VAR['PALADIN_SKILL_3_COOLDOWN'][0]))
+    3, "決一死戰", f"持續 2 回合，自身受到致死傷害時，回復最大血量的 {int(PALADIN_VAR['PALADIN_SKILL_3_MAX_HP_HEAL'][0]*100)}%。效果觸發時，持續 3 回合，自身提升 {int((PALADIN_VAR['PALADIN_SKILL_3_DAMAGE_BUFF'][0]-1) *100)}%的攻擊力，以及自身降低 {int((1-PALADIN_VAR['PALADIN_SKILL_3_DEFENSE_DEBUFF'][0])*100)}%的防禦力。", 'effect',PALADIN_VAR['PALADIN_SKILL_3_COOLDOWN'][0]))
 
 # 火焰領域
 sm.add_skill(Skill(
@@ -89,7 +89,7 @@ sm.add_skill(Skill(
 sm.add_skill(Skill(
     6, "全域爆破", f"對敵方造成 {MAGE_VAR['MAGE_SKILL_2_BASE_DAMAGE'][0]} 點傷害，並引爆累積的狀態。每層燃燒或冰凍效果額外對敵方造成 {MAGE_VAR['MAGE_SKILL_2_STATUS_MULTIPLIER'][0]} 點傷害。", 'damage'))
 sm.add_skill(Skill(
-    7, "無詠唱魔法", f"對敵方造成 {MAGE_VAR['MAGE_SKILL_3_BASE_DAMAGE'][0]} 點傷害，並引爆累積的狀態。每層燃燒或冰凍效果額外對敵方造成 {MAGE_VAR['MAGE_SKILL_3_STATUS_MULTIPLIER'][0]} 點傷害，此技能擁有最高使用的優先級。", 'effect'))
+    7, "詠唱破棄．全域爆破", f"對敵方造成 {MAGE_VAR['MAGE_SKILL_3_BASE_DAMAGE'][0]} 點傷害，並引爆累積的狀態。每層燃燒或冰凍效果額外對敵方造成 {MAGE_VAR['MAGE_SKILL_3_STATUS_MULTIPLIER'][0]} 點傷害，此技能攻擊順序必定最優先。", 'effect'))
 
 
 
@@ -102,7 +102,7 @@ sm.add_skill(Skill(
     10, "毒刃襲擊", f"對敵方造成 {ASSASSIN_VAR['ASSASSIN_SKILL_2_DAMAGE'][0]} 點傷害，並疊加 1~5 層中毒狀態（機率由權重決定）。每層中毒對敵方造成 {ASSASSIN_VAR['ASSASSIN_SKILL_2_POISON_DAMAGE'][0]} 點傷害。", 'damage'))
 # 致命藥劑 :根據敵方當前中毒層數降低治癒力，敵方每層中毒降低30%的治癒力。持續時間等同於中毒的剩餘持續時間
 sm.add_skill(Skill(
-    11, "致命藥劑", f"根據敵方當前中毒層數降低治癒力，敵方每層中毒降低{int(ASSASSIN_VAR['ASSASSIN_SKILL_3_DEBUFF_MULTIPLIER'][0]*100)}%的治癒力。持續時間等同於中毒的剩餘持續時間。", 'effect', ASSASSIN_VAR['ASSASSIN_SKILL_3_COOLDOWN'][0]))   
+    11, "致命藥劑", f"根據敵方當前中毒層數降低治癒力，敵方每層中毒降低 {int((1-ASSASSIN_VAR['ASSASSIN_SKILL_3_DEBUFF_MULTIPLIER'][0]*100))}% 治癒力。持續時間等同於中毒的剩餘持續時間。", 'effect', ASSASSIN_VAR['ASSASSIN_SKILL_3_COOLDOWN'][0]))   
 
     
 
@@ -115,7 +115,7 @@ sm.add_skill(Skill(
     14, "吸血箭", f"對敵方造成 {ARCHER_VAR['ARCHER_SKILL_2_DAMAGE'][0]} 點傷害，並為自身恢復 {ARCHER_VAR['ARCHER_SKILL_2_HEAL'][0]} 點生命值。", 'damage'))
 # 驟雨 對敵方造成50(10*5)傷害，無視目標80%防禦力。
 sm.add_skill(Skill(
-    15, "驟雨", f"對敵方造成 {ARCHER_VAR['ARCHER_SKILL_3_DAMAGE'][0]} 點傷害，無視目標{int(ARCHER_VAR['ARCHER_SKILL_3_IGN_DEFEND'][0]*100)}%防禦力。", 'damage', ARCHER_VAR['ARCHER_SKILL_3_COOLDOWN'][0]))
+    15, "驟雨", f"對敵方造成 {ARCHER_VAR['ARCHER_SKILL_3_DAMAGE'][0]} 點傷害，無視目標 {int(ARCHER_VAR['ARCHER_SKILL_3_IGN_DEFEND'][0]*100)}% 防禦力。", 'damage'))
 
     
 
@@ -146,7 +146,7 @@ sm.add_skill(Skill(
 # 浴血 CD 4
 # 3回合間獲得”吸血”效果，攻擊敵人會回復 15%傷害造成的血量。自身血量比例越低時，吸血效果額外增加，最大增加200%。
 sm.add_skill(Skill(
-    19,"嗜血本能",f"3回合間獲得”吸血”效果，攻擊敵人會回復 {BERSERKER_VAR['BERSERKER_SKILL_3_BASE_HEAL_RATE'][0]*100}%傷害造成的血量。自身血量比例越低時，吸血效果額外增加，最大增加{BERSERKER_VAR['BERSERKER_SKILL_3_BONUS_RATE'][0]*100}%。",'effect',BERSERKER_VAR['BERSERKER_SKILL_3_COOLDOWN'][0]))
+    19,"嗜血本能",f"持續 3 回合，攻擊敵人時會恢復 {int(BERSERKER_VAR['BERSERKER_SKILL_3_BASE_HEAL_RATE'][0]*100)}% 傷害造成的血量。自身血量比例越低時，吸血效果額外增加，最大增加 {int(BERSERKER_VAR['BERSERKER_SKILL_3_BONUS_RATE'][0]*100)}% 。",'effect',BERSERKER_VAR['BERSERKER_SKILL_3_COOLDOWN'][0]))
              
 
 
@@ -176,7 +176,7 @@ sm.add_skill(Skill(
 # 預借 CD 6
 # 龍神層數立即疊加 4 層，但在接下來的4回合內不會疊加層數。
 sm.add_skill(Skill(
-    23,"預借",f"龍神層數立即疊加 {DRAGONGOD_VAR['DRAGONGOD_SKILL_3_ADD_STACK'][0]} 層，但在接下來的{DRAGONGOD_VAR['DRAGONGOD_SKILL_3_ADD_STACK'][0]}回合內不會疊加層數。",'effect',DRAGONGOD_VAR['DRAGONGOD_SKILL_3_COOLDOWN'][0]))
+    23,"預借",f"龍神層數立即疊加 {DRAGONGOD_VAR['DRAGONGOD_SKILL_3_ADD_STACK'][0]} 層，但在接下來的{DRAGONGOD_VAR['DRAGONGOD_SKILL_3_ADD_STACK'][0]}回合內，「龍血」技能會處於無效狀態。",'effect',DRAGONGOD_VAR['DRAGONGOD_SKILL_3_COOLDOWN'][0]))
 
 
 
@@ -202,7 +202,7 @@ sm.add_skill(Skill(
 # 新生 CD8
 # 立即降低90%的血脈中的累積傷害，但是獲得一個永久的降低攻/防/治 20%的效果
 sm.add_skill(Skill(
-    27,"新生",f"立即降低{BLOODGOD_VAR['BLOODGOD_SKILL_REDUCE_DAMAGE']*100}% 的血脈中的累積傷害，但是獲得一個永久的降低攻擊力、防禦力、治癒力 {int(BLOODGOD_VAR['BLOODGOD_SKILL_3_DEBUFF_MULTIPLIER'][0]*100)}%的效果。",'effect',BLOODGOD_VAR['BLOODGOD_SKILL_3_COOLDOWN'][0]))
+    27,"新生",f"立即降低 {int(BLOODGOD_VAR['BLOODGOD_SKILL_3_REDUCE_DAMAGE'][0]*100)}% 的血脈中的累積傷害，但是獲得一個永久的攻擊力、防禦力、治癒力降低 {int((1-BLOODGOD_VAR['BLOODGOD_SKILL_3_DEBUFF_MULTIPLIER'][0])*100)}%的效果。",'effect',BLOODGOD_VAR['BLOODGOD_SKILL_3_COOLDOWN'][0]))
              
 
 
@@ -231,7 +231,7 @@ sm.add_skill(Skill(
 # 特殊效果：若敵方擁有增益效果，則移除一個增益效果並額外造成15點傷害，若我方有減益效果，則移除一個減益效果並額外造成15點傷害
 # 冷卻時間：3回合
 sm.add_skill(Skill(
-    31,"破魂斬",f"對敵方造成{STEADFASTWARRIOR_VAR['STEADFASTWARRIOR_SKILL_3_DAMAGE'][0]}點傷害，若敵方擁有增益效果，則移除一個增益效果並額外造成{STEADFASTWARRIOR_VAR['STEADFASTWARRIOR_SKILL_3_BONUS_DAMAGE'][0]}點傷害，若我方有減益效果，則移除一個減益效果並額外造成{STEADFASTWARRIOR_VAR['STEADFASTWARRIOR_SKILL_3_BONUS_DAMAGE'][0]}點傷害。",'damage',STEADFASTWARRIOR_VAR['STEADFASTWARRIOR_SKILL_3_COOLDOWN'][0]))
+    31,"破魂斬",f"對敵方造成 {STEADFASTWARRIOR_VAR['STEADFASTWARRIOR_SKILL_3_DAMAGE'][0]} 點傷害，若敵方擁有增益效果，則移除一個增益效果並額外對敵方造成 {STEADFASTWARRIOR_VAR['STEADFASTWARRIOR_SKILL_3_BONUS_DAMAGE'][0]} 點傷害，若我方有減益效果，則移除一個減益效果並額外對敵方造成 {STEADFASTWARRIOR_VAR['STEADFASTWARRIOR_SKILL_3_BONUS_DAMAGE'][0]} 點傷害。",'damage',STEADFASTWARRIOR_VAR['STEADFASTWARRIOR_SKILL_3_COOLDOWN'][0]))
 
 
 
@@ -240,7 +240,7 @@ sm.add_skill(Skill(
 # 鯨吞 技能定義
 sm.add_skill(Skill(
     32, "吞裂",
-    f"對敵方造成 {DEVOUR_VAR['DEVOUR_SKILL_0_DAMAGE'][0]} 點傷害，{int(DEVOUR_VAR['DEVOUR_SKILL_0_FAILURE_RATE'][0] * 100)}% 機率使用失敗，使用失敗後，下次提升{DEVOUR_VAR['DEVOUR_SKILL_0_FAILURE_ADD_RATE']*100}% 機率，直到使用成功。",
+    f"對敵方造成 {DEVOUR_VAR['DEVOUR_SKILL_0_DAMAGE'][0]} 點傷害，{int(DEVOUR_VAR['DEVOUR_SKILL_0_FAILURE_RATE'][0] * 100)}% 機率使用失敗，使用失敗後，下次提升 {int(DEVOUR_VAR['DEVOUR_SKILL_0_FAILURE_ADD_RATE'][0]*100)}% 機率，直到技能成功使用。",
     'damage'
 ))
 
@@ -260,7 +260,7 @@ sm.add_skill(Skill(
 # 新技能： 觸電反應 CD 3
 # 麻痺自己3回合，在接下來的3回合間吞裂的使用成功機率提升至100%
 sm.add_skill(Skill(
-    35,"觸電反應",f"麻痺自己{DEVOUR_VAR['DEVOUR_SKILL_3_PARALYSIS_DURATION'][0]}回合，在接下來的{DEVOUR_VAR['DEVOUR_SKILL_3_MUST_SUCCESS_DURATAION'][0]}回合間吞裂的使用成功機率提升至100%。",'effect',DEVOUR_VAR['DEVOUR_SKILL_3_COOLDOWN'][0]))
+    35,"觸電反應",f"麻痺自己 {DEVOUR_VAR['DEVOUR_SKILL_3_PARALYSIS_DURATION'][0]} 回合。持續 {DEVOUR_VAR['DEVOUR_SKILL_3_MUST_SUCCESS_DURATAION'][0]} 回合，吞裂的使用成功機率提升至100%。",'effect',DEVOUR_VAR['DEVOUR_SKILL_3_COOLDOWN'][0]))
 
 
 
@@ -289,7 +289,7 @@ sm.add_skill(Skill(
 # 引爆後2回合內會降低敵方40%防禦力，並受到地雷累積60%的傷害。
 # 若是未達成條件即引爆時，則降低20%防禦力，並受到地雷累積40%的傷害。
 sm.add_skill(Skill(
-    39,"地雷",f"施放一個地雷，地雷在受到最大等同於自身當前血量的{RANGER_VAR['RANGER_SKILL_3_HP_THRESHOLD'][0]*100}%累積傷害，或是{RANGER_VAR['RANGER_SKILL_3_DURATION'][0]}回合後會引爆。引爆後2回合內會降低敵方{1 - RANGER_VAR['RANGER_SKILL_3_DEBUFF_MULTIPLIER_SUCESS'][0]*100}%防禦力，並受到地雷累積{RANGER_VAR['RANGER_SKILL_3_DAMAGE_RATE_SUCCESS'][0]*100}%的傷害。若是未達成條件即引爆時，則降低{1 - RANGER_VAR['RANGER_SKILL_3_DEBUFF_MULTIPLIER_FAIL'][0]*100}%防禦力，並受到地雷累積{RANGER_VAR['RANGER_SKILL_3_DAMAGE_RATE_FAIL'][0]*100}%的傷害。",'effect',RANGER_VAR['RANGER_SKILL_3_COOLDOWN'][0]))
+    39,"地雷",f"施放一個地雷，地雷在受到最大等同於自身當前血量的 {int(RANGER_VAR['RANGER_SKILL_3_HP_THRESHOLD'][0]*100)}% 累積傷害，或是 {RANGER_VAR['RANGER_SKILL_3_DURATION'][0]} 回合後會引爆。引爆後，持續 2 回合，會讓敵方降低 {int((1 - RANGER_VAR['RANGER_SKILL_3_DEBUFF_MULTIPLIER_SUCCESS'][0])*100)}% 防禦力，並受到地雷累積 {int(RANGER_VAR['RANGER_SKILL_3_DAMAGE_RATE_SUCCESS'][0]*100)}% 的傷害。若是未達成傷害累積條件即引爆時，則降低 {int((1 - RANGER_VAR['RANGER_SKILL_3_DEBUFF_MULTIPLIER_FAIL'][0])*100)}% 防禦力，並受到地雷累積 {int(RANGER_VAR['RANGER_SKILL_3_DAMAGE_RATE_FAIL'][0]*100)}% 的傷害。",'effect',RANGER_VAR['RANGER_SKILL_3_COOLDOWN'][0]))
 
 
 # 元素法師 (ElementalMage) 技能定義
@@ -313,7 +313,7 @@ sm.add_skill(Skill(
 # 天啟 CD 8
 # 4回合內，將雙方的治癒力係數降低99%
 sm.add_skill(Skill(
-    43,"天啟",f"{ELEMENTALMAGE_VAR['ELEMENTALMAGE_SKILL_3_DURATION'][0]}回合內，將雙方的治癒力係數降低{(1- ELEMENTALMAGE_VAR['ELEMENTALMAGE_SKILL_3_MULTIPLIER'][0])*100}%。",'effect',ELEMENTALMAGE_VAR['ELEMENTALMAGE_SKILL_3_COOLDOWN'][0]))
+    43,"天啟",f"持續 {ELEMENTALMAGE_VAR['ELEMENTALMAGE_SKILL_3_DURATION'][0]} 回合，雙方降低 {int((1- ELEMENTALMAGE_VAR['ELEMENTALMAGE_SKILL_3_MULTIPLIER'][0])*100)}% 的治癒力。",'effect',ELEMENTALMAGE_VAR['ELEMENTALMAGE_SKILL_3_COOLDOWN'][0]))
 
 
 # 荒神 (HuangShen) 技能定義
@@ -340,7 +340,7 @@ sm.add_skill(Skill(
 ))
 # 3回合內，枯萎之刃攻擊時，降低敵方2%防禦力及治癒力。並回復等同於追打次數100%的血量
 sm.add_skill(Skill(
-    47,"風化",f"{HUANGSHEN_VAR['HUANGSHEN_SKILL_3_DURATION'][0]}回合內，枯萎之刃攻擊時，降低敵方{int(1- HUANGSHEN_VAR['HUANGSHEN_SKILL_3_REDUCE_MULTIPLIER'][0]*100)}%防禦力及治療力。並回復等同於追打次數{int(HUANGSHEN_VAR['HUANGSHEN_PASSIVE_EXTRA_HIT_HEAL'][0]*100)}%的血量。",'effect',HUANGSHEN_VAR['HUANGSHEN_SKILL_3_COOLDOWN'][0]))
+    47,"風化",f"持續 {HUANGSHEN_VAR['HUANGSHEN_SKILL_3_DURATION'][0]} 回合，枯萎之刃攻擊時，敵方降低 {int((1- HUANGSHEN_VAR['HUANGSHEN_SKILL_3_REDUCE_MULTIPLIER'][0])*100)}% 防禦力及治療力。並恢復等同於追打次數 {int(HUANGSHEN_VAR['HUANGSHEN_PASSIVE_EXTRA_HIT_HEAL'][0]*100)}% 的血量。",'effect',HUANGSHEN_VAR['HUANGSHEN_SKILL_3_COOLDOWN'][0]))
 
 # 星神
 sm.add_skill(Skill(
@@ -367,5 +367,5 @@ sm.add_skill(Skill(
 # 本回合天啟星盤的效果增加 25%。
 # 將自身由光輝流星附加的buff，轉為減益效果賦予到對方身上；自身由災厄隕星附加的debuff，轉為增益效果賦予到對方身上
 sm.add_skill(Skill(
-    51,"無序聯星",f"對敵方造成{GODOFSTAR_VAR['GODOFSTAR_SKILL_3_DAMAGE'][0]}點傷害，回復{GODOFSTAR_VAR['GODOFSTAR_SKILL_3_HEAL'][0]}點生命值，本回合天啟星盤的效果增加{GODOFSTAR_VAR['GODOFSTAR_SKILL_3_PASSIVE_MULTIPLIER'][0]*100}%。將自身由光輝流星附加的buff，轉為減益效果賦予到對方身上；自身由災厄隕星附加的debuff，轉為增益效果賦予到對方身上。",'damage',GODOFSTAR_VAR['GODOFSTAR_SKILL_3_COOLDOWN'][0]))
-    
+    51,"無序聯星",f"對敵方造成 {GODOFSTAR_VAR['GODOFSTAR_SKILL_3_DAMAGE'][0]} 點傷害，恢復 {GODOFSTAR_VAR['GODOFSTAR_SKILL_3_HEAL'][0]} 點生命值，本回合天啟星盤的效果增加 {int(GODOFSTAR_VAR['GODOFSTAR_SKILL_3_PASSIVE_MULTIPLIER'][0]*100)-100}%。將自身由光輝流星附加的增益效果，轉為減益效果賦予到對方身上；自身由災厄隕星附加的簡易效果，轉為增益效果賦予自身身上。",'damage',GODOFSTAR_VAR['GODOFSTAR_SKILL_3_COOLDOWN'][0]))
+

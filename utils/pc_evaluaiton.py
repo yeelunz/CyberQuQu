@@ -19,7 +19,7 @@ def version_test_random_vs_random_sse(professions, skill_mgr, num_battles=100):
     
     # 初始化結果字典
     results = {p.name: {op.name: {'win': 0, 'loss': 0, 'draw': 0} for op in professions if op != p} for p in professions}
-    skillusedFreq = {p.name: {0:0,1:0,2:0} for p in professions}
+    skillusedFreq = {p.name: {0:0,1:0,2:0,3:0} for p in professions}
     
     # 為了計算平均回合數
     total_rounds = 0
@@ -59,8 +59,8 @@ def version_test_random_vs_random_sse(professions, skill_mgr, num_battles=100):
                 rounds = 0  # 計算單場回合數
                 while not done:
                     rounds += 1
-                    pmask = obs["player"][0:3]
-                    emask = obs["enemy"][0:3]
+                    pmask = obs["player"][0:4]
+                    emask = obs["enemy"][0:4]
                     p_actions = np.where(pmask == 1)[0]
                     e_actions = np.where(emask == 1)[0]
                     p_act = random.choice(p_actions) if len(p_actions) > 0 else 0

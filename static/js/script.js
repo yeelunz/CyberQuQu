@@ -123,10 +123,13 @@ document.addEventListener("DOMContentLoaded", () => {
     menuInfo.addEventListener("click", (e) => {
         e.preventDefault();
         fetch("/api/show_professions")
+        // console.log("fetch professions");
+
             .then((res) => res.json())
             .then((data) => {
                 // data.professions_info 是後端回傳的陣列
                 const professions = data.professions_info;
+                console.log(professions);
                 let html = "";
 
                 professions.forEach((p) => {

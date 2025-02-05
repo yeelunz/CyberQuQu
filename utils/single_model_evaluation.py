@@ -126,7 +126,7 @@ def compute_ai_elo(model_path_1, professions, skill_mgr, base_elo=1500, opponent
                 ai_act = ai_package[0]
                 state = ai_package[1]
 
-                enemy_act = random.choice([0, 1, 2])  # 隨機對手
+                enemy_act = random.choice([0, 1, 2,3])  # 隨機對手
                 actions = {"player": ai_act, "enemy": enemy_act}
                 obs, rew, done_dict, tru, info = env.step(actions)
                 done = done_dict["__all__"]
@@ -167,7 +167,7 @@ def compute_ai_elo(model_path_1, professions, skill_mgr, base_elo=1500, opponent
             state = policy.model.get_initial_state()
 
             while not done:
-                enemy_act = random.choice([0, 1, 2])  # 隨機對手
+                enemy_act = random.choice([0, 1, 2,3])  # 隨機對手
 
                 ai_package = trainer.compute_single_action(
                     obs['enemy'], state=state, policy_id="shared_policy")
@@ -261,7 +261,7 @@ def version_test_random_vs_random_sse_ai(professions, skill_mgr, num_battles=100
     # 初始化結果字典
     results = {p.name: {op.name: {'win': 0, 'loss': 0, 'draw': 0}
                         for op in professions if op != p} for p in professions}
-    skillusedFreq = {p.name: {0: 0, 1: 0, 2: 0} for p in professions}
+    skillusedFreq = {p.name: {0: 0, 1: 0, 2: 0,3:0} for p in professions}
 
     fc_hiddens = [256, 256, 256]
     check_point_path = os.path.abspath(model_path_1)

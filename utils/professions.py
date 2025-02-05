@@ -46,7 +46,7 @@ class BattleProfession:
         # get cooldowns
         ok_skills = []
         if cooldowns[0] == 0:
-            ok_skills.append(self.profession_id * 3)
+            ok_skills.append(self.profession_id * 4)
         if cooldowns[1] == 0:
             ok_skills.append(self.profession_id*4 + 1)
         if cooldowns[2] == 0:
@@ -126,15 +126,15 @@ class Paladin(BattleProfession):
         )
         self.heal_counts = {}
         
-    def damage_taken(self, user, targets, env):
-        super().damage_taken(user, targets, env)
+    def damage_taken(self, user, targets, env, dmg):
+        super().damage_taken(user, targets, env, dmg)
         #  這邊處理的是技能 3 的效果
         if user["effect_manager"].has_effect("決一死戰") and user["hp"] <= 0:
             env.add_event(event=BattleEvent(type="text", text=f"{self.name} 整理好自己的狀態，並開始進行最後的決戰。"))
             user["hp"] = int(user["max_hp"] * PALADIN_VAR['PALADIN_SKILL_3_MAX_HP_HEAL'][0])
             # b
-            buff = DamageMultiplier(multiplier=PALADIN_VAR['PALADIN_SKILL_3_DAMAGE_BUFF'], duration=3, stackable=False, source=self.profession_id * 4 + 3)
-            debuff = DefenseMultiplier(multiplier=PALADIN_VAR['PALADIN_SKILL_3_DEFENSE_DEBUFF'], duration=3, stackable=False, source=self.profession_id * 4 + 3)
+            buff = DamageMultiplier(multiplier=PALADIN_VAR['PALADIN_SKILL_3_DAMAGE_BUFF'][0], duration=3, stackable=False, source=self.profession_id * 4 + 3)
+            debuff = DefenseMultiplier(multiplier=PALADIN_VAR['PALADIN_SKILL_3_DEFENSE_DEBUFF'][0], duration=3, stackable=False, source=self.profession_id * 4 + 3)
             env.apply_status(user, buff)
             env.apply_status(user, debuff)
             user["effect_manager"].remove_all_effects("決一死戰")
@@ -514,7 +514,8 @@ class DragonGod(BattleProfession):
     def on_turn_start(self, user, targets, env, id):
         super().on_turn_start(user, targets, env, id)
         # 每回合觸發被動技能，疊加龍血狀態
-        if user["effect_manager"].has_effect("預借"):
+
+        if user["effect_manager"].has_effect("預借",source = self.profession_id*4 +3):
             env.add_event(event=BattleEvent(
                 type="text", text=f"預借效果中，不會疊加龍血狀態。"))
             return
@@ -596,36 +597,12 @@ class DragonGod(BattleProfession):
         
         elif skill_id ==self.profession_id*4 +3:
             # 龍神層數立即疊加 4 層，但在接下來的4回合內不會疊加層數。
-            tr = Track(name = "預借", duration = DRAGONGOD_VAR['DRAGONGOD_SKILL_3_ADD_STACK'][0]+1, source = skill_id, stackable = False)
-            env.apply_status(user, tr)
-            atk_buff = DamageMultiplier(
-            multiplier=DRAGONGOD_VAR['DRAGONGOD_PASSIVE_ATK_MULTIPLIER'][0],
-            duration=99,
-            stacks=1,
-            source=self.default_passive_id,
-            stackable=True,
-            max_stack=99
-            )
-            def_buff = DefenseMultiplier(
-                multiplier=DRAGONGOD_VAR['DRAGONGOD_PASSIVE_DEF_MULTIPLIER'][0],
-                duration=99,
-                stacks=1,
-                source=self.default_passive_id,
-                stackable=True,
-                max_stack=99
-            )
-            track = Track(
-                name="龍血",
-                duration=99,
-                stacks=1,
-                source=self.default_passive_id,
-                stackable=True,
-                max_stack=99
-            )
+            tr = Track(name = "預借", duration = DRAGONGOD_VAR['DRAGONGOD_SKILL_3_ADD_STACK'][0]+1,stacks=1,max_stack=1, source = skill_id, stackable = False)
+            
             for _ in range(4):
-                env.apply_status(user, atk_buff)
-                env.apply_status(user, def_buff)
-                env.apply_status(user, track)
+                self.on_turn_start(user, targets, env, -1)
+            env.apply_status(user, tr)
+            
             
 class BloodGod(BattleProfession):
     def __init__(self):
@@ -754,18 +731,19 @@ class BloodGod(BattleProfession):
             env.apply_status(user, eff)
             # 剩下部分在 damage_taken 處理
         elif skill_id == self.profession_id * 4 + 3:
-            if 'total_accumulated_damage' in user['private_info']:
-                pass
-            else:
+            if 'total_accumulated_damage' not in user['private_info']:
+
                 user['private_info']['total_accumulated_damage'] = user['accumulated_damage']
             # reduce the accumulated damage
-            user['private_info']['total_accumulated_damage'] *= (1-BLOODGOD_VAR['BLOODGOD_SKILL_REDUCE_DAMAGE'])
-            dam_debuff = DamageMultiplier(multiplier = BLOODGOD_VAR['BLOODGOD_SKILL_DEBUFF_MULTIPLIER'], duration = 99,stack = 1 ,max_stack= 5 ,stackable = True, source = skill_id)
-            def_debuff = DefenseMultiplier(multiplier = BLOODGOD_VAR['BLOODGOD_SKILL_DEBUFF_MULTIPLIER'], duration = 99,stack = 1 ,max_stack= 5 ,stackable = True, source = skill_id)
-            hel_debuff = HealMultiplier(multiplier = BLOODGOD_VAR['BLOODGOD_SKILL_DEBUFF_MULTIPLIER'], duration = 99,stack = 1 ,max_stack= 5 ,stackable = True, source = skill_id)
+            user['private_info']['total_accumulated_damage'] *= (1-BLOODGOD_VAR['BLOODGOD_SKILL_3_REDUCE_DAMAGE'][0])
+            dam_debuff = DamageMultiplier(multiplier = BLOODGOD_VAR['BLOODGOD_SKILL_3_DEBUFF_MULTIPLIER'][0], duration = 99,stacks = 1 ,max_stack= 5 ,stackable = True, source = skill_id)
+            def_debuff = DefenseMultiplier(multiplier = BLOODGOD_VAR['BLOODGOD_SKILL_3_DEBUFF_MULTIPLIER'][0], duration = 99,stacks = 1 ,max_stack= 5 ,stackable = True, source = skill_id)
+            hel_debuff = HealMultiplier(multiplier = BLOODGOD_VAR['BLOODGOD_SKILL_3_DEBUFF_MULTIPLIER'][0], duration = 99,stacks = 1 ,max_stack= 5 ,stackable = True, source = skill_id)
             env.apply_status(user, dam_debuff)
             env.apply_status(user, def_debuff)
             env.apply_status(user, hel_debuff)
+            # 立即更新血脈
+            self.on_turn_end(user, targets, env, -1)
             
                    
 
@@ -826,19 +804,26 @@ class SteadfastWarrior(BattleProfession):
             dmg = STEADFASTWARRIOR_VAR['STEADFASTWARRIOR_SKILL_3_DAMAGE'][0] * self.baseAtk
             # check 敵方 buff狀態
             effects_cnt = 0
-            for eff in targets[0]["effect_manager"].active_effects.values():
+            effects_copy_1 = list(user["effect_manager"].active_effects.values())
+            effects_copy_2 = list(targets[0]["effect_manager"].active_effects.values())
+            deleted = 0
+            for eff in effects_copy_2:
                 for effect in eff:
-                    if effect.type == "buff" and effect.multiplier > 1:
+                    if effect.type == "buff" and effect.multiplier > 1 and deleted == 0:
                         effects_cnt += 1
                         # del this effect
                         targets[0]["effect_manager"].remove_all_effects(effect.name, effect.source)
+                        deleted  = 1
+                    
+            deleted = 0   
             # check 自己的debuff狀態
-            for eff in user["effect_manager"].active_effects.values():
+            for eff in effects_copy_1:
                 for effect in eff:
-                    if effect.type == "buff" and effect.multiplier < 1:
+                    if effect.type == "buff" and effect.multiplier < 1 and deleted == 0:
                         effects_cnt += 1
                         # del this effect
                         user["effect_manager"].remove_all_effects(effect.name, effect.source)
+                        deleted = 1
             dmg = STEADFASTWARRIOR_VAR['STEADFASTWARRIOR_SKILL_3_DAMAGE'][0] * self.baseAtk
             dmg += effects_cnt * STEADFASTWARRIOR_VAR['STEADFASTWARRIOR_SKILL_3_BONUS_DAMAGE'][0]
             env.deal_damage(user, targets[0], dmg, can_be_blocked=True)
@@ -935,14 +920,14 @@ class Ranger(BattleProfession):
                 type="text", text=f"{self.name} 埋伏成功，向敵人發動反擊！"))
             env.deal_damage(user, target, dmg * RANGER_VAR['RANGER_SKILL_1_AMBUSH_DAMAGE_MULTIPLIER'][0], can_be_blocked=True)
 
-    def on_turn_end(self, user, targets, env, id):
-        super().on_turn_end(user, targets, env, id)
+    def on_turn_end(self, user, target, env, id):
+        super().on_turn_end(user, target, env, id)
         if 'mines_accumulated' not in user['private_info']:
-            user['private_info']['mines_accumulated'] = targets[0]['accumulated_damage']
+            user['private_info']['mines_accumulated'] = target['accumulated_damage']
         else:
-            user['private_info']['mines_accumulated'] += targets[0]['accumulated_damage']
+            user['private_info']['mines_accumulated'] += target['accumulated_damage']
         # 引爆處理
-        mine_exist = targets[0]['effect_manager'].has_effect("地雷")
+        mine_exist = target['effect_manager'].has_effect("地雷")
         # round out bomb!
         if mine_exist==False and user['private_info']['mines'] == True:
             env.add_event(event=BattleEvent(type="text", text=f"{self.name} 設下的地雷因時間到而引爆！"))
@@ -955,12 +940,12 @@ class Ranger(BattleProfession):
                 stackable=False,
                 source = self.profession_id * 4 + 3
             )
-            env.deal_damage(user, targets[0], dmg, can_be_blocked=True)
-            env.apply_status(targets[0], debuff)
+            env.deal_damage(user, target, dmg, can_be_blocked=True)
+            env.apply_status(target, debuff)
             
             user['private_info']['mines_accumulated'] = 0
         # accumulate damage bomb!
-        elif mine_exist==True and user['private_info']['mines'] == True and user['private_info']['mines_accumulated'] >= user['private_info']['cur_hp'] * RANGER_VAR['RANGER_SKILL_3_DAMAGE_THRESHOLD'][0]:
+        elif mine_exist==True and user['private_info']['mines'] == True and user['private_info']['mines_accumulated'] >= user['private_info']['cur_hp'] * RANGER_VAR['RANGER_SKILL_3_HP_THRESHOLD'][0]:
             env.add_event(event=BattleEvent(type="text", text=f"{self.name} 設下的地雷累積傷害達到門檻，即將引爆！"))
             user['private_info']['mines'] = False
             # 計算傷害
@@ -971,8 +956,8 @@ class Ranger(BattleProfession):
                 stackable=False,
                 source = self.profession_id * 4 + 3
             )
-            env.deal_damage(user, targets[0], dmg, can_be_blocked=True)
-            env.apply_status(targets[0], debuff)
+            env.deal_damage(user, target, dmg, can_be_blocked=True)
+            env.apply_status(target, debuff)
             
             user['private_info']['mines_accumulated'] = 0
                 
@@ -1305,7 +1290,7 @@ class GodOfStar(BattleProfession):
             # find target debuff with type = buff and id = self.profession_id * 4 + 1
             for eff in effects_copy_2:
                 for effect in eff:
-                    if effect.source == self.profession_id * 4 + 1:
+                    if effect.source == self.profession_id * 4 :
                         # check its name
                         if effect.name =='攻擊力':
                             buff = DamageMultiplier(multiplier=GODOFSTAR_VAR['GODOFSTAR_SKILL_1_BUFF_MULTIPLIER'][0], duration=GODOFSTAR_VAR['GODOFSTAR_SKILL_0_DEBUFF_DURATION'][0], stackable=False, source=skill_id)

@@ -1,4 +1,4 @@
-// trian.js 
+// trian.js
 
 document.addEventListener("DOMContentLoaded", function () {
   const menuTrain = document.getElementById("menu-train");
@@ -41,6 +41,19 @@ document.addEventListener("DOMContentLoaded", function () {
   <!-- 超參數說明 -->
  <div class="params-explanation">
   <h2>超參數解說</h2>
+  <p>
+
+    <b>模型名稱 (model_name)</b>：用於識別不同的模型，通常會在訓練過程中生成對應的模型檔案。建議設定為具有描述性的名稱，以便於識別與管理。
+  </p>
+
+  <p>
+    <b>Iteration 次數 (iteration)</b>：指定訓練過程中的迭代次數，即模型對整個數據集的訓練輪次。迭代次數越多，模型對數據的擬合程度越高，但也可能導致過度擬合。建議設定值在 <strong>5 ~ 20</strong> 之間。
+  </p>
+
+  <p>
+    <b>模型類型 (model_type)</b>：指定訓練所使用的模型類型，包括 One-hot LSTM model、Embedding LSTM model、Embedding LSTM model V2、Embedding Merge LSTM model 以及 Embedding Merge LSTM model V2。不同的模型類型對應不同的神經網路結構，可根據具體應用需求進行選擇。
+      
+  </p>
   
   <p>
     <b>Learning Rate (learning_rate)</b>：控制模型在每次參數更新時依據梯度下降法所採取步伐的大小。學習率設定過大，可能會導致訓練過程中參數波動劇烈甚至發散；而設定過小則雖然能使更新更加穩定，但收斂速度可能變得緩慢。合理的學習率能幫助模型更有效地找到最優解。建議設定值介於 <strong>1e-5 ~ 1e-2</strong> 之間，以平衡收斂速度與穩定性。
@@ -120,7 +133,9 @@ document.addEventListener("DOMContentLoaded", function () {
       <select id="modelTypeSelect">
         <option value="one_hot">One-hot LSTM model</option>
         <option value="embedding">Embedding LSTM model</option>
+        <option value="embedding_v2">Embedding LSTM model V2</option>
         <option value="emd_merge">Embedding Merge LSTM model</option>
+        <option value="emd_merge_v2">Embedding Merge LSTM model V2</option>
       </select>
     </div>
     
@@ -401,8 +416,12 @@ document.addEventListener("DOMContentLoaded", function () {
       hyperparams.mask_model = "my_mask_model";
     } else if (modelType === "embedding") {
       hyperparams.mask_model = "my_mask_model_with_emb";
+    } else if (modelType === "embedding_v2") {
+      hyperparams.mask_model = "my_mask_model_with_emb_v2";
     } else if (modelType === "emd_merge") {
       hyperparams.mask_model = "my_mask_model_with_emb_combined";
+    } else if (modelType === "emd_merge_v2") {
+      hyperparams.mask_model = "my_mask_model_with_emb_combined_v2";
     }
 
     const resultsContainer = document.getElementById("results-container");

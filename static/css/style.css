@@ -1133,3 +1133,43 @@ header #skip-round-btn:hover {
     opacity: 0.7;
   }
 }
+
+
+/* battle-progress.css */
+#battle-progress-container {
+  margin: 10px auto;       /* 上下間距，置中 */
+  padding: 0 20px;         /* 左右內距增加，讓進度條寬度變長 */
+  width: 50%;              /* 容器寬度擴大到 90% (可依需求調整) */
+}
+
+#battle-progress-bar {
+  width: 100%;             /* 進度條填滿容器 */
+  -webkit-appearance: none;
+  appearance: none;
+  height: 10px;            /* 可調整高度 */
+  background: #ddd;
+  outline: none;
+  border-radius: 5px;      /* 調整邊角圓滑 */
+}
+
+/* Chrome / Safari */
+#battle-progress-bar::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;             /* 調整滑塊大小 */
+  height: 20px;
+  border-radius: 50%;
+  background: #22326b;
+  cursor: pointer;
+  border: none;
+}
+
+/* Firefox */
+#battle-progress-bar::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #22326b;
+  cursor: pointer;
+  border: none;
+}

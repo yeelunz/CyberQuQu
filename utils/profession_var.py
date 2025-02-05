@@ -214,7 +214,7 @@ BLOODGOD_VAR = {
 
     # PASSIVE EFFECT
     'BLOODGOD_PASSIVE_DAMAGE_THRESHOLD': [0.25, 0.25, 0.01, 1, 'high'],  # 每受到最大血量的 25% 傷害
-    'BLOODGOD_PASSIVE_MULTIPLIER_REDUCTION': [0.895, 0.895, 0.01, 1, 'low'],  # 攻擊、防禦、治癒力降低比例
+    'BLOODGOD_PASSIVE_MULTIPLIER_REDUCTION': [0.9, 0.9, 0.01, 1, 'low'],  # 攻擊、防禦、治癒力降低比例
 
     # SKILL 18: DAMAGE, BLEED EFFECT, HEAL PER BLEED STACK
     'BLOODGOD_SKILL_0_DAMAGE': [55, 55, 1, 999, 'high'],
@@ -234,8 +234,8 @@ BLOODGOD_VAR = {
     'BLOODGOD_SKILL_2_COOLDOWN': [5, 5, 1, 999, 'no'],  # 技能冷卻時間
     
     # SKILL 3
-    'BLOODGOD_SKILL_REDUCE_DAMAGE': [0.9, 0.9, 0.1, 1, 'high'],
-    'BLOODGOD_SKILL_DEBUFF_MULTIPLIER': [0.8, 0.8, 0.1, 1, 'high'],
+    'BLOODGOD_SKILL_3_REDUCE_DAMAGE': [0.8, 0.8, 0.1, 1, 'high'],
+    'BLOODGOD_SKILL_3_DEBUFF_MULTIPLIER': [0.8, 0.8, 0.1, 1, 'high'],
     'BLOODGOD_SKILL_3_COOLDOWN': [8, 8, 1, 999, 'no'],
 }
 
@@ -294,7 +294,7 @@ DEVOUR_VAR = {
     
     # skill 3
     'DEVOUR_SKILL_3_PARALYSIS_DURATION': [3, 3, 3, 999, 'high'], 
-    'DEVOUR_SKILL_3_MUST_SUCCESS_DURATAION': [3, 3, 1, 999, 'high'],
+    'DEVOUR_SKILL_3_MUST_SUCCESS_DURATAION': [6, 6, 1, 999, 'high'],
     'DEVOUR_SKILL_3_COOLDOWN': [5, 5, 1, 999, 'low'],
 }
 
@@ -328,7 +328,7 @@ RANGER_VAR = {
     'RANGER_SKILL_3_HP_THRESHOLD': [0.5, 0.5, 0.1, 1, 'low'],
     'RANGER_SKILL_3_DAMAGE_RATE_SUCCESS': [0.6, 0.6, 0.1, 999, 'high'],
     'RANGER_SKILL_3_DAMAGE_RATE_FAIL': [0.4, 0.4, 0.1, 999, 'high'],
-    'RANGER_SKILL_3_DEBUFF_MULTIPLIER_SUCESS': [0.6, 0.6, 0.1, 1, 'high'],
+    'RANGER_SKILL_3_DEBUFF_MULTIPLIER_SUCCESS': [0.6, 0.6, 0.1, 1, 'high'],
     'RANGER_SKILL_3_DEBUFF_MULTIPLIER_FAIL': [0.8, 0.8, 0.1, 1, 'high'],
     'RANGER_SKILL_3_COOLDOWN': [5, 5, 1, 999, 'low'],
 }
@@ -336,7 +336,7 @@ RANGER_VAR = {
 ELEMENTALMAGE_VAR = {
     # BASE STATS
     'ELEMENTALMAGE_BASE_HP': [248, 248, 100, 999, 'high'],
-    'ELEMENTALMAGE_BASE_ATK': [1.45, 1.45, 0.1, 999, 'high'],
+    'ELEMENTALMAGE_BASE_ATK': [1.28, 1.28, 0.1, 999, 'high'],
     'ELEMENTALMAGE_BASE_DEF': [0.95, 0.95, 0.1, 999, 'high'],
 
     # PASSIVE: ELEMENTAL FORCE
@@ -359,7 +359,7 @@ ELEMENTALMAGE_VAR = {
     'ELEMENTALMAGE_SKILL_2_PARALYSIS_DURATIONS_WEIGHTS': [0.7, 0.25, 0.05],  # 暈眩持續時間機率
     
     # skill 3
-    'ELEMENTALMAGE_SKILL_3_DURATION': [3, 3, 1, 999, 'high'],
+    'ELEMENTALMAGE_SKILL_3_DURATION': [4, 4, 1, 999, 'high'],
     'ELEMENTALMAGE_SKILL_3_MULTIPLIER': [0.01, 0.01, 0.1, 1, 'high'],
     'ELEMENTALMAGE_SKILL_3_COOLDOWN': [8, 8, 1, 999, 'low'],
 }
@@ -367,7 +367,7 @@ ELEMENTALMAGE_VAR = {
 HUANGSHEN_VAR = {
     # BASE STATS
     'HUANGSHEN_BASE_HP': [248, 248, 100, 999, 'high'],
-    'HUANGSHEN_BASE_ATK': [1.23, 1.23, 0.1, 999, 'high'],
+    'HUANGSHEN_BASE_ATK': [1.1, 1.1, 0.1, 999, 'high'],
     'HUANGSHEN_BASE_DEF': [1.15, 1.15, 0.1, 999, 'high'],
 
     # PASSIVE: WITHER BLADE
@@ -418,12 +418,12 @@ GODOFSTAR_VAR = {
 
     # SKILL 38: STAR CREATION
     'GODOFSTAR_SKILL_2_DAMAGE': [50, 50, 1, 999, 'high'],  # 基礎傷害
-    'GODOFSTAR_SKILL_2_PASSIVE_MULTIPLIER': [1.5, 1.5, 0.1, 3, 'high'],  # 被動效果增強倍率
+    'GODOFSTAR_SKILL_2_PASSIVE_MULTIPLIER': [1.3, 1.3, 0.1, 3, 'high'],  # 被動效果增強倍率
     
     # skill 3
     'GODOFSTAR_SKILL_3_DAMAGE': [15, 35, 1, 999, 'high'],
     'GODOFSTAR_SKILL_3_HEAL': [15, 20, 1, 999, 'high'],
-    'GODOFSTAR_SKILL_3_PASSIVE_MULTIPLIER': [1.25, 1.25, 0.1, 3, 'high'],  # 被動效果增強倍率
+    'GODOFSTAR_SKILL_3_PASSIVE_MULTIPLIER': [1.15, 1.15, 0.1, 3, 'high'],  # 被動效果增強倍率
     'GODOFSTAR_SKILL_3_COOLDOWN': [3, 3, 1, 999, 'low'],
     
 }

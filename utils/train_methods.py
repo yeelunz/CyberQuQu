@@ -14,9 +14,16 @@ from .professions import build_professions
 from .skills import build_skill_manager
 import threading
 import time
-
+from .model_struct import MaskedLSTMNetwork, MaskedLSTMNetworkWithEmb, MaskedLSTMNetworkWithMergedEmb,MaskedLSTMNetworkWithEmbV2,MaskedLSTMNetworkWithMergedEmbV2
+from ray.rllib.models import ModelCatalog
 
 stop_training_flag = threading.Event()
+ModelCatalog.register_custom_model("my_mask_model", MaskedLSTMNetwork)
+ModelCatalog.register_custom_model("my_mask_model_with_emb", MaskedLSTMNetworkWithEmb)
+ModelCatalog.register_custom_model("my_mask_model_with_emb_v2", MaskedLSTMNetworkWithEmbV2)
+ModelCatalog.register_custom_model("my_mask_model_with_emb_combined", MaskedLSTMNetworkWithMergedEmb)
+ModelCatalog.register_custom_model("my_mask_model_with_emb_combined_v2", MaskedLSTMNetworkWithMergedEmbV2)
+
 
 
 def multi_agent_cross_train(num_iterations,
@@ -179,7 +186,10 @@ def multi_agent_cross_train(num_iterations,
         print("訓練過程被終止。")
 
     # 這邊是訓練完了 如果是 mask_model_with_emb_combined 就要把 embedding 存起來到embedding.json
-    if hyperparams.get("mask_model", "my_mask_model") == "my_mask_model_with_emb" or hyperparams.get("mask_model", "my_mask_model") == "my_mask_model_with_emb_combined":
+    if hyperparams.get("mask_model", "my_mask_model") == "my_mask_model_with_emb" \
+        or hyperparams.get("mask_model", "my_mask_model") == "my_mask_model_with_emb_combined"\
+        or hyperparams.get("mask_model", "my_mask_model") == "my_mask_model_with_emb_v2"\
+        or hyperparams.get("mask_model", "my_mask_model") == "my_mask_model_with_emb_combined_v2":
         print("Saving embeddings...")
         save_root = os.path.join("data", "saved_models", model_name)
         meta_path = os.path.join(save_root, "embeddings.json")

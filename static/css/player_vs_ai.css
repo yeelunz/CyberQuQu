@@ -1,0 +1,100 @@
+/* pva 版全域資訊 */
+#global-info {
+    font-size: 16px;
+    font-weight: bold;
+  }
+  
+  /* 技能選擇區 */
+  #battle-skill-container {
+    padding: 10px;
+    background: #eee;
+    border-top: 1px solid #ccc;
+    border-radius: 8px;
+    border: 2px solid #ccc;
+  }
+  #battle-skill-cards.pva-battle-skill-cards {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+  }
+  
+  /* 技能卡風格 */
+  .pva-skill-card {
+    width: 25%;
+    background: #fff;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: transform 0.2s;
+  }
+  .pva-skill-card:hover {
+    transform: translateY(-2px);
+  }
+  .skill-card-top {
+    display: flex;
+    justify-content: space-between;
+    padding: 4px;
+    border-bottom: 1px solid #eee;
+  }
+  .skill-name {
+    font-size: 14px;
+    font-weight: bold;
+    color: #333;
+  }
+  .skill-meta {
+    text-align: right;
+    font-size: 12px;
+    color: #999;
+  }
+  /* 技能類型膠囊 */
+  .skill-type-pill {
+    border-radius: 12px;
+    padding: 2px 6px;
+    margin-right: 4px;
+    color: #fff;
+  }
+  .pva-pill-damage {
+    background: #e74c3c;
+    font-weight: bold;
+  }
+  .pva-pill-heal {
+    background: #27ae60;
+    font-weight: bold;
+  }
+  .pva-pill-effect {
+    background: #8e44ad;
+    font-weight: bold;
+  }
+  /* 冷卻時間文字：粗體藍色 */
+  .pva-skill-cooldown {
+    color: #3498db;
+    font-weight: bold;
+  }
+  .skill-card-bottom {
+    display: flex;
+    padding: 4px;
+  }
+  .skill-image {
+    margin-right: 8px;
+  }
+  .skill-image img {
+    width: 50px;
+    height: 50px;
+    object-fit: contain;
+    border-radius: 4px;
+  }
+  .skill-description {
+    font-size: 12px;
+    color: #666;
+    line-height: 1.2;
+  }
+  .pva-skill-card.disabled {
+    opacity: 0.5;
+    pointer-events: none;
+  }
+  .pva-skill-card.disabled .skill-name,
+  .pva-skill-card.disabled .skill-meta,
+  .pva-skill-card.disabled .skill-description {
+    color: #888;
+  }
+  

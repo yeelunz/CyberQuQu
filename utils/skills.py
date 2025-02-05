@@ -102,7 +102,7 @@ sm.add_skill(Skill(
     10, "毒刃襲擊", f"對敵方造成 {ASSASSIN_VAR['ASSASSIN_SKILL_2_DAMAGE'][0]} 點傷害，並疊加 1~5 層中毒狀態（機率由權重決定）。每層中毒對敵方造成 {ASSASSIN_VAR['ASSASSIN_SKILL_2_POISON_DAMAGE'][0]} 點傷害。", 'damage'))
 # 致命藥劑 :根據敵方當前中毒層數降低治癒力，敵方每層中毒降低30%的治癒力。持續時間等同於中毒的剩餘持續時間
 sm.add_skill(Skill(
-    11, "致命藥劑", f"根據敵方當前中毒層數降低治癒力，敵方每層中毒降低 {int((1-ASSASSIN_VAR['ASSASSIN_SKILL_3_DEBUFF_MULTIPLIER'][0]*100))}% 治癒力。持續時間等同於中毒的剩餘持續時間。", 'effect', ASSASSIN_VAR['ASSASSIN_SKILL_3_COOLDOWN'][0]))   
+    11, "致命藥劑", f"根據敵方當前中毒層數降低治癒力，敵方每層中毒降低 {int((1-ASSASSIN_VAR['ASSASSIN_SKILL_3_DEBUFF_MULTIPLIER'][0])*100)}% 治癒力。持續時間等同於中毒的剩餘持續時間。", 'effect', ASSASSIN_VAR['ASSASSIN_SKILL_3_COOLDOWN'][0]))   
 
     
 

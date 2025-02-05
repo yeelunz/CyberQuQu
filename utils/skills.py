@@ -240,7 +240,7 @@ sm.add_skill(Skill(
 # 鯨吞 技能定義
 sm.add_skill(Skill(
     32, "吞裂",
-    f"對敵方造成 {DEVOUR_VAR['DEVOUR_SKILL_0_DAMAGE'][0]} 點傷害，{int(DEVOUR_VAR['DEVOUR_SKILL_0_FAILURE_RATE'][0] * 100)}% 機率使用失敗，使用失敗後，下次提升 {int(DEVOUR_VAR['DEVOUR_SKILL_0_FAILURE_ADD_RATE'][0]*100)}% 機率，直到技能成功使用。",
+    f"對敵方造成 {DEVOUR_VAR['DEVOUR_SKILL_0_DAMAGE'][0]} 點傷害，{int(DEVOUR_VAR['DEVOUR_SKILL_0_FAILURE_RATE'][0] * 100)}% 機率使用失敗，使用失敗後，提升 {int(DEVOUR_VAR['DEVOUR_SKILL_0_FAILURE_ADD_RATE'][0]*100)}% 機率成功施放，機率會被重複疊加，直到技能成功使用。",
     'damage'
 ))
 
@@ -289,7 +289,7 @@ sm.add_skill(Skill(
 # 引爆後2回合內會降低敵方40%防禦力，並受到地雷累積60%的傷害。
 # 若是未達成條件即引爆時，則降低20%防禦力，並受到地雷累積40%的傷害。
 sm.add_skill(Skill(
-    39,"地雷",f"施放一個地雷，地雷在受到最大等同於自身當前血量的 {int(RANGER_VAR['RANGER_SKILL_3_HP_THRESHOLD'][0]*100)}% 累積傷害，或是 {RANGER_VAR['RANGER_SKILL_3_DURATION'][0]} 回合後會引爆。引爆後，持續 2 回合，會讓敵方降低 {int((1 - RANGER_VAR['RANGER_SKILL_3_DEBUFF_MULTIPLIER_SUCCESS'][0])*100)}% 防禦力，並受到地雷累積 {int(RANGER_VAR['RANGER_SKILL_3_DAMAGE_RATE_SUCCESS'][0]*100)}% 的傷害。若是未達成傷害累積條件即引爆時，則降低 {int((1 - RANGER_VAR['RANGER_SKILL_3_DEBUFF_MULTIPLIER_FAIL'][0])*100)}% 防禦力，並受到地雷累積 {int(RANGER_VAR['RANGER_SKILL_3_DAMAGE_RATE_FAIL'][0]*100)}% 的傷害。",'effect',RANGER_VAR['RANGER_SKILL_3_COOLDOWN'][0]))
+    39,"地雷",f"施放一個地雷，地雷在受到最大等同於自身當前血量的 {int(RANGER_VAR['RANGER_SKILL_3_HP_THRESHOLD'][0]*100)}% 累積傷害，或是 {RANGER_VAR['RANGER_SKILL_3_DURATION'][0] +1} 回合後會引爆。引爆後，持續 2 回合，會讓敵方降低 {int((1 - RANGER_VAR['RANGER_SKILL_3_DEBUFF_MULTIPLIER_SUCCESS'][0])*100)}% 防禦力，並受到地雷累積 {int(RANGER_VAR['RANGER_SKILL_3_DAMAGE_RATE_SUCCESS'][0]*100)}% 的傷害。若是未達成傷害累積條件即引爆時，則降低 {int((1 - RANGER_VAR['RANGER_SKILL_3_DEBUFF_MULTIPLIER_FAIL'][0])*100)}% 防禦力，並受到地雷累積 {int(RANGER_VAR['RANGER_SKILL_3_DAMAGE_RATE_FAIL'][0]*100)}% 的傷害。",'effect',RANGER_VAR['RANGER_SKILL_3_COOLDOWN'][0]))
 
 
 # 元素法師 (ElementalMage) 技能定義

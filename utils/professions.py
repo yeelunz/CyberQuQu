@@ -129,7 +129,7 @@ class Paladin(BattleProfession):
     def damage_taken(self, user, targets, env, dmg):
         super().damage_taken(user, targets, env, dmg)
         #  這邊處理的是技能 3 的效果
-        if user["effect_manager"].has_effect("決一死戰") and user["hp"] <= 0:
+        if user["effect_manager"].has_effect("決一死戰") and user["hp"] == 0:
             env.add_event(event=BattleEvent(type="text", text=f"{self.name} 整理好自己的狀態，並開始進行最後的決戰。"))
             user["hp"] = int(user["max_hp"] * PALADIN_VAR['PALADIN_SKILL_3_MAX_HP_HEAL'][0])
             # b
@@ -766,7 +766,7 @@ class SteadfastWarrior(BattleProfession):
         env.deal_healing(user, heal)
 
     def on_turn_end(self, user, targets, env, id):
-        if id == 23:
+        if id == self.profession_id * 4 + 2:
             if user["last_attacker"]:
                 dmg = user["last_damage_taken"] * STEADFASTWARRIOR_VAR['STEADFASTWARRIOR_SKILL_2_DAMAGE_MULTIPLIER'][0]
                 env.deal_damage(user, user["last_attacker"], dmg, can_be_blocked=True)
@@ -922,9 +922,9 @@ class Ranger(BattleProfession):
 
     def on_turn_end(self, user, target, env, id):
         super().on_turn_end(user, target, env, id)
-        if 'mines_accumulated' not in user['private_info']:
+        if 'mines_accumulated' not in user['private_info'] and user['private_info']['mines'] == True:
             user['private_info']['mines_accumulated'] = target['accumulated_damage']
-        else:
+        elif user['private_info']['mines'] == True:
             user['private_info']['mines_accumulated'] += target['accumulated_damage']
         # 引爆處理
         mine_exist = target['effect_manager'].has_effect("地雷")
@@ -940,8 +940,10 @@ class Ranger(BattleProfession):
                 stackable=False,
                 source = self.profession_id * 4 + 3
             )
+            
             env.deal_damage(user, target, dmg, can_be_blocked=True)
             env.apply_status(target, debuff)
+            target['effect_manager'].remove_all_effects("地雷")
             
             user['private_info']['mines_accumulated'] = 0
         # accumulate damage bomb!
@@ -958,6 +960,7 @@ class Ranger(BattleProfession):
             )
             env.deal_damage(user, target, dmg, can_be_blocked=True)
             env.apply_status(target, debuff)
+            target['effect_manager'].remove_all_effects("地雷")
             
             user['private_info']['mines_accumulated'] = 0
                 
@@ -966,13 +969,17 @@ class Ranger(BattleProfession):
         if 'mines' not in user['private_info']:
             user['private_info']['mines'] = False
             user['private_info']['cur_hp'] = 0
+        if 'continous_bonus' not in user['private_info']:
+            user['private_info']['continous_bonus'] = 0
+            
+
 
         if skill_id == self.profession_id * 4:
             # 續戰攻擊
             times_used = user.get("skills_used", {}).get(skill_id, 0)
-            dmg = (RANGER_VAR['RANGER_SKILL_0_DAMAGE'][0] + (RANGER_VAR['RANGER_SKILL_0_BONUS_DAMAGE_PER_USE'][0] * times_used)) * self.baseAtk
+            dmg = (RANGER_VAR['RANGER_SKILL_0_DAMAGE'][0] + (RANGER_VAR['RANGER_SKILL_0_BONUS_DAMAGE_PER_USE'][0] * user['private_info']['continous_bonus'] )) * self.baseAtk
             env.deal_damage(user, targets[0], dmg, can_be_blocked=True)
-            user["skills_used"][skill_id] = times_used + 1
+            user['private_info']['continous_bonus'] +=1
 
         elif skill_id == self.profession_id * 4 + 1:
             # 埋伏防禦
@@ -1116,7 +1123,7 @@ class HuangShen(BattleProfession):
         )
 
     def passive(self, user, targets, env):
-        bonus_hits = user.get("skills_used", {}).get(33, 0) // HUANGSHEN_VAR['HUANGSHEN_PASSIVE_EXTRA_HIT_THRESHOLD'][0]
+        bonus_hits = user['private_info']['hit_times'] // HUANGSHEN_VAR['HUANGSHEN_PASSIVE_EXTRA_HIT_THRESHOLD'][0]
         if bonus_hits > 0:
             for _ in range(bonus_hits):
                 env.add_event(event=BattleEvent(
@@ -1155,20 +1162,24 @@ class HuangShen(BattleProfession):
 
     def apply_skill(self, skill_id, user, targets, env):
         super().apply_skill(skill_id, user, targets, env)
+        if 'hit_times' not in user['private_info']:
+            user['private_info']['hit_times'] = 0
+        if 'skill2_used' not in user['private_info']:
+            user['private_info']['skill2_used'] = 0
 
         if skill_id == self.profession_id * 4:
             # 枯骨
-            user["skills_used"][skill_id] = user.get("skills_used", {}).get(skill_id, 0)
+
             times = random.randint(*HUANGSHEN_VAR['HUANGSHEN_SKILL_0_HIT_RANGE'])
             for i in range(times):
                 dmg = HUANGSHEN_VAR['HUANGSHEN_SKILL_0_DAMAGE'][0] * self.baseAtk * (1 - i * HUANGSHEN_VAR['HUANGSHEN_SKILL_0_DAMAGE_REDUCTION_PER_HIT'][0])
                 env.deal_damage(user, targets[0], dmg, can_be_blocked=True)
                 self.passive(user, targets, env)
-                user["skills_used"][skill_id] += 1
+                user['private_info']['hit_times'] += 1
 
         elif skill_id == self.profession_id * 4 + 1:
             # 荒原
-            time_used = user.get("skills_used", {}).get(skill_id, 0)
+            time_used = user["private_info"]["skill2_used"] 
             if time_used % 3 == 0:
                 atk_buff = DamageMultiplier(
                     multiplier=HUANGSHEN_VAR['HUANGSHEN_SKILL_1_ATK_BUFF'][0],
@@ -1187,7 +1198,7 @@ class HuangShen(BattleProfession):
                     duration=HUANGSHEN_VAR['HUANGSHEN_SKILL_1_BUFF_DURATION'][0],
                     stackable=False, source=skill_id)
                 env.apply_status(user, def_buff)
-            user["skills_used"][skill_id] = time_used + 1
+            user["private_info"]["skill2_used"] += 1
 
         elif skill_id == self.profession_id * 4 + 2:
             # 生命逆流

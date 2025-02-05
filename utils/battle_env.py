@@ -103,10 +103,8 @@ class BattleEnv(MultiAgentEnv):
             m["damage_multiplier"] = 1.0
             m["defend_multiplier"] = 1.0
             m["heal_multiplier"] = 1.0
-            m["skills_used"] = {} 
             m["cooldowns"] = {0:0, 1:0, 2:0,3:0}
             m["last_skill_used"] = None
-            m["skills_used"] = {}  # 用於追蹤技能使用次數
             m["effect_manager"] = EffectManager(target=m, env=self)  # 初始化 EffectManager
             m["last_attacker"] = None
             m["last_damage_taken"] = 0
@@ -129,7 +127,6 @@ class BattleEnv(MultiAgentEnv):
             e["heal_multiplier"] = 1.0
             e["cooldowns"] = {0:0, 1:0, 2:0,3:0}
             e["last_skill_used"] = None 
-            e["skills_used"] = {} 
             e["effect_manager"] = EffectManager(target=e, env=self)  # 初始化 EffectManager
             e["last_attacker"] = None
             e["last_damage_taken"] = 0
@@ -671,13 +668,13 @@ class BattleEnv(MultiAgentEnv):
         if not self.done:
             player_all_skill = player_effect_skills + player_heal_skills + player_damage_skills
             enemy_all_skill = enemy_effect_skills + enemy_heal_skills + enemy_damage_skills
-            self._process_passives_end_of_turn(player_all_skill, enemy_all_skill)
             self._handle_status_end_of_turn()
+            self._process_passives_end_of_turn(player_all_skill, enemy_all_skill)
             self._manage_cooldowns()
         # 增加戰鬥特性：超過10回合後，每過2回合，雙方的傷害係數增加10%
             if self.round_count > 10 and (self.round_count - 10) % 2 == 0:
-                self.damage_coefficient *= 1.1
-                self.add_event(event=BattleEvent(type="text",text=f"戰鬥超過10回合，雙方的傷害係數增加了10%，現在為 {self.damage_coefficient:.2f}。"))
+                self.damage_coefficient *= 1.15
+                self.add_event(event=BattleEvent(type="text",text=f"戰鬥超過10回合，雙方的傷害係數增加了15%，現在為 {self.damage_coefficient:.2f}。"))
         # 強制停止
         self.round_count += 1
         if self.round_count > self.max_rounds:

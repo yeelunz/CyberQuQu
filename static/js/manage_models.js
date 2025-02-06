@@ -53,13 +53,16 @@ document.addEventListener("DOMContentLoaded", () => {
       modelDetails.classList.add("mm-model-details");
       modelDetails.style.display = "none";
 
-      // 填入 meta 資訊
-      const detailsTable = createMetaTable(meta);
-      modelDetails.appendChild(detailsTable);
+      // 只有當 hidden_info 為 false 才顯示完整 meta 資訊
+      if (!meta.hidden_info) {
+        // 顯示所有 meta 資訊（排除 elo_result）
+        const detailsTable = createMetaTable(meta);
+        modelDetails.appendChild(detailsTable);
+      }
 
       // 根據是否有 ELO 結果，顯示不同的按鈕和資訊
       if (!meta.elo_result) { // 避免 `null` 或 `undefined`
-        // 顯示「無資訊」和「計算 ELO」按鈕
+        // 顯示「無 ELO 資訊」和「計算 ELO」按鈕
         const noInfoDiv = document.createElement("div");
         noInfoDiv.classList.add("mm-no-elo-info");
         noInfoDiv.textContent = "無 ELO 資訊。";
@@ -128,7 +131,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   /**
-   * 建立 meta 的表格
+   * 建立 meta 的表格（排除 elo_result 與 hidden_info）
    */
   function createMetaTable(meta) {
     const table = document.createElement("table");
@@ -150,9 +153,9 @@ document.addEventListener("DOMContentLoaded", () => {
       table.appendChild(row);
     }
   
-    // 依序建立其他欄位（排除不想顯示的 key）
+    // 依序建立其他欄位（排除不想顯示的 key，如 elo_result 與 hidden_info）
     for (const key in meta) {
-      if (["elo_result"].includes(key)) {
+      if (["elo_result", "hidden_info"].includes(key)) {
         continue;
       }
       const row = document.createElement("tr");

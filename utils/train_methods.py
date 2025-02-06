@@ -171,6 +171,8 @@ def multi_agent_cross_train(num_iterations,
             "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "version": gl["version"],
             "elo_result": None,
+            "cost": round(num_iterations/5 * hyperparams.get("train_batch_size", 4000)/4000 * cal_size(hyperparams.get("fcnet_hiddens", [256, 256]))* gl['cost'][hyperparams.get("mask_model", "my_mask_model")],2),
+            "hidden_info": False
         }
         with open(meta_path, "w", encoding="utf-8") as f:
             json.dump(meta_info, f, ensure_ascii=False, indent=2)
@@ -248,3 +250,57 @@ def make_env_config(skill_mgr, professions, show_battlelog=False, pr1=None, pr2=
         "all_professions": professions
     }
     return config
+
+
+
+def cal_size(fc_net_hidden):
+    """
+    根據 fc_net_hidden 設定計算整個模型（前面的全連接層 + 最後的 LSTM cell）的參數數量，
+    並以 fc_net_hidden = [256,256] 的模型作為基準 (比例=1)。
+    
+    假設：
+      - 輸入維度固定為 256。
+      - fc_net_hidden 列表長度 >= 1。
+        * 若長度為 1：表示模型僅有一層 LSTM cell，
+          輸入來自 256 維的外部輸入，隱藏單元數為 fc_net_hidden[0]。
+        * 若長度 >= 2：表示前面所有層（除了最後一層）為全連接層，
+          第一層接收 256 維輸入，其餘 fc 層依序連接，
+          最後一層是 LSTM cell，其輸入維度來自倒數第二層，全連接層的輸出維度，
+          隱藏單元數為 fc_net_hidden[-1].
+    
+    回傳：
+      與基準模型參數數量的比例（float）。
+    """
+    # 固定輸入維度
+    input_dim = 256
+
+    if not fc_net_hidden or len(fc_net_hidden) < 1:
+        raise ValueError("fc_net_hidden 必須至少包含一個元素")
+    
+    total_params = 0
+    n = len(fc_net_hidden)
+    
+    if n == 1:
+        # 模型只有 LSTM cell 層，直接接外部輸入
+        lstm_in_dim = input_dim
+        lstm_hidden = fc_net_hidden[0]
+        lstm_params = 4 * (lstm_in_dim * lstm_hidden + lstm_hidden * lstm_hidden + lstm_hidden)
+        total_params += lstm_params
+    else:
+        # 先計算前面的 fc 層參數（除最後一層）
+        # 第一個 fc 層：從輸入到 fc_net_hidden[0]
+        fc0_params = input_dim * fc_net_hidden[0] + fc_net_hidden[0]
+        total_params += fc0_params
+        # 後續 fc 層（從 fc_net_hidden[i-1] 到 fc_net_hidden[i]），i = 1 ~ n-2
+        for i in range(1, n - 1):
+            fc_params = fc_net_hidden[i - 1] * fc_net_hidden[i] + fc_net_hidden[i]
+            total_params += fc_params
+        # 最後一層為 LSTM cell，其輸入維度來自 fc_net_hidden[-2]
+        lstm_in_dim = fc_net_hidden[-2]
+        lstm_hidden = fc_net_hidden[-1]
+        lstm_params = 4 * (lstm_in_dim * lstm_hidden + lstm_hidden * lstm_hidden + lstm_hidden)
+        total_params += lstm_params
+
+
+    ratio = total_params / 591104
+    return ratio

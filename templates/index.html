@@ -22,30 +22,33 @@
 <body>
   <!-- 頂部資訊列 -->
   <header>
-    <div id="game-version">版本：v0.0.1</div>
-    <div id="action-times">剩餘計算資源：<span id="action-count">0</span></div>
+    <!-- 將 ☰ 按鈕移至 header -->
+    <button id="toggle-sidebar">☰</button>
+    <div id="game-version">版本：</div>
+    <div id="action-times">剩餘計算資源：<span id="action-count"></span></div>
     <button id="skip-round-btn">跳過當前回合</button>
   </header>
 
   <div class="container">
     <!-- 左側選單列 -->
     <nav class="sidebar">
+      <!-- 移除原本的 toggle 按鈕 -->
       <ul>
-        <li><a href="#" id="menu-train">訓練模型</a></li>
-        <li><a href="#" id="menu-ai-vs-ai">AI vs AI 對戰</a></li>
+        <li><a href="#" id="menu-train" data-label="訓練模型">訓練模型</a></li>
+        <li><a href="#" id="menu-ai-vs-ai" data-label="AI vs AI 對戰">AI vs AI 對戰</a></li>
         <!-- 新增玩家 vs AI 對戰項目 -->
-        <li><a href="#" id="menu-player-vs-ai">玩家 vs AI 對戰</a></li>
-        <li><a href="#" id="menu-pc-vs-pc">PC vs PC 對戰</a></li>
-        <li><a href="#" id="menu-cross-battle-generate-pc">產生交叉對戰數據</a></li>
-        <li><a href="#" id="menu-cross-battle-result-pc">顯示交叉對戰數據</a></li>
-        <li><a href="#" id="menu-info">各職業介紹</a></li>
-        <li><a href="#" id="menu-manage-vars">管理技能/職業變數</a></li>
-        <li><a href="#" id="menu-manage-models">管理模型</a></li>
+        <li><a href="#" id="menu-player-vs-ai" data-label="玩家 vs AI 對戰">玩家 vs AI 對戰</a></li>
+        <li><a href="#" id="menu-pc-vs-pc" data-label="PC vs PC 對戰">PC vs PC 對戰</a></li>
+        <li><a href="#" id="menu-cross-battle-generate-pc" data-label="產生交叉對戰數據">產生交叉對戰數據</a></li>
+        <li><a href="#" id="menu-cross-battle-result-pc" data-label="顯示交叉對戰數據">顯示交叉對戰數據</a></li>
+        <li><a href="#" id="menu-info" data-label="各職業介紹">各職業介紹</a></li>
+        <li><a href="#" id="menu-manage-vars" data-label="管理技能/職業變數">管理技能/職業變數</a></li>
+        <li><a href="#" id="menu-manage-models" data-label="管理模型">管理模型</a></li>
         <!-- 模型間對戰功能 -->
-        <li><a href="#" id="menu-model-vs-model-generate">模型間對戰產生</a></li>
-        <li><a href="#" id="menu-model-vs-model-result">模型間對戰資料檢視</a></li>
+        <li><a href="#" id="menu-model-vs-model-generate" data-label="模型間對戰產生">模型間對戰產生</a></li>
+        <li><a href="#" id="menu-model-vs-model-result" data-label="模型間對戰資料檢視">模型間對戰資料檢視</a></li>
         <!-- 新增的嵌入向量可視化選單 -->
-        <li><a href="#" id="menu-embedding-visualization">嵌入向量可視化</a></li>
+        <li><a href="#" id="menu-embedding-visualization" data-label="嵌入向量可視化">嵌入向量可視化</a></li>
       </ul>
     </nav>
 
@@ -115,6 +118,56 @@
     }
     
     window.addEventListener("DOMContentLoaded", initMenuEvents);
+
+    // 左側選單收合／展開功能（現將 toggle 按鈕放在 header 中）
+    document.addEventListener("DOMContentLoaded", function(){
+      var toggleBtn = document.getElementById("toggle-sidebar");
+      var sidebar = document.querySelector(".sidebar");
+      toggleBtn.addEventListener("click", function(){
+        sidebar.classList.toggle("collapsed");
+        // 可根據需要修改按鈕文字或樣式
+        if(sidebar.classList.contains("collapsed")){
+          toggleBtn.textContent = "☰";
+        } else {
+          toggleBtn.textContent = "☰";
+        }
+      });
+    });
+  </script>
+
+  <!-- 利用 AJAX 動態更新 token 與 version -->
+  <script>
+    window.addEventListener('DOMContentLoaded', function() {
+      // 取得 token
+      fetch('/get_token')
+        .then(response => {
+          if (!response.ok) {
+            throw new Error("Token 請求失敗");
+          }
+          return response.text();
+        })
+        .then(token => {
+          document.getElementById('action-count').textContent = token;
+        })
+        .catch(error => {
+          console.error("取得 token 時發生錯誤：", error);
+        });
+
+      // 取得 version
+      fetch('/get_version')
+        .then(response => {
+          if (!response.ok) {
+            throw new Error("Version 請求失敗");
+          }
+          return response.text();
+        })
+        .then(version => {
+          document.getElementById('game-version').textContent = '版本：' + version;
+        })
+        .catch(error => {
+          console.error("取得 version 時發生錯誤：", error);
+        });
+    });
   </script>
 </body>
 </html>

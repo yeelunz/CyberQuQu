@@ -18,16 +18,16 @@
 
 PALADIN_VAR = {
     # BASE STATS
-    'PALADIN_BASE_HP': [377, 397, 100, 999, 'high'],
+    'PALADIN_BASE_HP': [0, 0, 100, 999, 'high'],
     'PALADIN_BASE_ATK': [1.0, 1.0, 0.1, 999, 'high'],
     'PALADIN_BASE_DEF': [1.1, 1.1, 0.1, 999, 'high'],
 
     # PASSIVE TRIGGER RATE
-    'PALADIN_PASSIVE_TRIGGER_RATE': [0.2, 0.2, 0.01, 1, 'high'],
+    'PALADIN_PASSIVE_TRIGGER_RATE': [0.25, 0.25, 0.01, 1, 'high'],
     # PASSIVE HEAL AMOUNT RATE
     'PALADIN_PASSIVE_HEAL_RATE': [0.15, 0.15, 0.01, 1, 'high'],
     # OVERHEADLING DAMAGE RATE
-    'PALADIN_PASSIVE_OVERHEADLINGE_RATE': [0.8, 0.8, 0.01, 999, 'high'],
+    'PALADIN_PASSIVE_OVERHEADLINGE_RATE': [1, 1, 0.01, 999, 'high'],
 
     # SKILL 1 DAMAGE AMOUNT
     'PALADIN_SKILL_0_DAMAGE': [30, 30, 1, 999, 'high'],
@@ -38,14 +38,14 @@ PALADIN_VAR = {
 
     # SKILL 3 DAMAGE AMOUNT
     # FIRST HEAL AMOUNT FIRST/SECOND/or more
-    'PALADIN_SKILL_2_FIRST_HEAL': [45, 45, 1, 999, 'high'],
-    'PALADIN_SKILL_2_SECOND_HEAL': [35, 35, 1, 999, 'high'],
-    'PALADIN_SKILL_2_MORE_HEAL': [20, 20, 1, 999, 'high'],
+    'PALADIN_SKILL_2_FIRST_HEAL': [60, 60, 1, 999, 'high'],
+    'PALADIN_SKILL_2_SECOND_HEAL': [40, 40, 1, 999, 'high'],
+    'PALADIN_SKILL_2_MORE_HEAL': [30, 30, 1, 999, 'high'],
     
     # SKILL 4 DAMAGE AMOUNT AND DEFENSE BUFF
     'PALADIN_SKILL_3_MAX_HP_HEAL': [0.25, 0.25, 1, 999, 'high'],
     'PALADIN_SKILL_3_DAMAGE_BUFF': [2, 2, 0.1, 999, 'high'],
-    'PALADIN_SKILL_3_DEFENSE_DEBUFF': [0.5, 0.5, 0.1, 999, 'high'],
+    'PALADIN_SKILL_3_DEFENSE_DEBUFF': [0.75, 0.75, 0.1, 999, 'high'],
     'PALADIN_SKILL_3_COOLDOWN': [5, 5, 1, 999, 'low'],
 
 }
@@ -169,16 +169,16 @@ BERSERKER_VAR = {
     # SKILL 2 HP COST, DEFENSE BUFF, AND CONTROL IMMUNITY
     'BERSERKER_SKILL_2_HP_COST': [30, 30, 1, 999, 'low'],
     'BERSERKER_SKILL_2_DEFENSE_BUFF': [1.35, 1.35, 0.1, 999, 'high'],
-    'BERSERKER_SKILL_2_DURATION': [2, 2, 1, 999, 'high'],
+    'BERSERKER_SKILL_2_DURATION': [3, 3, 1, 999, 'high'],
     
-    'BERSERKER_SKILL_3_BASE_HEAL_RATE': [0.15, 0.15, 0.1, 999, 'high'],
-    'BERSERKER_SKILL_3_BONUS_RATE': [2, 2, 0.1, 999, 'high'],
+    'BERSERKER_SKILL_3_BASE_HEAL_RATE': [0.1, 0.1, 0.1, 999, 'high'],
+    'BERSERKER_SKILL_3_BONUS_RATE': [2.5, 2.5, 0.1, 999, 'high'],
     'BERSERKER_SKILL_3_COOLDOWN': [5, 5, 1, 999, 'low'],
 }
 
 DRAGONGOD_VAR = {
     # BASE STATS
-    'DRAGONGOD_BASE_HP': [299, 299, 100, 999, 'high'],
+    'DRAGONGOD_BASE_HP': [276, 276, 100, 999, 'high'],
     'DRAGONGOD_BASE_ATK': [1.0, 1.0, 0.1, 999, 'high'],
     'DRAGONGOD_BASE_DEF': [1.0, 1.0, 0.1, 999, 'high'],
 
@@ -188,7 +188,7 @@ DRAGONGOD_VAR = {
 
     # SKILL 0 DAMAGE
     'DRAGONGOD_SKILL_0_BASE_DAMAGE': [20, 20, 1, 999, 'high'],
-    'DRAGONGOD_SKILL_0_BONUS_DAMAGE_PER_STACK': [10, 10, 1, 999, 'high'],
+    'DRAGONGOD_SKILL_0_BONUS_DAMAGE_PER_STACK': [5, 5, 1, 999, 'high'],
 
     # SKILL 1 HEAL AND BLEED
     'DRAGONGOD_SKILL_1_HEAL_AMOUNT': [120, 120, 1, 999, 'high'],
@@ -197,20 +197,20 @@ DRAGONGOD_VAR = {
     'DRAGONGOD_SKILL_1_COOLDOWN': [4, 4, 1, 999, 'no'],
 
     # SKILL 2 DAMAGE AND STACK CONSUMPTION
-    'DRAGONGOD_SKILL_2_DAMAGE_PER_STACK': [40, 40, 1, 999, 'high'],
+    'DRAGONGOD_SKILL_2_DAMAGE_PER_STACK': [35, 35, 1, 999, 'high'],
     # 這邊是消耗的疊加層數比例 如果是0.5代表消耗一半
     'DRAGONGOD_SKILL_2_STACK_CONSUMPTION': [0.5, 0.5, 0.1, 1, 'nd'],
     
-    'DRAGONGOD_SKILL_3_ADD_STACK': [4, 4, 1, 999, 'high'],
-    'DRAGONGOD_SKILL_3_COOLDOWN': [6, 6, 1, 999, 'no'],
+    'DRAGONGOD_SKILL_3_ADD_STACK': [3, 3, 1, 999, 'high'],
+    'DRAGONGOD_SKILL_3_COOLDOWN': [5, 5, 1, 999, 'no'],
 }
 
 
 BLOODGOD_VAR = {
     # BASE STATS
     'BLOODGOD_BASE_HP': [276, 276, 100, 999, 'high'],
-    'BLOODGOD_BASE_ATK': [1.5, 1.5, 0.1, 999, 'high'],
-    'BLOODGOD_BASE_DEF': [1.5, 1.5, 0.1, 999, 'high'],
+    'BLOODGOD_BASE_ATK': [1.6, 1.6, 0.1, 999, 'high'],
+    'BLOODGOD_BASE_DEF': [1.6, 1.6, 0.1, 999, 'high'],
 
     # PASSIVE EFFECT
     'BLOODGOD_PASSIVE_DAMAGE_THRESHOLD': [0.25, 0.25, 0.01, 1, 'high'],  # 每受到最大血量的 25% 傷害
@@ -234,9 +234,9 @@ BLOODGOD_VAR = {
     'BLOODGOD_SKILL_2_COOLDOWN': [5, 5, 1, 999, 'no'],  # 技能冷卻時間
     
     # SKILL 3
-    'BLOODGOD_SKILL_3_REDUCE_DAMAGE': [0.8, 0.8, 0.1, 1, 'high'],
+    'BLOODGOD_SKILL_3_REDUCE_DAMAGE': [0.9, 0.9, 0.1, 1, 'high'],
     'BLOODGOD_SKILL_3_DEBUFF_MULTIPLIER': [0.8, 0.8, 0.1, 1, 'high'],
-    'BLOODGOD_SKILL_3_COOLDOWN': [8, 8, 1, 999, 'no'],
+    'BLOODGOD_SKILL_3_COOLDOWN': [7, 7, 1, 999, 'no'],
 }
 
 STEADFASTWARRIOR_VAR = {
@@ -279,13 +279,13 @@ DEVOUR_VAR = {
     'DEVOUR_PASSIVE_SELF_DAMAGE_PERCENT': [0.08, 0.08, 0.01, 1, 'low'],  # 攻擊時消耗的生命值比例
 
     # SKILL 24: DAMAGE AND FAILURE RATE
-    'DEVOUR_SKILL_0_DAMAGE': [50, 50, 1, 999, 'high'],
+    'DEVOUR_SKILL_0_DAMAGE': [45, 45, 1, 999, 'high'],
     'DEVOUR_SKILL_0_FAILURE_RATE': [0.4, 0.4, 0.01, 1, 'low'],  # 技能失敗的機率
     'DEVOUR_SKILL_0_FAILURE_ADD_RATE': [0.08, 0.08, 0.01, 1, 'low'],  # 技能失敗的機率增加
 
     # SKILL 25: DAMAGE BASED ON HP DIFFERENCE
-    'DEVOUR_SKILL_1_LOST_HP_DAMAGE_MULTIPLIER': [0.15, 0.15, 0.01, 1, 'high'],  # 已損血量傷害倍率
-    'DEVOUR_SKILL_1_CURRENT_HP_DAMAGE_MULTIPLIER': [0.15, 0.15, 0.01, 1, 'high'],  # 當前血量傷害倍率
+    'DEVOUR_SKILL_1_LOST_HP_DAMAGE_MULTIPLIER': [0.12, 0.12, 0.01, 1, 'high'],  # 已損血量傷害倍率
+    'DEVOUR_SKILL_1_CURRENT_HP_DAMAGE_MULTIPLIER': [0.12, 0.12, 0.01, 1, 'high'],  # 當前血量傷害倍率
     'DEVOUR_SKILL_1_COOLDOWN': [2, 2, 1, 10, 'low'],  # 技能冷卻時間
 
     # SKILL 26: DEFENSE BUFF
@@ -336,32 +336,36 @@ RANGER_VAR = {
 ELEMENTALMAGE_VAR = {
     # BASE STATS
     'ELEMENTALMAGE_BASE_HP': [248, 248, 100, 999, 'high'],
-    'ELEMENTALMAGE_BASE_ATK': [1.08, 1.08, 0.1, 999, 'high'],
-    'ELEMENTALMAGE_BASE_DEF': [0.95, 0.95, 0.1, 999, 'high'],
-
-    # PASSIVE: ELEMENTAL FORCE
-    'ELEMENTALMAGE_PASSIVE_TRIGGER_RATE': [0.3, 0.3, 0.01, 1, 'high'],  # 元素效果觸發機率
+    'ELEMENTALMAGE_BASE_ATK': [1.12, 1.12, 0.1, 999, 'high'],
+    'ELEMENTALMAGE_BASE_DEF': [1.02, 1.02, 0.1, 999, 'high'],
+    
+    'ELEMENTALMAGE_PASSIVE_SINGLE_PARALYSIS_TRIGGER_RATE': [0.2, 0.2, 0.01, 1, 'high'],
+    'ELEMENTALMAGE_PASSIVE_MULTI_PARALYSIS_TRIGGER_RATE': [0.25, 0.25, 0.01, 1, 'high'],
+    'ELEMENTALMAGE_PASSIVE_SINGLE_PARALYSIS_DURATION': [2, 2, 1, 999, 'high'],
+    'ELEMENTALMAGE_PASSIVE_MULTI_PARALYSIS_DURATION': [2, 2, 1, 999, 'high'],
+    'ELEMENTALMAGE_PASSIVE_MULTI_PARALYSIS_ONE_MORE_DURATION_RATE': [0.25, 0.25, 0.1, 1, 'high'],
+    
+    
+    'ELEMENTALMAGE_SKILL_0_DAMAGE': [10, 10, 1, 999, 'high'],
+    'ELEMENTALMAGE_SKILL_0_SIGLE_ELEMENT_BONOUS': [2.5, 2.5, 1, 999, 'high'],
+    'ELEMENTALMAGE_SKILL_0_MULTI_ELEMENT_BONOUS': [6, 6, 1, 999, 'high'],
 
     # SKILL 30: LIGHTNING ARMOR
-    'ELEMENTALMAGE_SKILL_0_DEFENSE_BUFF': [1.5, 1.5, 0.1, 2, 'high'],  # 防禦力提升倍率
-    'ELEMENTALMAGE_SKILL_0_DURATION': [2, 2, 1, 5, 'nd'],  # 持續時間
-    'ELEMENTALMAGE_SKILL_0_HEAL_PERCENT': [0.08, 0.08, 0.01, 0.1, 'high'],  # 恢復生命比例
-    'ELEMENTALMAGE_SKILL_0_PARALYSIS_TRIGGER_RATE': [0.2, 0.2, 0.01, 1, 'high'],  # 麻痺觸發機率
+    'ELEMENTALMAGE_SKILL_1_DEFENSE_BUFF': [1.5, 1.5, 0.1, 2, 'high'],  # 防禦力提升倍率
+    'ELEMENTALMAGE_SKILL_1_DURATION': [2, 2, 1, 5, 'nd'],  # 持續時間
+    'ELEMENTALMAGE_SKILL_1_HEAL_PERCENT': [0.08, 0.08, 0.01, 0.1, 'high'],  # 恢復生命比例
+    'ELEMENTALMAGE_SKILL_1_PARALYSIS_TRIGGER_RATE': [0.2, 0.2, 0.01, 1, 'high'],  # 麻痺觸發機率
+    'ELEMENTALMAGE_SKILL_1_ELEMENT_ADD': [0.2, 0.2, 0.01, 1, 'high'],  # 麻痺觸發機率
 
     # SKILL 31: ELEMENTAL BURST
-    'ELEMENTALMAGE_SKILL_1_DAMAGE': [45, 45, 1, 999, 'high'],  # 基礎傷害
-    'ELEMENTALMAGE_SKILL_1_ADDITIONAL_DAMAGE': [15, 15, 1, 999, 'high'],  # 每層狀態額外傷害
-
-    # SKILL 32: THUNDERSTRIKE
-    'ELEMENTALMAGE_SKILL_2_DAMAGE': [35, 35, 1, 999, 'high'],  # 基礎傷害
-    'ELEMENTALMAGE_SKILL_2_PARALYSIS_TRIGGER_RATE': [0.25, 0.25, 0.01, 1, 'high'],  # 暈眩觸發機率
-    'ELEMENTALMAGE_SKILL_2_PARALYSIS_DURATIONS': [2,3,4],  # 暈眩持續時間選項
-    'ELEMENTALMAGE_SKILL_2_PARALYSIS_DURATIONS_WEIGHTS': [0.7, 0.25, 0.05],  # 暈眩持續時間機率
+    'ELEMENTALMAGE_SKILL_2_DAMAGE': [25, 25, 1, 999, 'high'],
+    'ELEMENTALMAGE_SKILL_2_BONOUS_DAMAGE_MULTIPLIER': [1.5, 1.5, 0.1, 2, 'high'],  # 傷害倍率
     
-    # skill 3
-    'ELEMENTALMAGE_SKILL_3_DURATION': [4, 4, 1, 999, 'high'],
-    'ELEMENTALMAGE_SKILL_3_MULTIPLIER': [0.01, 0.01, 0.1, 1, 'high'],
-    'ELEMENTALMAGE_SKILL_3_COOLDOWN': [8, 8, 1, 999, 'low'],
+    'ELEMENTALMAGE_SKILL_2_PARALYSIS_TRIGGER_RATE': [0.25, 0.25, 0.01, 1, 'high'],  # 麻痺觸發機率
+    
+    'ELEMENTALMAGE_SKILL_3_DAMAGE': [30, 30, 1, 999, 'high'],
+    'ELEMENTALMAGE_SKILL_3_BONOUS_DAMAGE_MULTIPLIER': [1.5, 1.5, 0.1, 2, 'high'],  # 傷害倍率
+
 }
 
 HUANGSHEN_VAR = {
@@ -386,14 +390,14 @@ HUANGSHEN_VAR = {
     'HUANGSHEN_SKILL_1_BUFF_DURATION': [4, 4, 1, 5, 'high'],  # 持續時間
 
     # SKILL 35: HEAL BASED ON DAMAGE TIMES
-    'HUANGSHEN_SKILL_2_HEAL_MULTIPLIER': [5, 5, 1, 999, 'high'],  # 每次傷害回血比例
+    'HUANGSHEN_SKILL_2_HEAL_MULTIPLIER': [8, 8, 1, 999, 'high'],  # 每次傷害回血比例
     'HUANGSHEN_SKILL_2_COOLDOWN': [3, 3, 1, 10, 'low'],  # 技能冷卻時間
     
     # SKILL 3
     'HUANGSHEN_SKILL_3_DURATION': [3, 3, 1, 999, 'high'],
     'HUANGSHEN_SKILL_3_REDUCE_MULTIPLIER': [0.98, 0.98, 0.1, 1, 'high'],
-    'HUANGSHEN_SKILL_3_COOLDOWN': [5, 5, 1, 999, 'low'],
-    'HUANGSHEN_PASSIVE_EXTRA_HIT_HEAL': [1, 1, 0.5, 2, 'high'],
+    'HUANGSHEN_SKILL_3_COOLDOWN': [6, 6, 1, 999, 'low'],
+    'HUANGSHEN_PASSIVE_EXTRA_HIT_HEAL': [0.5, 0.5, 0.5, 2, 'high'],
 }
 
 GODOFSTAR_VAR = {
@@ -407,23 +411,23 @@ GODOFSTAR_VAR = {
     'GODOFSTAR_PASSIVE_HEAL_PER_EFFECT': [10, 10, 1, 999, 'high'],  # 每層效果恢復的額外生命值
 
     # SKILL 36: DEBUFF METEOR
-    'GODOFSTAR_SKILL_0_DAMAGE': [30, 30, 1, 999, 'high'],
+    'GODOFSTAR_SKILL_0_DAMAGE': [25, 25, 1, 999, 'high'],
     'GODOFSTAR_SKILL_0_DEBUFF_MULTIPLIER': [0.9, 0.9, 0.01, 1, 'low'],  # 減益倍率
     'GODOFSTAR_SKILL_0_DEBUFF_DURATION': [3, 3, 1, 5, 'nd'],  # 持續時間
 
     # SKILL 37: BUFF METEOR
-    'GODOFSTAR_SKILL_1_HEAL': [30, 30, 1, 999, 'high'],
+    'GODOFSTAR_SKILL_1_HEAL': [25, 25, 1, 999, 'high'],
     'GODOFSTAR_SKILL_1_BUFF_MULTIPLIER': [1.1, 1.1, 1.0, 2, 'low'],  # 增益倍率
     'GODOFSTAR_SKILL_1_BUFF_DURATION': [3, 3, 1, 5, 'high'],  # 持續時間
 
     # SKILL 38: STAR CREATION
     'GODOFSTAR_SKILL_2_DAMAGE': [45, 45, 1, 999, 'high'],  # 基礎傷害
-    'GODOFSTAR_SKILL_2_PASSIVE_MULTIPLIER': [1.3, 1.3, 0.1, 3, 'high'],  # 被動效果增強倍率
+    'GODOFSTAR_SKILL_2_PASSIVE_MULTIPLIER': [1.25, 1.25, 0.1, 3, 'high'],  # 被動效果增強倍率
     
     # skill 3
     'GODOFSTAR_SKILL_3_DAMAGE': [15, 15, 1, 999, 'high'],
     'GODOFSTAR_SKILL_3_HEAL': [15, 15, 1, 999, 'high'],
-    'GODOFSTAR_SKILL_3_PASSIVE_MULTIPLIER': [1.15, 1.15, 0.1, 3, 'high'],  # 被動效果增強倍率
+    'GODOFSTAR_SKILL_3_PASSIVE_MULTIPLIER': [1.05, 1.05, 0.1, 3, 'high'],  # 被動效果增強倍率
     'GODOFSTAR_SKILL_3_COOLDOWN': [3, 3, 1, 999, 'low'],
     
 }

@@ -649,17 +649,17 @@ class BattleEnv(MultiAgentEnv):
         
         # check 我方是否全滅
         def check_end():
-            if all(m["hp"] <= 0 for m in self.player_team):
-                self.done = True
-                self.add_event(event=BattleEvent(type="text",text="我方全滅，敵方獲勝！"))
-            # check 敵方是否全滅
-            if all(e["hp"] <= 0 for e in self.enemy_team):
-                self.done = True
-                self.add_event(event=BattleEvent(type="text",text="敵方全滅，我方獲勝！"))
             # check 雙方全滅?
             if self._check_both_defeated():
                 self.done = True
                 self.add_event(event=BattleEvent(type="text",text="雙方全滅，平手！"))
+            elif all(m["hp"] <= 0 for m in self.player_team):
+                self.done = True
+                self.add_event(event=BattleEvent(type="text",text="我方全滅，敵方獲勝！"))
+            # check 敵方是否全滅
+            elif all(e["hp"] <= 0 for e in self.enemy_team):
+                self.done = True
+                self.add_event(event=BattleEvent(type="text",text="敵方全滅，我方獲勝！"))
 
         
         check_end()
@@ -678,7 +678,8 @@ class BattleEnv(MultiAgentEnv):
         # 強制停止
         self.round_count += 1
         if self.round_count > self.max_rounds:
-                self.done = True
+            self.add_event(event=BattleEvent(type="text",text="戰鬥回合數超過上限，雙方平手！"))
+            self.done = True
         
         # 因為異常狀態有可能造成擊殺，所以要在最後檢查
         if not self.done:

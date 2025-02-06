@@ -30,6 +30,10 @@ document.addEventListener("DOMContentLoaded", () => {
             return `對敵方造成 <span class="damage-text">${p1}</span> 點傷害`;
         });
 
+        text = text.replace(/消耗 (\d+)% 的/g, (match, p1) => {
+            return `消耗 <span class="effect-text">${p1}%</span> 的`;
+        });
+
         text = text.replace(/額外造成 (\d+) 點傷害/g, (match, p1) => {
             return `額外造成 <span class="damage-text">${p1}</span> 點傷害`;
         });

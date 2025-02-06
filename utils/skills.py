@@ -110,7 +110,7 @@ sm.add_skill(Skill(
 sm.add_skill(Skill(
     12, "五連矢", f"對敵方造成 {ARCHER_VAR['ARCHER_SKILL_0_DAMAGE'][0]} 點傷害，並使其防禦力降低 {int((1 - ARCHER_VAR['ARCHER_SKILL_0_DEFENSE_DEBUFF'][0]) * 100)}%， 持續 {ARCHER_VAR['ARCHER_SKILL_0_DURATION'][0]} 回合。", 'damage'))
 sm.add_skill(Skill(
-    13, "箭矢補充", f"持續 {ARCHER_VAR['ARCHER_SKILL_1_DURATION'][0]} 回合，提升 {int(ARCHER_VAR['ARCHER_SKILL_1_DAMAGE_MULTIPLIER'][0] * 100 - 100)}% 攻擊力，或降低 {int((1 - ARCHER_VAR['ARCHER_SKILL_1_DEFENSE_MULTIPLIER'][0]) * 100)}% 防禦力（成功率：{int(ARCHER_VAR['ARCHER_SKILL_1_SUCESS_RATIO'][0] * 100)}%）。", 'effect'))
+    13, "箭矢補充", f"持續 {ARCHER_VAR['ARCHER_SKILL_1_DURATION'][0]} 回合，{int(ARCHER_VAR['ARCHER_SKILL_1_SUCESS_RATIO'][0] * 100)}% 機率提升 {int(ARCHER_VAR['ARCHER_SKILL_1_DAMAGE_MULTIPLIER'][0] * 100 - 100)}% 攻擊力，否則降低 {int((1 - ARCHER_VAR['ARCHER_SKILL_1_DEFENSE_MULTIPLIER'][0]) * 100)}% 防禦力。", 'effect'))
 sm.add_skill(Skill(
     14, "吸血箭", f"對敵方造成 {ARCHER_VAR['ARCHER_SKILL_2_DAMAGE'][0]} 點傷害，並為自身恢復 {ARCHER_VAR['ARCHER_SKILL_2_HEAL'][0]} 點生命值。", 'damage'))
 # 驟雨 對敵方造成50(10*5)傷害，無視目標80%防禦力。
@@ -195,7 +195,7 @@ sm.add_skill(Skill(
 
 sm.add_skill(Skill(
     26, "轉生",
-    f"消耗當前生命值的 {int(BLOODGOD_VAR['BLOODGOD_SKILL_2_SELF_DAMAGE_RATIO'][0] * 100)}%，持續 {BLOODGOD_VAR['BLOODGOD_SKILL_2_DURATION'][0]} 回合內，受到致死傷害時，復活並回復最大血量的 {int(BLOODGOD_VAR['BLOODGOD_SKILL_2_RESURRECT_HEAL_RATIO'][0] * 100)}%。",
+    f"消耗當前生命值的 {int(BLOODGOD_VAR['BLOODGOD_SKILL_2_SELF_DAMAGE_RATIO'][0] * 100)}%，持續 {BLOODGOD_VAR['BLOODGOD_SKILL_2_DURATION'][0]} 回合內，受到致死傷害時，復活並回復最大血量的 {int(BLOODGOD_VAR['BLOODGOD_SKILL_2_RESURRECT_HEAL_RATIO'][0] * 100)}%。但是致死傷害所累積的傷害會提升至 {int(BLOODGOD_VAR['BLOODGOD_SKILL_2_BLOOD_ACCUMULATION_MULTIPLIER'][0]*100)}% 。",
     'effect',
     BLOODGOD_VAR['BLOODGOD_SKILL_2_COOLDOWN'][0]
 ))
@@ -292,29 +292,90 @@ sm.add_skill(Skill(
     39,"地雷",f"施放一個地雷，地雷在受到最大等同於自身當前血量的 {int(RANGER_VAR['RANGER_SKILL_3_HP_THRESHOLD'][0]*100)}% 累積傷害，或是 {RANGER_VAR['RANGER_SKILL_3_DURATION'][0] +1} 回合後會引爆。引爆後，持續 2 回合，會讓敵方降低 {int((1 - RANGER_VAR['RANGER_SKILL_3_DEBUFF_MULTIPLIER_SUCCESS'][0])*100)}% 防禦力，並受到地雷累積 {int(RANGER_VAR['RANGER_SKILL_3_DAMAGE_RATE_SUCCESS'][0]*100)}% 的傷害。若是未達成傷害累積條件即引爆時，則降低 {int((1 - RANGER_VAR['RANGER_SKILL_3_DEBUFF_MULTIPLIER_FAIL'][0])*100)}% 防禦力，並受到地雷累積 {int(RANGER_VAR['RANGER_SKILL_3_DAMAGE_RATE_FAIL'][0]*100)}% 的傷害。",'effect',RANGER_VAR['RANGER_SKILL_3_COOLDOWN'][0]))
 
 
-# 元素法師 (ElementalMage) 技能定義
+# 技能 40：融合
+# 此技能對敵方造成 ELEMENTALMAGE_SKILL_0_DAMAGE 點傷害，
+# 並根據玩家目前持有的元素強化狀態決定額外效果：
+# 【單屬性強化】
+#  • 傷害效果提升至 ELEMENTALMAGE_SKILL_0_SIGLE_ELEMENT_BONOUS 倍（顯示為 {int(ELEMENTALMAGE_VAR['ELEMENTALMAGE_SKILL_0_SIGLE_ELEMENT_BONOUS'][0] * 100)}% 效果）
+#  • 持有「雷」：有 {int(ELEMENTALMAGE_VAR['ELEMENTALMAGE_PASSIVE_SINGLE_PARALYSIS_TRIGGER_RATE'][0]*100)}% 機率使敵方麻痺 {ELEMENTALMAGE_PASSIVE_SINGLE_PARALYSIS_DURATION} 回合
+#  • 持有「火」：附加敵方 1 層燃燒
+#  • 持有「冰」：附加敵方 1 層冰凍
+#
+# 【雙屬性強化】
+#  • 傷害效果提升至 ELEMENTALMAGE_SKILL_0_MULTI_ELEMENT_BONOUS 倍（顯示為 {int(ELEMENTALMAGE_VAR['ELEMENTALMAGE_SKILL_0_MULTI_ELEMENT_BONOUS'][0] * 100)}% 效果）
+#  • 持有「雷」：有 {int(ELEMENTALMAGE_VAR['ELEMENTALMAGE_PASSIVE_MULTI_PARALYSIS_TRIGGER_RATE'][0]*100)}% 機率使敵方麻痺 {ELEMENTALMAGE_VAR['ELEMENTALMAGE_PASSIVE_MULTI_PARALYSIS_DURATION'][0]} 回合
+#      （另有 {ELEMENTALMAGE_VAR['ELEMENTALMAGE_PASSIVE_MULTI_PARALYSIS_ONE_MORE_DURATION_RATE'][0]} 機率延長 1 回合）
+#  • 持有「火」：附加敵方 1 層燃燒，並立即觸發燃燒總傷害
+#  • 持有「冰」：附加敵方 1 層冰凍，使敵方隨機 1 個技能進入冷卻
 sm.add_skill(Skill(
-    40, "雷霆護甲",
-    f"持續 {ELEMENTALMAGE_VAR['ELEMENTALMAGE_SKILL_0_DURATION'][0]} 回合，受到傷害時有 {int(ELEMENTALMAGE_VAR['ELEMENTALMAGE_SKILL_0_PARALYSIS_TRIGGER_RATE'][0] * 100)}% 機率直接麻痺敵人，並提升 {int((ELEMENTALMAGE_VAR['ELEMENTALMAGE_SKILL_0_DEFENSE_BUFF'][0] - 1) * 100)}% 防禦力，恢復最大生命的 {int(ELEMENTALMAGE_VAR['ELEMENTALMAGE_SKILL_0_HEAL_PERCENT'][0] * 100)}%。",
+    40, "融合",
+    f"對敵方造成 {ELEMENTALMAGE_VAR['ELEMENTALMAGE_SKILL_0_DAMAGE'][0]} 點傷害，依據元素強化狀態發動不同效果：\n"
+    "【單屬性強化】\n"
+    f"  傷害提升至 {int(ELEMENTALMAGE_VAR['ELEMENTALMAGE_SKILL_0_SIGLE_ELEMENT_BONOUS'][0] * 100)}% 效果；\n"
+    f"  持有雷：{int(ELEMENTALMAGE_VAR['ELEMENTALMAGE_PASSIVE_SINGLE_PARALYSIS_TRIGGER_RATE'][0] * 100)}% 機率使敵方麻痺 {ELEMENTALMAGE_VAR['ELEMENTALMAGE_PASSIVE_SINGLE_PARALYSIS_DURATION'][0]} 回合；\n"
+    "  持有火：附加敵方1層燃燒；\n"
+    "  持有冰：附加敵方1層冰凍；\n"
+    "【雙屬性強化】\n"
+    f"  傷害提升至 {int(ELEMENTALMAGE_VAR['ELEMENTALMAGE_SKILL_0_MULTI_ELEMENT_BONOUS'][0] * 100)}% 效果；\n"
+    f"  持有雷：{int(ELEMENTALMAGE_VAR['ELEMENTALMAGE_PASSIVE_MULTI_PARALYSIS_TRIGGER_RATE'][0] * 100)}% 機率使敵方麻痺 {ELEMENTALMAGE_VAR['ELEMENTALMAGE_PASSIVE_MULTI_PARALYSIS_DURATION'][0]} 回合"
+    f"（另有 {int(ELEMENTALMAGE_VAR['ELEMENTALMAGE_PASSIVE_MULTI_PARALYSIS_ONE_MORE_DURATION_RATE'][0]*100)}% 機率延長1回合）；\n"
+    "  持有火：附加敵方1層燃燒，並立即觸發燃燒總傷害；\n"
+    "  持有冰：附加敵方1層冰凍，使敵方隨機 1 招技能進入冷卻。",
+    'damage'
+))
+
+# 技能 41：雷霆護甲
+# 為自身疊加雷元素（同時移除回血效果），並提升防禦：
+#  • 防禦提升幅度：{int((ELEMENTALMAGE_VAR['ELEMENTALMAGE_SKILL_1_DEFENSE_BUFF'][0] - 1) * 100)}%
+#  • 持續 {ELEMENTALMAGE_VAR['ELEMENTALMAGE_SKILL_1_DURATION'][0]} 回合
+#
+# 【冰火強化】若同時持有冰與火，則技能變為「雷霆護甲．神火」：
+#  受擊時，敵方將附加1層燃燒，並立即觸發燃燒總傷害
+sm.add_skill(Skill(
+    41, "雷霆護甲",
+    f"為自身疊加雷元素。\n"
+    f"持續 {ELEMENTALMAGE_VAR['ELEMENTALMAGE_SKILL_1_DURATION'][0]} 回合，效果存在時受到攻擊有 {ELEMENTALMAGE_VAR['ELEMENTALMAGE_SKILL_1_ELEMENT_ADD'][0]}% 機率麻痺敵方，防禦提升 {int((ELEMENTALMAGE_VAR['ELEMENTALMAGE_SKILL_1_DEFENSE_BUFF'][0] - 1) * 100)}%，持續 {ELEMENTALMAGE_VAR['ELEMENTALMAGE_SKILL_1_DURATION'][0]} 回合。\n"
+    "【冰火強化】若同時持有冰與火，則變為『雷霆護甲．神火』，"
+    "受擊時使敵方附加 1 層燃燒，並立即觸發燃燒總傷害。",
     'effect'
 ))
 
+# 技能 42：寒星墜落
+# 為自身疊加冰元素，對敵方造成
+# {ELEMENTALMAGE_SKILL_2_DAMAGE} 點傷害，並立即疊加1~3層冰凍，使敵方隨機1個技能進入冷卻。
+#
+# 【雷火強化】若同時持有火與雷，則技能變為「寒星墜落．雷霆」：
+#  • 傷害額外提升至 {int((ELEMENTALMAGE_SKILL_2_BONOUS_DAMAGE_MULTIPLIER - 1) * 100)}% 加成，
+#  • 並有 {int(ELEMENTALMAGE_SKILL_2_PARALYSIS_TRIGGER_RATE[0] * 100)}% 機率使敵方麻痺 2 回合，
+#  • 同時使敵方隨機2個技能進入冷卻。
 sm.add_skill(Skill(
-    41, "凍燒雷",
-    f"對敵方造成 {ELEMENTALMAGE_VAR['ELEMENTALMAGE_SKILL_1_DAMAGE'][0]} 點傷害，每層燃燒、冰凍、麻痺效果額外對敵方造成 {ELEMENTALMAGE_VAR['ELEMENTALMAGE_SKILL_1_ADDITIONAL_DAMAGE'][0]} 點傷害。",
-    'damage'
+    42, "寒星墜落",
+    f"為自身疊加冰元素，對敵方造成 {ELEMENTALMAGE_VAR['ELEMENTALMAGE_SKILL_2_DAMAGE'][0]} 點傷害，"
+    "並立即疊加1~3層冰凍，使敵方隨機 1 招技能進入冷卻。\n"
+    "【雷火強化】若同時持有火與雷，則變為『寒星墜落．雷霆』，"
+    f"增加 {int((ELEMENTALMAGE_VAR['ELEMENTALMAGE_SKILL_2_BONOUS_DAMAGE_MULTIPLIER'][0] - 1) * 100)}% 傷害，"
+    f"且有 {int(ELEMENTALMAGE_VAR['ELEMENTALMAGE_SKILL_2_PARALYSIS_TRIGGER_RATE'][0] * 100)}% 機率使敵方麻痺 2 回合，"
+    "並使敵方隨機 2招技能進入冷卻。",
+    'damage',3
 ))
 
+# 技能 43：焚天
+# 為自身疊加火元素，對敵方造成
+# {ELEMENTALMAGE_SKILL_3_DAMAGE} 點傷害，並使敵方附加1層燃燒，立即觸發燃燒總傷害。
+#
+# 【冰雷強化】若同時持有冰與雷，則技能變為「焚天．寒焰」：
+#  • 傷害額外增加 {int((ELEMENTALMAGE_SKILL_3_BONOUS_DAMAGE_MULTIPLIER - 1) * 100)}% 加成，
+#  • 並使敵方同時附加1層冰凍及1層燃燒，
+#  • 另外使敵方隨機1個技能進入冷卻。
 sm.add_skill(Skill(
-    42, "雷擊術",
-    f"對敵方造成 {ELEMENTALMAGE_VAR['ELEMENTALMAGE_SKILL_2_DAMAGE'][0]} 點傷害，{int(ELEMENTALMAGE_VAR['ELEMENTALMAGE_SKILL_2_PARALYSIS_TRIGGER_RATE'][0] * 100)}% 機率使敵方麻痺 2~4 回合。",
+    43, "焚天",
+    f"為自身疊加火元素，對敵方造成 {ELEMENTALMAGE_VAR['ELEMENTALMAGE_SKILL_3_DAMAGE'][0]} 點傷害，"
+    "並使敵方附加1層燃燒，立即觸發燃燒總傷害。\n"
+    "【冰雷強化】若同時持有冰與雷，則變為『焚天．寒焰』，"
+    f"增加 {int((ELEMENTALMAGE_VAR['ELEMENTALMAGE_SKILL_3_BONOUS_DAMAGE_MULTIPLIER'][0] - 1) * 100)}% 傷害，"
+    "並使敵方同時附加1層冰凍及1層燃燒，且使敵方隨機1技能進入冷卻。",
     'damage'
 ))
-# 天啟 CD 8
-# 4回合內，將雙方的治癒力係數降低99%
-sm.add_skill(Skill(
-    43,"天啟",f"持續 {ELEMENTALMAGE_VAR['ELEMENTALMAGE_SKILL_3_DURATION'][0]} 回合，雙方降低 {int((1- ELEMENTALMAGE_VAR['ELEMENTALMAGE_SKILL_3_MULTIPLIER'][0])*100)}% 的治癒力。",'effect',ELEMENTALMAGE_VAR['ELEMENTALMAGE_SKILL_3_COOLDOWN'][0]))
-
 
 # 荒神 (HuangShen) 技能定義
 sm.add_skill(Skill(
@@ -367,5 +428,5 @@ sm.add_skill(Skill(
 # 本回合天啟星盤的效果增加 25%。
 # 將自身由光輝流星附加的buff，轉為減益效果賦予到對方身上；自身由災厄隕星附加的debuff，轉為增益效果賦予到對方身上
 sm.add_skill(Skill(
-    51,"無序聯星",f"對敵方造成 {GODOFSTAR_VAR['GODOFSTAR_SKILL_3_DAMAGE'][0]} 點傷害，恢復 {GODOFSTAR_VAR['GODOFSTAR_SKILL_3_HEAL'][0]} 點生命值，本回合天啟星盤的效果增加 {int(GODOFSTAR_VAR['GODOFSTAR_SKILL_3_PASSIVE_MULTIPLIER'][0]*100)-100}%。將自身由光輝流星附加的增益效果，轉為減益效果賦予到對方身上；自身由災厄隕星附加的簡易效果，轉為增益效果賦予自身身上。",'damage',GODOFSTAR_VAR['GODOFSTAR_SKILL_3_COOLDOWN'][0]))
+    51,"無序聯星",f"對敵方造成 {GODOFSTAR_VAR['GODOFSTAR_SKILL_3_DAMAGE'][0]} 點傷害，恢復 {GODOFSTAR_VAR['GODOFSTAR_SKILL_3_HEAL'][0]} 點生命值，本回合天啟星盤的效果增加 {int(GODOFSTAR_VAR['GODOFSTAR_SKILL_3_PASSIVE_MULTIPLIER'][0]*100)-100}%。將自身由光輝流星附加的增益效果，轉為減益效果賦予到對方身上；自身由災厄隕星附加的減益效果，轉為增益效果賦予自身身上。",'damage',GODOFSTAR_VAR['GODOFSTAR_SKILL_3_COOLDOWN'][0]))
 

@@ -31,96 +31,15 @@ from utils.profession_var import (
 import copy
 
 # 將所有職業的變數整理到一個全域 dict 中 (注意：此處只是在記憶體中修改，重新啟動後會回復原始設定)
-ALL_PROFESSIONS_VARS = {
-    'PALADIN': PALADIN_VAR,
-    'MAGE': MAGE_VAR,
-    'ASSASSIN': ASSASSIN_VAR,
-    'ARCHER': ARCHER_VAR,
-    'BERSERKER': BERSERKER_VAR,
-    'DRAGONGOD': DRAGONGOD_VAR,
-    'BLOODGOD': BLOODGOD_VAR,
-    'STEADFASTWARRIOR': STEADFASTWARRIOR_VAR,
-    'DEVOUR': DEVOUR_VAR,
-    'RANGER': RANGER_VAR,
-    'ELEMENTALMAGE': ELEMENTALMAGE_VAR,
-    'HUANGSHEN': HUANGSHEN_VAR,
-    'GODOFSTAR': GODOFSTAR_VAR,
-}
+
 
 main_routes = Blueprint('main', __name__)
 
 
-@main_routes.route("/dev/manage_vars")
-def manage_vars_page():
-    """
-    開發者介面：瀏覽並修改各職業/技能的變數
-    """
-    return render_template("dev_manage_vars.html", professions_vars=ALL_PROFESSIONS_VARS)
-
-
-@main_routes.route("/api/update_var", methods=["POST"])
-def update_var():
-    """
-    API: 更新指定職業變數的「當前值」
-
-    傳入的 JSON 格式：
-    {
-       "profession": "PALADIN",
-       "var_key": "PALADIN_BASE_HP",
-       "new_value": 400
-    }
-    """
-    data = request.get_json()
-    profession = data.get("profession")
-    var_key = data.get("var_key")
-    new_value = data.get("new_value")
-
-    if profession not in ALL_PROFESSIONS_VARS:
-        return jsonify({"status": "error", "message": "無效的職業名稱"}), 400
-
-    profession_vars = ALL_PROFESSIONS_VARS[profession]
-    if var_key not in profession_vars:
-        return jsonify({"status": "error", "message": "無效的變數名稱"}), 400
-
-    var_data = profession_vars[var_key]
-    # 若該變數有設定第5個值且為 'no'，則不可修改
-    if len(var_data) >= 5 and var_data[4] == 'no':
-        return jsonify({"status": "error", "message": "該變數不可修改"}), 400
-
-    try:
-        # 根據預設值的型態來轉換 new_value
-        default_val = var_data[1]
-        if isinstance(default_val, int):
-            converted_value = int(new_value)
-        elif isinstance(default_val, float):
-            converted_value = float(new_value)
-        else:
-            converted_value = new_value  # 當作字串處理
-    except ValueError:
-        return jsonify({"status": "error", "message": "數值型態錯誤"}), 400
-
-    # 若有提供上下界，則做簡單檢查
-    lower_bound = var_data[2] if len(var_data) > 2 else None
-    upper_bound = var_data[3] if len(var_data) > 3 else None
-    if lower_bound is not None and converted_value < lower_bound:
-        return jsonify({"status": "error", "message": "數值低於下限"}), 400
-    if upper_bound is not None and upper_bound > 0 and converted_value > upper_bound:
-        return jsonify({"status": "error", "message": "數值超過上限"}), 400
-
-    # 更新變數的「當前值」 (索引 0)
-    profession_vars[var_key][0] = converted_value
-
-    return jsonify({
-        "status": "success",
-        "profession": profession,
-        "var_key": var_key,
-        "new_value": converted_value
-    })
 
 
 # 建立全域的 manager & professions，避免每次端點都要重建
-skill_mgr = build_skill_manager()
-professions = build_professions()
+
 
 
 @main_routes.route("/api/list_models", methods=["GET"])
@@ -268,12 +187,6 @@ def stop_train():
         return jsonify({"message": "訓練已經在終止中。"}), 400
 
 
-@main_routes.route('/')
-def index():
-    """
-    回傳前端的 index.html
-    """
-    return render_template('index.html')
 
 
 @main_routes.route("/api/list_professions", methods=["GET"])
@@ -457,16 +370,16 @@ def api_version_test_generate_sse():
 
         print("model_full_path", model_path)
         generator = version_test_random_vs_random_sse_ai(
-            professions,
-            skill_mgr,
+            professions = build_professions(),
+            skill_mgr = build_skill_manager(),
             num_battles=num_battles,
             model_path_1=model_path
         )
     else:
         # mode == "pc"
         generator = version_test_random_vs_random_sse(
-            professions,
-            skill_mgr,
+            professions = build_professions(),
+            skill_mgr = build_skill_manager(),
             num_battles=num_battles
         )
 
@@ -542,7 +455,8 @@ def api_show_professions():
     (8) 各職業介紹
     回傳結構化的職業資料
     """
-    professions_data = get_professions_data(professions, skill_mgr)
+    
+    professions_data = get_professions_data(build_professions(), build_skill_manager())
     return jsonify({"professions_info": professions_data})
 
 
@@ -710,8 +624,8 @@ skill_id_to_name = {
     15: "驟雨", 16: "狂暴之力", 17: "熱血", 18: "血怒之泉", 19: "嗜血本能", 20: "神龍之息", 21: "龍血之泉",
     22: "神龍燎原", 23: "預借", 24: "血刀", 25: "血脈祭儀", 26: "轉生", 27: "新生", 28: "剛毅打擊", 29: "不屈意志",
     30: "絕地反擊", 31: "破魂斬", 32: "吞裂", 33: "巨口吞世", 34: "堅硬皮膚", 35: "觸電反應",
-    36: "續戰攻擊", 37: "埋伏防禦", 38: "荒原抗性", 39: "地雷", 40: "雷霆護甲", 41: "凍燒雷",
-    42: "雷擊術", 43: "天啟", 44: "枯骨",  45: "荒原", 46: "生命逆流", 47: "風化", 48: "災厄隕星",  49: "光輝流星",
+    36: "續戰攻擊", 37: "埋伏防禦", 38: "荒原抗性", 39: "地雷", 40: "融合", 41: "雷霆護甲",
+    42: "寒星墜落", 43: "焚天", 44: "枯骨",  45: "荒原", 46: "生命逆流", 47: "風化", 48: "災厄隕星",  49: "光輝流星",
     50: "虛擬創星圖", 51: "無序聯星"
 }
 
@@ -1234,7 +1148,7 @@ def player_vs_ai_step(session_id):
             "winner_text": result_text,
         })
         storage["done"] = True
-
+    print("--對戰完成--")
     return jsonify({"done": done}), 200
 
 
@@ -1272,3 +1186,20 @@ def player_vs_ai_hint(session_id):
         "skill_desc": skill_info["description"],
         "probabilities": [0, 0, 0, 0]  # 假設不顯示詳細機率
     }), 200
+
+@main_routes.route('/get_token')
+def get_token():
+    token = globalVar['token']
+    return str(token)
+
+@main_routes.route('/get_version')
+def get_version():
+    version = globalVar['version']
+    return str(version)
+
+@main_routes.route('/')
+def index():
+    token = get_token()
+    version = get_version()
+    # 將 token 與 version 傳入模板
+    return render_template('index.html', token=token, version=version)

@@ -63,6 +63,11 @@ class EffectManager:
 
 
         elif effect.type in['special','control']:
+            # if is control effect, then check if immune
+            if effect.type == 'control':
+                if self.has_effect("免疫控制"):
+                    self.env.add_event(user = self.target, event = BattleEvent(type="status_apply_fail",appendix={"effect_name":effect.name}))
+                    return
             # non-stackable 效果存在後即使疊加也不更新duration
             if effect.stackable:
                 if existing_effects:

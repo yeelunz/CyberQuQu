@@ -380,7 +380,7 @@
           const log = data.round_battle_log || [];
           playRoundAnimation(log);
         } else if (data.type === "battle_end") {
-          addTurnBroadcastLine("【戰鬥結束】 " + data.winner_text, "log-end");
+          addTurnBroadcastLine("【戰鬥結束】 " , "log-end");
           pva_sse.close();
           disableAllSkills();
         }

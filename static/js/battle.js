@@ -78,16 +78,16 @@ function initBattleView() {
       <input type="range" id="battle-progress-bar" min="0" max="0" value="0">
     </div>
     <div id="speed-control-panel">
-    <button id="pause-btn">繼續/暫停</button>
-        <button class="speed-btn" data-speed="2000">0.5x</button>
-        <button class="speed-btn" data-speed="1000">1x</button>
-        <button class="speed-btn" data-speed="500">2x</button>
-        <button class="speed-btn" data-speed="333">3x</button>
-        <button class="speed-btn" data-speed="200">5x</button>
-        <button class="speed-btn" data-speed="100">10x</button>
-        <button class="speed-btn" data-speed="50">20x</button>
-        <button id="skip-all-btn">跳過全部</button>
-        <button id="replay-btn" disabled>Replay</button>
+      <button id="pause-btn">繼續/暫停</button>
+      <button class="speed-btn" data-speed="2000">0.5x</button>
+      <button class="speed-btn" data-speed="1000">1x</button>
+      <button class="speed-btn" data-speed="500">2x</button>
+      <button class="speed-btn" data-speed="333">3x</button>
+      <button class="speed-btn" data-speed="200">5x</button>
+      <button class="speed-btn" data-speed="100">10x</button>
+      <button class="speed-btn" data-speed="50">20x</button>
+      <button id="skip-all-btn">再來一場</button>
+      <button id="replay-btn" disabled>Replay</button>
     </div>
   `;
   battleContainer.appendChild(topControls);
@@ -189,18 +189,12 @@ function initBattleView() {
   replayBtn.addEventListener("click", () => {
     replayBattle();
   });
-  const skipAllBtn = document.getElementById("skip-all-btn");
-
-  skipAllBtn.addEventListener("click", () => {
-    skipAllEvents();
+  // 將原本的「跳過全部」按鈕改為「再來一場」
+  const newBattleBtn = document.getElementById("skip-all-btn");
+  newBattleBtn.textContent = "再來一場";
+  newBattleBtn.addEventListener("click", () => {
+    startNewBattle();
   });
-
-  function skipAllEvents() {
-    clearTimeout(battleTimerGlobal);
-    battleIndexGlobal = battleLogGlobal.length; // 直接跳到結束
-    updateProgressBar();
-    showBattleEnd();
-  }
 
   // 新增：進度條拖動控制 (這裡使用 change 事件，若想即時反映可改用 input 事件)
   const progressBar = document.getElementById("battle-progress-bar");
@@ -209,7 +203,7 @@ function initBattleView() {
     seekBattle(newIndex);
   });
 
-  contentArea.appendChild(battleContainer);
+  // 注意：原本 skipAllEvents() 函式已不再使用
 }
 
 /* 
@@ -280,10 +274,72 @@ function replayBattle() {
   startBattle(battleLogGlobal);
 }
 
+// 當戰鬥結束時，只顯示結束文字（不再顯示底部再來一場/返回選單的按鈕）
 function showBattleEnd() {
   addTextLog("【戰鬥結束】", "log-end");
   const replayBtn = document.getElementById("replay-btn");
-  if (replayBtn) replayBtn.disabled = false;
+  if (replayBtn) replayBtn.disabled = true;
+}
+
+// 使用目前的配置發起一場新戰鬥
+function startNewBattle() {
+  if (window.currentBattleType === "pc_vs_pc") {
+    const config = window.currentBattleConfig;
+    if (window.showLoadingSpinner) window.showLoadingSpinner();
+    const query = new URLSearchParams({ pr1: config.leftProfession, pr2: config.rightProfession });
+    fetch(`/api/computer_vs_computer?${query.toString()}`)
+      .then((res) => {
+        if (!res.ok) {
+          return res.text().then(text => { throw new Error(text); });
+        }
+        return res.json();
+      })
+      .then((data) => {
+        if (window.hideLoadingSpinner) window.hideLoadingSpinner();
+        const battleLog = data.battle_log;
+        initBattleView();
+        startBattle(battleLog);
+      })
+      .catch((error) => {
+        if (window.hideLoadingSpinner) window.hideLoadingSpinner();
+        alert("再來一場發生錯誤: " + error);
+      });
+  } else if (window.currentBattleType === "ai_vs_ai") {
+    const config = window.currentBattleConfig;
+    if (window.showLoadingSpinner) window.showLoadingSpinner();
+    const query = new URLSearchParams({
+      pr1: config.leftProfession,
+      pr2: config.rightProfession,
+      model1: config.leftModel,
+      model2: config.rightModel
+    });
+    fetch(`/api/ai_vs_ai?${query.toString()}`)
+      .then((res) => {
+        if (!res.ok) {
+          return res.text().then(text => { throw new Error(text); });
+        }
+        return res.json();
+      })
+      .then((data) => {
+        if (window.hideLoadingSpinner) window.hideLoadingSpinner();
+        const battleLog = data.battle_log;
+        initBattleView();
+        startBattle(battleLog);
+      })
+      .catch((error) => {
+        if (window.hideLoadingSpinner) window.hideLoadingSpinner();
+        alert("再來一場發生錯誤: " + error);
+      });
+  } else {
+    alert("無法辨識目前的對戰模式。");
+  }
+}
+
+// 返回選單 (這裡以重新載入頁面為例)
+function returnToMainMenu() {
+  location.reload();
+  // 或者，如果你有自訂的主選單渲染函式，則可直接呼叫該函式：
+  // showMainMenu();
 }
 
 /* 
@@ -896,7 +952,7 @@ function handleEffectAddOrTick(event) {
 /* 
   ================
   導出
-  ================ 
+  ================
 */
 window.initBattleView = initBattleView;
 window.startBattle = startBattle;

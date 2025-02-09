@@ -271,7 +271,7 @@ function renderProfessionEvaluation(profession_evaluation, container) {
         <li><strong>EIR (Effective Influence Rate):</strong> 衡量職業在整體環境中的實際影響力。<span class="info-icon" data-info="eir">ℹ️</span>
           <div class="popover-content" id="popover-eir">
             <strong>EIR (Effective Influence Rate)</strong><br>
-            衡量職業在整體環境中的實際影響力。這是一個綜合指標，結合了職業的平均勝率和對環境的影響力。計算方式為：50% * 平均勝率 + 50% * 總影響力。分數範圍通常在0-100之間，越高代表該職業越強勢。
+            衡量職業在整體環境中的加權勝率：對戰該職業之勝率 * 該職業的總勝率。
           </div>
         </li>
         <li><strong>A-NAS (Advanced Normalized Ability Score):</strong> 基於 BTL 模型的相對實力指標。<span class="info-icon" data-info="a_nas">ℹ️</span>

@@ -478,7 +478,7 @@ def api_model_vs_model_result():
 
     return jsonify(data), 200
 
-# 請自行實作或調整 load_model_vs_model_result 函式
+
 
 
 def load_model_vs_model_result(result_id):
@@ -626,7 +626,7 @@ skill_id_to_name = {
     30: "絕地反擊", 31: "破魂斬", 32: "吞裂", 33: "巨口吞世", 34: "堅硬皮膚", 35: "觸電反應",
     36: "續戰攻擊", 37: "埋伏防禦", 38: "荒原抗性", 39: "地雷", 40: "融合", 41: "雷霆護甲",
     42: "寒星墜落", 43: "焚天", 44: "枯骨",  45: "荒原", 46: "生命逆流", 47: "風化", 48: "災厄隕星",  49: "光輝流星",
-    50: "虛擬創星圖", 51: "無序聯星"
+    50: "虛擬星圖", 51: "無序聯星"
 }
 
 profession_id_to_name = {
@@ -1203,3 +1203,54 @@ def index():
     version = get_version()
     # 將 token 與 version 傳入模板
     return render_template('index.html', token=token, version=version)
+
+
+from utils.var_update import init_global_var
+
+@main_routes.route('/next_version', methods=['POST'])
+def next_version():
+    # parse version string
+    # version like that: 1.4.5
+    # so we need to split it by '.'
+    # ver_1 = 1 (to int)
+    # ver_2 = 4 (to int)
+    # ver_3 = 5 (to int)
+    ver_1 = int(globalVar['version'].split('.')[0])
+    ver_2 = int(globalVar['version'].split('.')[1])
+    ver_3 = int(globalVar['version'].split('.')[2])
+    
+    # if ver_3 < 9, ver_3 += 1
+    if ver_3 < 9:
+        ver_3 += 1
+    # if ver_3 == 9, ver_3 = 0, ver_2 += 1
+    elif ver_3 == 9:
+        ver_3 = 0
+        ver_2 += 1
+        # TODO this need to update to prof_var by using update_prof_var()
+        if globalVar['version_change'] == True:
+            pass
+        # but not implement yet
+        pass
+
+    # update back to globalVar (use .update() method)
+    # read config/gv.json
+    with open('config/gv.json', 'r') as f:
+        data = json.load(f)
+        # update version
+        data['version'] = f"{ver_1}.{ver_2}.{ver_3}"
+        data['token']  += 15
+    # error handling
+
+        
+    # write back to config/gv.json
+    with open('config/gv.json', 'w') as f:
+        json.dump(data, f)
+    
+    init_global_var()
+    
+    token = get_token()
+    version = get_version()
+    # 將 token 與 version 傳入模板
+    return jsonify({'token': token, 'version': version})
+        
+    

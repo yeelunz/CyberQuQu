@@ -436,6 +436,8 @@ class BattleEnv(MultiAgentEnv):
         e['last_skill_used'] = [0,0,0,0]
         m['last_skill_used'][p_action] = 1
         e['last_skill_used'][e_action] = 1
+        etmphp = e['hp']
+        ptmphp = m['hp']
 
         player_actions = [p_action]
         enemy_actions = [e_action]
@@ -578,9 +580,7 @@ class BattleEnv(MultiAgentEnv):
                 targets = self._select_targets(self.enemy_team)
                 if targets:
                     user["profession"].apply_skill(skill_id, user, targets, self)
-                else:
-                    # 敵方全滅，結束遊戲
-                    self.done = True
+
 
         # 2. 敵方效果技能
         def effect_enemy():
@@ -589,9 +589,7 @@ class BattleEnv(MultiAgentEnv):
                 targets = self._select_targets(self.player_team)
                 if targets:
                     e["profession"].apply_skill(skill_id, e, targets, self)
-                else:
-                    # 我方全滅，結束遊戲
-                    self.done = True
+
 
         # 3. 我方治療技能
         def heal_player():
@@ -622,9 +620,7 @@ class BattleEnv(MultiAgentEnv):
                 targets = self._select_targets(self.enemy_team)
                 if targets:
                     user["profession"].apply_skill(skill_id, user, targets, self)
-                else:
-                    # 敵方全滅，結束遊戲
-                    self.done = True
+
 
         # 6. 敵方傷害技能
         def damage_enemy():
@@ -633,9 +629,7 @@ class BattleEnv(MultiAgentEnv):
                 targets = self._select_targets(self.player_team)
                 if targets:
                     e["profession"].apply_skill(skill_id, e, targets, self)
-                else:
-                    # 我方全滅，結束遊戲
-                    self.done = True
+
 
         # 抽籤處理順序
         # 兩兩一組排序，但依然按照效果、治療、傷害的順序
@@ -649,11 +643,18 @@ class BattleEnv(MultiAgentEnv):
         
         # check 我方是否全滅
         def check_end():
-            # check 雙方全滅?
+            # check 雙方全滅? => 進入殊死戰
             if self._check_both_defeated():
-                self.done = True
-                self.add_event(event=BattleEvent(type="text",text="雙方全滅，平手！"))
-            elif all(m["hp"] <= 0 for m in self.player_team):
+                self.done = False
+                self.add_event(event=BattleEvent(type="text",text="雙方同歸於盡，進入殊死戰！"))
+                self.add_event(event=BattleEvent(type="text",text="雙方將恢復相當於本回合造成超出敵方血量傷害的生命值，並增加全局傷害係數15%！"))
+                self.damage_coefficient= min(3,self.damage_coefficient * 1.15)
+                # 恢復血量
+                self.player_team[0]['hp'] = min((self.enemy_team[0]['accumulated_damage']-etmphp,self.player_team[0]['max_hp']))
+                self.enemy_team[0]['hp'] = min((self.player_team[0]['accumulated_damage']-ptmphp,self.enemy_team[0]['max_hp']))
+            
+            # 勝or負
+            if all(m["hp"] <= 0 for m in self.player_team):
                 self.done = True
                 self.add_event(event=BattleEvent(type="text",text="我方全滅，敵方獲勝！"))
             # check 敵方是否全滅
@@ -662,36 +663,37 @@ class BattleEnv(MultiAgentEnv):
                 self.add_event(event=BattleEvent(type="text",text="敵方全滅，我方獲勝！"))
 
         
-        check_end()
+        # check_end()
         
         #  最後階段的處理(冷卻，回合狀態，回合末端技能)
-        if not self.done:
-            player_all_skill = player_effect_skills + player_heal_skills + player_damage_skills
-            enemy_all_skill = enemy_effect_skills + enemy_heal_skills + enemy_damage_skills
-            self._handle_status_end_of_turn()
-            self._process_passives_end_of_turn(player_all_skill, enemy_all_skill)
-            self._manage_cooldowns()
+        
+        player_all_skill = player_effect_skills + player_heal_skills + player_damage_skills
+        enemy_all_skill = enemy_effect_skills + enemy_heal_skills + enemy_damage_skills
+        self._handle_status_end_of_turn()
+        self._process_passives_end_of_turn(player_all_skill, enemy_all_skill)
+        self._manage_cooldowns()
         # 增加戰鬥特性：超過10回合後，每過2回合，雙方的傷害係數增加10%
-            if self.round_count > 10 and (self.round_count - 10) % 2 == 0:
-                self.damage_coefficient *= 1.15
-                self.add_event(event=BattleEvent(type="text",text=f"戰鬥超過10回合，雙方的傷害係數增加了15%，現在為 {self.damage_coefficient:.2f}。"))
+        if self.round_count > 10 and (self.round_count - 10) % 2 == 0:
+            self.damage_coefficient  = min(3,self.damage_coefficient* 1.15)
+            self.add_event(event=BattleEvent(type="text",text=f"戰鬥超過10回合，雙方的傷害係數增加了15%，現在為 {self.damage_coefficient:.2f}。"))
+            
+        if not self.done:
+            check_end()
         # 強制停止
         self.round_count += 1
-        if self.round_count > self.max_rounds:
-            self.add_event(event=BattleEvent(type="text",text="戰鬥回合數超過上限，雙方平手！"))
+        if self.round_count > self.max_rounds and not self.done:
+            self.add_event(event=BattleEvent(type="text",text="戰鬥回合數超過上限，依據剩餘血量比例決定勝負！"))
+            if sum(m["hp"] for m in self.player_team) / sum(m["max_hp"] for m in self.player_team) > sum(e["hp"] for e in self.enemy_team) / sum(e["max_hp"] for e in self.enemy_team):
+                self.add_event(event=BattleEvent(type="text",text="我方獲勝！"))
+            else:
+                self.add_event(event=BattleEvent(type="text",text="敵方獲勝！"))
             self.done = True
         
         # 因為異常狀態有可能造成擊殺，所以要在最後檢查
-        if not self.done:
-            check_end()
         
         self._print_round_footer()   
             
-        #  返回觀測、獎勵、終止條件、截斷條件、信息
-        rewards = {
-        "player": self._get_reward(player=True),
-        "enemy": self._get_reward(player=False),
-        }
+        
         
         terminateds = {
         "player": self.done,
@@ -709,12 +711,23 @@ class BattleEnv(MultiAgentEnv):
         # notdone, playerwin, enemywin, draw
         info_res  = 2
         if self.done:
-            if all(m["hp"] <= 0 for m in self.player_team):
+            if all(m["hp"] <= 0 for m in self.player_team) and all(e["hp"] <= 0 for e in self.enemy_team):
+                info_res = 0
+            elif all(m["hp"] <= 0 for m in self.player_team):
                 info_res = -1
             elif all(e["hp"] <= 0 for e in self.enemy_team):
                 info_res = 1
-            else:
-                info_res = 0
+            # 依照血量比例判斷勝負
+            elif sum(m["hp"] for m in self.player_team) / sum(m["max_hp"] for m in self.player_team) > sum(e["hp"] for e in self.enemy_team) / sum(e["max_hp"] for e in self.enemy_team):
+                info_res = 1
+            elif sum(m["hp"] for m in self.player_team) / sum(m["max_hp"] for m in self.player_team) < sum(e["hp"] for e in self.enemy_team) / sum(e["max_hp"] for e in self.enemy_team):                                                                                                                               
+                info_res = -1
+        
+        #  返回觀測、獎勵、終止條件、截斷條件、信息
+        rewards = {
+        "player": self._get_reward(info_res,player=True),
+        "enemy": self._get_reward(info_res,player=False),
+        }
 
         infos = {
         "player": {},  # 玩家相關的空信息
@@ -908,33 +921,37 @@ class BattleEnv(MultiAgentEnv):
         dmg = int(dmg * user.get("damage_multiplier", 1.0)) * self.damage_coefficient
 
         # 應用防禦
-        total_defend = target["profession"].baseDef * target.get("defend_multiplier", 1.0)
+        total_def = target["profession"].baseDef * target.get("defend_multiplier", 1.0)
         
         # ign def process
-        if ignore_defense > 0 and total_defend > 1:
-            total_defend = (total_defend -1)*ignore_defense + 1
+        if ignore_defense > 0 and total_def > 1:
+            total_def = (total_def -1)*ignore_defense + 1
 
         
-        dmg /= total_defend
+        dmg /= total_def
   
         dmg = max(1, dmg)  # 至少造成1點傷害
+        dmg = int(dmg * random.uniform(0.95, 1.05))
+        # 爆擊?
+        if random.random() < 0.05:
+            dmg *= 2
+            self.add_event(event=BattleEvent(type="text",text=f"{user['profession'].name} 的攻擊造成爆擊！"))
         
         # 正負浮動5%
-        dmg = int(dmg * random.uniform(0.95, 1.05))
+        # dmg最小為1
+        dmg = int(max(1, dmg))
 
         # 實際減血
         target["hp"] = max(0, target["hp"] - dmg)
         target['accumulated_damage'] += dmg
         self.add_event(user=user,target=target,event=BattleEvent(type="damage",appendix={"amount":dmg}))
         
-        # process damage taken event
-        target["profession"].damage_taken(target,user,self,dmg)
-    
-        
         # update last attacker and last damage
-
         target["last_attacker"] = user
         target["last_damage_taken"] = dmg
+        
+        # 處理反傷
+        target["profession"].damage_taken(target,user,self,dmg)
         
 
     def deal_healing(self, user, heal_amount, rate = 0,heal_damage=False,target=None,self_mutilation = False):
@@ -1033,8 +1050,7 @@ class BattleEnv(MultiAgentEnv):
             left["profession"].on_turn_end(left,right,self,left_skill)
         if right_skill != None:
             right["profession"].on_turn_end(right,left,self,right_skill)
-
-                 
+            
     def _select_targets(self, team):
         """
         選擇目標：選擇HP最高的敵人
@@ -1053,26 +1069,30 @@ class BattleEnv(MultiAgentEnv):
         """
         return [user]
 
-    def _get_reward(self, player=True):
+    def _get_reward(self,info_res ,player=True):
         """
         計算獎勵，根據玩家或對手
+        info_res = 0 => draw
+        info_res = 1 => left(player)win
+        info_res = -1 => right(enemy)win
+        info_res = 2 => not
         """
         # 勝利/失敗獎勵
         res = 0
         if self.done:
             if player:
-                if all(m["hp"] <= 0 for m in self.player_team) and all(e["hp"] <= 0 for e in self.enemy_team):
+                if info_res == 0:
                     return -0.2
-                elif all(m["hp"] <= 0 for m in self.player_team):
+                elif info_res == -1:
                     return -1
-                elif all(e["hp"] <= 0 for e in self.enemy_team):
+                elif info_res == 1:
                     return 1
             else:
-                if all(m["hp"] <= 0 for m in self.player_team) and all(e["hp"] <= 0 for e in self.enemy_team):
+                if info_res == 0:
                     return -0.2
-                elif all(m["hp"] <= 0 for m in self.player_team):
+                elif info_res == -1:
                     return 1
-                elif all(e["hp"] <= 0 for e in self.enemy_team):
+                elif info_res == 1:
                     return -1
         return res
 

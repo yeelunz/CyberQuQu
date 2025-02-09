@@ -46,6 +46,7 @@ PALADIN_VAR = {
     'PALADIN_SKILL_3_MAX_HP_HEAL': [0.25, 0.25, 1, 999, 'high'],
     'PALADIN_SKILL_3_DAMAGE_BUFF': [2, 2, 0.1, 999, 'high'],
     'PALADIN_SKILL_3_DEFENSE_DEBUFF': [0.75, 0.75, 0.1, 999, 'high'],
+    'PALADIN_SKILL_3_DURATION': [3, 3, 1, 999, 'high'],
     'PALADIN_SKILL_3_COOLDOWN': [5, 5, 1, 999, 'low'],
 
 }

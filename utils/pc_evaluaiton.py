@@ -30,7 +30,9 @@ def version_test_random_vs_random_sse(professions, skill_mgr, num_battles=100):
     for p in professions:
         for op in professions:
             if p == op:
+                # pass
                 continue
+            
             
             current_combination += 1
             # yield 進度 (以組合數量為基準)
@@ -98,6 +100,7 @@ def version_test_random_vs_random_sse(professions, skill_mgr, num_battles=100):
                     # 先攻是 op => info_result=1 => op贏 (對 p 而言就是輸)
                     # 對 p 來說，要把結果反向
                     info_result = -info_result
+                
 
                 # 判斷勝負
                 if info_result == 1:
@@ -106,7 +109,8 @@ def version_test_random_vs_random_sse(professions, skill_mgr, num_battles=100):
                     results[p.name][op.name]['loss'] += 1
                 else:
                     results[p.name][op.name]['draw'] += 1
-    
+        
+
     # 全部對戰結束後，計算每個職業的勝率
     win_rate_table = {}
     for p in professions:
@@ -115,6 +119,7 @@ def version_test_random_vs_random_sse(professions, skill_mgr, num_battles=100):
         for op in professions:
             if p == op:
                 continue
+                # pass
             wins = results[p.name][op.name]['win']
             losses = results[p.name][op.name]['loss']
             draws = results[p.name][op.name]['draw']

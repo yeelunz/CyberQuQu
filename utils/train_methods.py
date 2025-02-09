@@ -14,17 +14,30 @@ from .professions import build_professions
 from .skills import build_skill_manager
 import threading
 import time
-from .model_struct import MaskedLSTMNetwork, MaskedLSTMNetworkWithEmb, MaskedLSTMNetworkWithMergedEmb,MaskedLSTMNetworkWithEmbV2,MaskedLSTMNetworkWithMergedEmbV2
+from .model_struct import MaskedLSTMNetwork, MaskedLSTMNetworkWithEmb, MaskedLSTMNetworkWithMergedEmb,MaskedLSTMNetworkWithEmbV2,MaskedLSTMNetworkWithMergedEmbV2,MaskedLSTMNetworkV2,TransformerMaskedNetworkV2,MaskedLSTMNetworkWithAttention,EnhancedMaskedLSTMNetwork,HRLMaskedLSTMNetwork,TransformerMaskedNetwork
 from ray.rllib.models import ModelCatalog
+
+
+# get
+
+
+
+
+
+
 
 stop_training_flag = threading.Event()
 ModelCatalog.register_custom_model("my_mask_model", MaskedLSTMNetwork)
+ModelCatalog.register_custom_model("my_mask_model_v2", MaskedLSTMNetworkV2)
+ModelCatalog.register_custom_model("my_mask_model_transformer_v2", TransformerMaskedNetworkV2)
+ModelCatalog.register_custom_model("my_mask_model_enhanced", EnhancedMaskedLSTMNetwork)
+ModelCatalog.register_custom_model("my_mask_model_hrl", HRLMaskedLSTMNetwork)
+ModelCatalog.register_custom_model("my_mask_model_transformer", TransformerMaskedNetwork)
+ModelCatalog.register_custom_model("my_mask_model_with_attention", MaskedLSTMNetworkWithAttention)
 ModelCatalog.register_custom_model("my_mask_model_with_emb", MaskedLSTMNetworkWithEmb)
 ModelCatalog.register_custom_model("my_mask_model_with_emb_v2", MaskedLSTMNetworkWithEmbV2)
 ModelCatalog.register_custom_model("my_mask_model_with_emb_combined", MaskedLSTMNetworkWithMergedEmb)
 ModelCatalog.register_custom_model("my_mask_model_with_emb_combined_v2", MaskedLSTMNetworkWithMergedEmbV2)
-
-
 
 def multi_agent_cross_train(num_iterations,
                             model_name="my_multiagent_ai",
@@ -32,6 +45,9 @@ def multi_agent_cross_train(num_iterations,
     """
     多智能體交叉訓練
     """
+    # 如果get不到就是240
+    SAMPLE_TIME_OUT_S = gl.get("sample_time_out_s", 240)
+    NUM_GPUS_PER_ENV_RUNNER = gl.get("num_gpus_per_env_runner", 0)
 
     professions = build_professions()
     skill_mgr = build_skill_manager()
@@ -65,6 +81,7 @@ def multi_agent_cross_train(num_iterations,
         grad_clip_by = hyperparams.get("grad_clip_by", 'global_norm')
 
     # 修改 config.training() 部分，帶入所有超參數：
+    
     config = (
         PPOConfig()
         .environment(
@@ -74,8 +91,8 @@ def multi_agent_cross_train(num_iterations,
         .env_runners(
             num_env_runners=1,
             num_cpus_per_env_runner=1,
-            num_gpus_per_env_runner=1,
-            sample_timeout_s=120
+            num_gpus_per_env_runner=NUM_GPUS_PER_ENV_RUNNER,
+            sample_timeout_s=SAMPLE_TIME_OUT_S
         )
         .framework("torch")
         .training(
@@ -99,7 +116,6 @@ def multi_agent_cross_train(num_iterations,
             lambda_=hyperparams.get("lambda", 1.0),
             clip_param=hyperparams.get("clip_param", 0.3),
             vf_clip_param=hyperparams.get("vf_clip_param", 10.0),
-            # ... 可根據需要增加更多動態帶入的超參數 ...
         )
     )
 
@@ -139,6 +155,7 @@ def multi_agent_cross_train(num_iterations,
 
         result = algo.train()
         print(f"=== Iteration {i + 1} ===")
+        print('result\n',result)
 
         # 將需要的監控指標一起回傳
         yield {

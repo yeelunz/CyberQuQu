@@ -4,7 +4,28 @@ document.addEventListener("DOMContentLoaded", function () {
   const menuTrain = document.getElementById("menu-train");
   const contentArea = document.getElementById("content-area");
 
-  // 自訂打開/關閉 Modal 的函式
+  // 防止訓練期間切換頁面 —— 禁用側邊選單並設置離開頁面警告
+  const menuItems = document.querySelectorAll(".sidebar a");
+  function menuWarningHandler(e) {
+    e.preventDefault();
+    alert("訓練進行中，請勿切換頁面！訓練完成後才能切換。");
+  }
+  function disableMenu() {
+    menuItems.forEach((item) => {
+      item.addEventListener("click", menuWarningHandler);
+      item.style.pointerEvents = "none";
+      item.style.opacity = "0.5";
+    });
+  }
+  function enableMenu() {
+    menuItems.forEach((item) => {
+      item.removeEventListener("click", menuWarningHandler);
+      item.style.pointerEvents = "auto";
+      item.style.opacity = "1";
+    });
+  }
+
+  // 自訂開啟/關閉 Modal 的函式
   function showModal(message) {
     const modal = document.getElementById("train-complete-modal");
     const modalMsg = document.getElementById("modal-message");
@@ -39,78 +60,60 @@ document.addEventListener("DOMContentLoaded", function () {
   <h1>多智能體訓練</h1>
   
   <!-- 超參數說明 -->
- <div class="params-explanation">
-  <h2>超參數解說</h2>
-  <p>
-
-    <b>模型名稱 (model_name)</b>：用於識別不同的模型，通常會在訓練過程中生成對應的模型檔案。建議設定為具有描述性的名稱，以便於識別與管理。
-  </p>
-
-  <p>
-    <b>Iteration 次數 (iteration)</b>：指定訓練過程中的迭代次數，即模型對整個數據集的訓練輪次。迭代次數越多，模型對數據的擬合程度越高，但也可能導致過度擬合。建議設定值在 <strong>5 ~ 20</strong> 之間。
-  </p>
-
-  <p>
-    <b>模型類型 (model_type)</b>：指定訓練所使用的模型類型，包括 One-hot LSTM model、Embedding LSTM model、Embedding LSTM model V2、Embedding Merge LSTM model 以及 Embedding Merge LSTM model V2。不同的模型類型對應不同的神經網路結構，可根據具體應用需求進行選擇。
-      
-  </p>
-  
-  <p>
-    <b>Learning Rate (learning_rate)</b>：控制模型在每次參數更新時依據梯度下降法所採取步伐的大小。學習率設定過大，可能會導致訓練過程中參數波動劇烈甚至發散；而設定過小則雖然能使更新更加穩定，但收斂速度可能變得緩慢。合理的學習率能幫助模型更有效地找到最優解。建議設定值介於 <strong>1e-5 ~ 1e-2</strong> 之間，以平衡收斂速度與穩定性。
-  </p>
-  
-  <p>
-    <b>LR Schedule</b>：透過設定一系列 [Timestep, Value] 的數值對，來動態調整學習率在不同訓練階段的取值（例如：[0, 0.0001] 與 [1000000, 0.0]）。這種調度機制通常用於在訓練初期採用較高的學習率以促進快速探索，隨著訓練進展逐漸降低學習率以精細調整參數。此為默認選項，默認值為 <strong>[0, 0.0001] , [1000000, 0.0]</strong>。
-  </p>
-  
-  <p>
-    <b>Batch Size (train_batch_size)</b>：指定在每次模型更新時所使用的樣本數，即每個迭代中的 timestep 的數量。較大的 Batch Size 能夠提供更穩定的梯度估計，但同時需要更多的記憶體資源；較小的 Batch Size 則可能使模型更新更頻繁，從而捕捉到更多的樣本變化。建議值在 <strong>1000 ~ 10000</strong> 之間，視硬體資源和具體應用需求進行調整。
-  </p>
-  
-  <p>
-    <b>Entropy Coefficient (entropy_coeff)</b>：這個參數用來鼓勵模型在策略探索過程中採取更多隨機性，避免過早陷入局部最優解。較高的 entropy coefficient 值能促使模型嘗試更多新策略，但也可能導致策略過於隨機；較低的值則會讓模型過早收斂於固定策略。建議值在 <strong>0.001 ~ 0.1</strong> 之間。
-  </p>
-  
-  <p>
-    <b>Entropy Coefficient Schedule</b>：透過依序填入兩組 [Timestep, Value] 數據對（例如：[0, 0.01] 與 [1000000, 0.0]），來動態調整探索的強度。這樣在訓練初期可以鼓勵較強的探索行為，而隨著訓練進展逐步降低探索性。此為默認選項，默認值為 <strong>[0, 0.0001] , [1000000, 0.0]</strong>。
-  </p>
-  
-  <p>
-    <b>Max Seq Len (max_seq_len)</b>：代表 LSTM 模型在處理序列數據時，每次參與計算的最大時間步數。過長的序列可能會導致梯度消失或梯度爆炸問題，而過短則可能無法捕捉序列中的長期依賴關係。預設為 <strong>10</strong>，可根據具體應用場景進行調整。
-  </p>
-  
-  <p>
-    <b>FC Net Hiddens (fcnet_hiddens)</b>：定義全連接神經網路中各隱藏層的單元數量，數值之間以逗號分隔。該參數決定了網路的容量與表達能力，對於處理複雜任務尤為重要。預設為 <strong>256,256</strong>，根據問題複雜度可適當增減層數或每層單元數量。
-  </p>
-  
-  <p>
-    <b>Gamma</b>：也稱為折扣因子，用於決定未來獎勵在當前決策中的重要性。較高的 Gamma 值表示模型更重視長期回報，而較低的值則使模型更加關注近期獎勵。預設為 <strong>0.99</strong>，在大部分強化學習問題中是一個常用且穩定的選擇。
-  </p>
-  
-  <p>
-    <b>grad_clip</b>：梯度裁剪的數值上限，用來防止梯度爆炸問題。在反向傳播過程中，當梯度值超過此設定時會被裁剪到該值。此參數可填入具體數字，或留空（代表 None）。若留空則會使用預設的裁剪方式，即 grad_clip_by 為 <em>global_norm</em>。
-  </p>
-  
-  <p>
-    <b>grad_clip_by</b>：定義梯度裁剪的方法。可選項包括 <em>value</em>（直接依據梯度數值進行裁剪）、<em>norm</em>（依據梯度範數進行裁剪）以及預設選項 <em>global_norm</em>（全局範數裁剪），以確保在不同層間梯度分佈均衡。
-  </p>
-  
-  <p>
-    <b>Lambda</b>：在廣義優勢估計（GAE）中用來平衡偏差與方差的一個參數。該值控制了未來獎勵折衷的程度，預設為 <strong>1.0</strong>，意味著對未來獎勵給予全權重，對於不同任務可以根據需求進行調整。
-  </p>
-  
-  <p>
-    <b>Minibatch Size</b>：指定在每次模型更新中使用的小批次樣本數量。這個參數影響了模型參數更新的精細程度與訓練速度，預設為 <strong>128</strong>，根據問題的複雜度及硬體條件可以做適當的調整。
-  </p>
-  
-  <p>
-    <b>Clip Param</b>：用於 PPO（近端策略優化）演算法中限制策略更新幅度的參數，以防止策略在單次更新中變化過大，從而導致訓練不穩定。預設值為 <strong>0.3</strong>。
-  </p>
-  
-  <p>
-    <b>VF Clip Param</b>：則是針對 Value Function 的更新所設定的裁剪參數，預設值為 <strong>10.0</strong>，兩者均有助於提升訓練過程的穩定性。
-  </p>
-</div>
+  <div class="params-explanation">
+    <h2>超參數解說</h2>
+    <p>
+      <b>模型名稱 (model_name)</b>：用於識別不同的模型，通常會在訓練過程中生成對應的模型檔案。建議設定為具有描述性的名稱，以便於識別與管理。
+    </p>
+    <p>
+      <b>Iteration 次數 (iteration)</b>：指定訓練過程中的迭代次數，即模型對整個數據集的訓練輪次。迭代次數越多，模型對數據的擬合程度越高，但也可能導致過度擬合。建議設定值在 <strong>5 ~ 20</strong> 之間。
+    </p>
+    <p>
+      <b>模型類型 (model_type)</b>：指定訓練所使用的模型類型，包括 One-hot LSTM model、Embedding LSTM model、Embedding LSTM model V2、Embedding Merge LSTM model 以及 Embedding Merge LSTM model V2。不同的模型類型對應不同的神經網路結構，可根據具體應用需求進行選擇。
+    </p>
+    <p>
+      <b>Learning Rate (learning_rate)</b>：控制模型在每次參數更新時依據梯度下降法所採取步伐的大小。學習率設定過大，可能會導致訓練過程中參數波動劇烈甚至發散；而設定過小則雖然能使更新更加穩定，但收斂速度可能變得緩慢。合理的學習率能幫助模型更有效地找到最優解。建議設定值介於 <strong>1e-5 ~ 1e-2</strong> 之間，以平衡收斂速度與穩定性。
+    </p>
+    <p>
+      <b>LR Schedule</b>：透過設定一系列 [Timestep, Value] 的數值對，來動態調整學習率在不同訓練階段的取值（例如：[0, 0.0001] 與 [1000000, 0.0]）。這種調度機制通常用於在訓練初期採用較高的學習率以促進快速探索，隨著訓練進展逐漸降低學習率以精細調整參數。此為默認選項，默認值為 <strong>[0, 0.0001] , [1000000, 0.0]</strong>。
+    </p>
+    <p>
+      <b>Batch Size (train_batch_size)</b>：指定在每次模型更新時所使用的樣本數，即每個迭代中的 timestep 的數量。較大的 Batch Size 能夠提供更穩定的梯度估計，但同時需要更多的記憶體資源；較小的 Batch Size 則可能使模型更新更頻繁，從而捕捉到更多的樣本變化。建議值在 <strong>1000 ~ 10000</strong> 之間，視硬體資源和具體應用需求進行調整。
+    </p>
+    <p>
+      <b>Entropy Coefficient (entropy_coeff)</b>：這個參數用來鼓勵模型在策略探索過程中採取更多隨機性，避免過早陷入局部最優解。較高的 entropy coefficient 值能促使模型嘗試更多新策略，但也可能導致策略過於隨機；較低的值則會讓模型過早收斂於固定策略。建議值在 <strong>0.001 ~ 0.1</strong> 之間。
+    </p>
+    <p>
+      <b>Entropy Coefficient Schedule</b>：透過依序填入兩組 [Timestep, Value] 數據對（例如：[0, 0.01] 與 [1000000, 0.0]），來動態調整探索的強度。這樣在訓練初期可以鼓勵較強的探索行為，而隨著訓練進展逐步降低探索性。此為默認選項，默認值為 <strong>[0, 0.0001] , [1000000, 0.0]</strong>。
+    </p>
+    <p>
+      <b>Max Seq Len (max_seq_len)</b>：代表 LSTM 模型在處理序列數據時，每次參與計算的最大時間步數。過長的序列可能會導致梯度消失或梯度爆炸問題，而過短則可能無法捕捉序列中的長期依賴關係。預設為 <strong>10</strong>，可根據具體應用場景進行調整。
+    </p>
+    <p>
+      <b>FC Net Hiddens (fcnet_hiddens)</b>：定義全連接神經網路中各隱藏層的單元數量，數值之間以逗號分隔。該參數決定了網路的容量與表達能力，對於處理複雜任務尤為重要。預設為 <strong>256,256</strong>，根據問題複雜度可適當增減層數或每層單元數量。
+    </p>
+    <p>
+      <b>Gamma</b>：也稱為折扣因子，用於決定未來獎勵在當前決策中的重要性。較高的 Gamma 值表示模型更重視長期回報，而較低的值則使模型更加關注近期獎勵。預設為 <strong>0.99</strong>，在大部分強化學習問題中是一個常用且穩定的選擇。
+    </p>
+    <p>
+      <b>grad_clip</b>：梯度裁剪的數值上限，用來防止梯度爆炸問題。在反向傳播過程中，當梯度值超過此設定時會被裁剪到該值。此參數可填入具體數字，或留空（代表 None）。若留空則會使用預設的裁剪方式，即 grad_clip_by 為 <em>global_norm</em>。
+    </p>
+    <p>
+      <b>grad_clip_by</b>：定義梯度裁剪的方法。可選項包括 <em>value</em>（直接依據梯度數值進行裁剪）、<em>norm</em>（依據梯度範數進行裁剪）以及預設選項 <em>global_norm</em>（全局範數裁剪），以確保在不同層間梯度分佈均衡。
+    </p>
+    <p>
+      <b>Lambda</b>：在廣義優勢估計（GAE）中用來平衡偏差與方差的一個參數。該值控制了未來獎勵折衷的程度，預設為 <strong>1.0</strong>，意味著對未來獎勵給予全權重，對於不同任務可以根據需求進行調整。
+    </p>
+    <p>
+      <b>Minibatch Size</b>：指定在每次模型更新中使用的小批次樣本數量。這個參數影響了模型參數更新的精細程度與訓練速度，預設為 <strong>128</strong>，根據問題的複雜度及硬體條件可以做適當的調整。
+    </p>
+    <p>
+      <b>Clip Param</b>：用於 PPO（近端策略優化）演算法中限制策略更新幅度的參數，以防止策略在單次更新中變化過大，從而導致訓練不穩定。預設值為 <strong>0.3</strong>。
+    </p>
+    <p>
+      <b>VF Clip Param</b>：則是針對 Value Function 的更新所設定的裁剪參數，預設值為 <strong>10.0</strong>，兩者均有助於提升訓練過程的穩定性。
+    </p>
+  </div>
   
   <!-- 表單區 -->
   <div class="form-section">
@@ -127,16 +130,23 @@ document.addEventListener("DOMContentLoaded", function () {
       <label for="batchInput">Batch Size：</label>
       <input type="number" id="batchInput" placeholder="4000" min="1" />
     </div>
-    <!-- 新增模型類型選項 -->
+    <!-- 模型類型選項 -->
     <div style="flex-basis: 100%;">
       <label for="modelTypeSelect">模型類型：</label>
-      <select id="modelTypeSelect">
-        <option value="one_hot">One-hot LSTM model</option>
-        <option value="embedding">Embedding LSTM model</option>
-        <option value="embedding_v2">Embedding LSTM model V2</option>
-        <option value="emd_merge">Embedding Merge LSTM model</option>
-        <option value="emd_merge_v2">Embedding Merge LSTM model V2</option>
-      </select>
+        <select id="modelTypeSelect">
+          <option value="one_hot">One-hot LSTM model</option>
+          <option value="one_hot_v2">One-hot LSTM model V2</option>
+          <option value="embedding">Embedding LSTM model</option>
+          <option value="embedding_v2">Embedding LSTM model V2</option>
+          <option value="emd_merge">Embedding Merge LSTM model</option>
+          <option value="emd_merge_v2">Embedding Merge LSTM model V2</option>
+          <!-- 新增選項 -->
+          <option value="enhanced">Enhanced Masked LSTM model</option>
+          <option value="hrl">HRL Masked LSTM model</option>
+          <option value="transformer">Transformer Masked Network</option>
+          <option value="transformerv2">Transformer Masked Network V2</option>
+          <option value="attention">Masked LSTM model with Attention</option>
+        </select>
     </div>
     
     <!-- Learning Rate 與 LR Schedule -->
@@ -159,7 +169,7 @@ document.addEventListener("DOMContentLoaded", function () {
       </div>
     </fieldset>
     
-    <!-- Entropy Coefficient 與其 Schedule -->
+    <!-- Entropy Coefficient 與 Schedule -->
     <fieldset style="flex-basis: 100%; border: 1px solid #ccc; padding: 10px; border-radius: 3px;">
       <legend><b>Entropy Coefficient 設定</b></legend>
       <div style="display: flex; flex-wrap: wrap; gap: 10px;">
@@ -233,9 +243,11 @@ document.addEventListener("DOMContentLoaded", function () {
   </div>
   
   <!-- 訓練初始化中狀態 -->
-  <div id="initializing-status" style="display:none; align-items: center;">
-    <span style="color: black;">訓練初始化中，請稍候...</span>
-    <div class="spinner" style="margin-left:10px;"></div>
+  <div id="initializing-status" style="display:none;">
+    <div style="display:flex; align-items:center;">
+      <span class="spinner" style="margin-right:10px;"></span>
+      <span id="initializing-status-text" style="color: black;">訓練初始化中，請稍候 ...</span>
+    </div>
   </div>
   
   <!-- 初始化與訓練中資訊 -->
@@ -266,7 +278,17 @@ document.addEventListener("DOMContentLoaded", function () {
   });
 
   function startTraining() {
-    // 模型名稱與 iteration
+    // 禁用其他選單並設置瀏覽器離開頁面前的警告
+    disableMenu();
+    window.onbeforeunload = function (e) {
+      e = e || window.event;
+      if (e) {
+        e.returnValue = "訓練進行中，離開頁面會中斷訓練，確定要離開嗎？";
+      }
+      return "訓練進行中，離開頁面會中斷訓練，確定要離開嗎？";
+    };
+
+    // 取得模型名稱、iteration 與 batchSize
     const modelName =
       document.getElementById("modelNameInput").value.trim() ||
       `my_multiagent_ai_${getCurrentTimestamp()}`;
@@ -275,7 +297,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const batchSize =
       parseInt(document.getElementById("batchInput").value) || 4000;
 
-    // Learning Rate 與 LR Schedule：若 lrInput 有值則使用該值，否則使用 lr_schedule
+    // Learning Rate 與 LR Schedule：若 lrInput 有值則使用該值，否則使用 schedule
     const lrRaw = document.getElementById("lrInput").value.trim();
     const lr = lrRaw !== "" ? parseFloat(lrRaw) : null;
     const lrSchedule1TimestepRaw = document
@@ -303,7 +325,7 @@ document.addEventListener("DOMContentLoaded", function () {
       ],
     ];
 
-    // Entropy Coefficient 與 Schedule：若 entropyInput 有值則使用該值，否則使用 entropy_schedule
+    // Entropy Coefficient 與 Schedule：若 entropyInput 有值則使用該值，否則使用 schedule
     const entropyRaw = document.getElementById("entropyInput").value.trim();
     const entropy = entropyRaw !== "" ? parseFloat(entropyRaw) : null;
     const entropySchedule1TimestepRaw = document
@@ -410,7 +432,7 @@ document.addEventListener("DOMContentLoaded", function () {
       vf_clip_param: vfClipParam,
     };
 
-    // 根據模型類型選項，設定對應的 mask_model
+    // 根據模型類型選項設定對應的 mask_model
     const modelType = document.getElementById("modelTypeSelect").value;
     if (modelType === "one_hot") {
       hyperparams.mask_model = "my_mask_model";
@@ -422,6 +444,18 @@ document.addEventListener("DOMContentLoaded", function () {
       hyperparams.mask_model = "my_mask_model_with_emb_combined";
     } else if (modelType === "emd_merge_v2") {
       hyperparams.mask_model = "my_mask_model_with_emb_combined_v2";
+    } else if (modelType === "one_hot_v2") {
+      hyperparams.mask_model = "my_mask_model_v2";
+    } else if (modelType === "transformerv2") {
+      hyperparams.mask_model = "my_mask_model_transformer_v2";
+    } else if (modelType === "enhanced") {
+      hyperparams.mask_model = "my_mask_model_enhanced";
+    } else if (modelType === "hrl") {
+      hyperparams.mask_model = "my_mask_model_hrl";
+    } else if (modelType === "transformer") {
+      hyperparams.mask_model = "my_mask_model_transformer";
+    } else if (modelType === "attention") {
+      hyperparams.mask_model = "my_mask_model_with_attention";
     }
 
     const resultsContainer = document.getElementById("results-container");
@@ -434,6 +468,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const startTrainBtn = document.getElementById("startTrainBtn");
     const stopTrainBtn = document.getElementById("stopTrainBtn");
 
+    // 顯示初始化狀態（包含 spinner 與動畫文字）
     initializingStatus.style.display = "flex";
     initializedInfo.style.display = "none";
     startTrainBtn.disabled = true;
@@ -451,10 +486,15 @@ document.addEventListener("DOMContentLoaded", function () {
         case "initialized":
           initializingStatus.style.display = "none";
           initializedInfo.style.display = "block";
-          // 調整 spinner 與文字的位置：將 spinner 放在文字左側
-          initializedInfo.innerHTML =
-            data.message +
-            "<br><div style='display:flex; align-items:center;'><span class='spinner' style='margin-right:10px;'></span><span style='color: black;'>模型訓練中，請稍後 ...</span></div>";
+          // 使用反引號建立正確的 HTML 字串，並產生訓練中狀態（避免重複 id 問題）
+          initializedInfo.innerHTML = `
+            <span style="color: green;">${data.message}</span><br>
+            <div style="display:flex; align-items:center;">
+              <span class="spinner" style="margin-right:10px;"></span>
+              <span id="training-status-text" style="color: black;">模型訓練中，請稍候 </span>
+            </div>
+          `;
+          startTrainingAnimation();
           break;
         case "iteration":
           currentIteration = data.iteration;
@@ -486,22 +526,30 @@ document.addEventListener("DOMContentLoaded", function () {
           currentSource.close();
           currentSource = null;
           progressBar.style.width = "100%";
+          stopTrainingAnimation();
+          // 模型訓練完成時訊息變綠
           initializedInfo.style.color = "green";
           if (initializedInfo.style.display === "none") {
             initializedInfo.style.display = "block";
           }
-          initializedInfo.innerHTML =
-            data.message || "algo = config.build() 完成";
+          initializedInfo.innerHTML = `<span style="color: green;">${
+            data.message || "algo = config.build() 完成"
+          }</span>`;
           showModal(data.message || "訓練完成！");
           startTrainBtn.disabled = false;
           stopTrainBtn.disabled = true;
+          window.onbeforeunload = null;
+          enableMenu();
           break;
         case "stopped":
           currentSource.close();
           currentSource = null;
+          stopTrainingAnimation();
           showModal(data.message || "訓練已被終止。");
           startTrainBtn.disabled = false;
           stopTrainBtn.disabled = true;
+          window.onbeforeunload = null;
+          enableMenu();
           break;
         default:
           console.warn("未知的 SSE 資料類型:", data);
@@ -512,9 +560,12 @@ document.addEventListener("DOMContentLoaded", function () {
       console.error("SSE 發生錯誤或連線中斷:", err);
       currentSource.close();
       currentSource = null;
+      stopTrainingAnimation();
       showModal("訓練過程中發生錯誤或連線中斷。");
       startTrainBtn.disabled = false;
       stopTrainBtn.disabled = true;
+      window.onbeforeunload = null;
+      enableMenu();
     };
   }
 
@@ -583,5 +634,21 @@ document.addEventListener("DOMContentLoaded", function () {
   function getCurrentTimestamp() {
     const now = new Date();
     return `${now.getFullYear()}_${String(now.getMonth() + 1).padStart(2, "0")}_${String(now.getDate()).padStart(2, "0")}_${String(now.getHours()).padStart(2, "0")}_${String(now.getMinutes()).padStart(2, "0")}_${String(now.getSeconds()).padStart(2, "0")}`;
+  }
+
+  // 訓練狀態文字動畫
+  let trainingAnimationInterval;
+  function startTrainingAnimation() {
+    const statusTextElem = document.getElementById("training-status-text");
+    if (!statusTextElem) return;
+    const baseText = "模型訓練中，請稍候 ";
+    let dotCount = 1;
+    trainingAnimationInterval = setInterval(() => {
+      dotCount = (dotCount % 3) + 1; // 循環 1, 2, 3
+      statusTextElem.textContent = baseText + ".".repeat(dotCount);
+    }, 500);
+  }
+  function stopTrainingAnimation() {
+    clearInterval(trainingAnimationInterval);
   }
 });

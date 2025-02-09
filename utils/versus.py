@@ -6,7 +6,7 @@ import pandas as pd
 from stable_baselines3 import PPO
 
 from .battle_env import BattleEnv
-from .skills import SkillManager, sm
+from .skills import SkillManager
 from .professions import (
     Paladin, Mage, Assassin, Archer, Berserker, DragonGod, BloodGod,
     SteadfastWarrior, Devour, Ranger, ElementalMage, HuangShen,
@@ -25,9 +25,7 @@ from .global_var import globalVar as gl
 
 
 
-#---------------------------------------
-# (5) 電腦 VS 電腦
-#---------------------------------------
+
 def computer_vs_computer(skill_mgr, professions,pr1,pr2):
     # 這邊的 pr1, pr2 是職業物件
     env = BattleEnv(

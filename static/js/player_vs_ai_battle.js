@@ -7,6 +7,9 @@
   let pva_animationInterval = 300; // 預設 300ms
   let latestAppendix = null; // 儲存最新的 refresh 資料
 
+  // 新增：儲存本次戰鬥參數，供「再來一場」使用
+  let currentBattleParams = null;
+
   const EFFECT_DATA = {
     1: { name: "攻擊力變更", type: "buff" },
     2: { name: "防禦力變更", type: "buff" },
@@ -240,17 +243,21 @@
       alert("請選擇模型 (檢查是否有已訓練模型)");
       return;
     }
+
+    // 新增：儲存本次對戰參數，供再來一場使用
+    currentBattleParams = {
+      player_profession: playerProfession,
+      enemy_profession: enemyProfession,
+      model1: playerModel,
+      model2: enemyModel,
+    };
+
     showLoadingSpinner();
     try {
       const res = await fetch("/api/player_vs_ai_init", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          player_profession: playerProfession,
-          enemy_profession: enemyProfession,
-          model1: playerModel,
-          model2: enemyModel,
-        }),
+        body: JSON.stringify(currentBattleParams),
       });
       if (!res.ok) {
         hideLoadingSpinner();
@@ -275,6 +282,42 @@
     }
   }
 
+  // 新增：再來一場的功能，直接利用先前儲存的 currentBattleParams 發起對戰
+  async function restartPlayerVsAiBattle() {
+    if (!currentBattleParams) {
+      alert("找不到上一次的戰鬥參數");
+      return;
+    }
+    showLoadingSpinner();
+    try {
+      const res = await fetch("/api/player_vs_ai_init", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(currentBattleParams),
+      });
+      if (!res.ok) {
+        hideLoadingSpinner();
+        const errData = await res.json().catch(() => {});
+        alert("初始化錯誤: " + (errData.error || res.status));
+        return;
+      }
+      const data = await res.json();
+      hideLoadingSpinner();
+      if (data.session_id) {
+        pva_session_id = data.session_id;
+        console.log("[PVA] restart init ok, session_id:", pva_session_id);
+        initPlayerVsAiBattleView();
+        connectPvaSSE(pva_session_id);
+      } else {
+        alert("初始化失敗: 未取得 session_id");
+      }
+    } catch (err) {
+      hideLoadingSpinner();
+      alert("初始化對戰錯誤: " + err);
+      console.error(err);
+    }
+  }
+
   function initPlayerVsAiBattleView() {
     const contentArea = document.getElementById("content-area");
     contentArea.innerHTML = "";
@@ -283,17 +326,21 @@
     battleContainer.classList.add("pva-battle-container");
     const topControls = document.createElement("div");
     topControls.id = "battle-top-controls";
+    // 調整排版：先放「再來一場」按鈕，接著是速度控制按鈕（1x、3x、5x）
     topControls.innerHTML = `
       <div id="global-info">
         <span id="round-indicator">回合: 0/0</span>
         <span id="global-damage-coeff">全域傷害倍率: 1.00</span>
       </div>
       <div id="speed-control-panel">
+        <button class="speed-btn" id="restart-battle-btn">再來一場</button>
         <button class="speed-btn" data-speed="1000">1x</button>
         <button class="speed-btn" data-speed="500">2x</button>
         <button class="speed-btn" data-speed="300">3x</button>
         <button class="speed-btn" data-speed="200">5x</button>
         <button class="speed-btn" data-speed="100">10x</button>
+        <button class="speed-btn" data-speed="50">20x</button>
+        <button class="speed-btn" data-speed="30">30x</button>
       </div>
     `;
     battleContainer.appendChild(topControls);
@@ -357,14 +404,24 @@
     bottomArea.classList.add("pva-battle-skill-cards");
     skillContainer.appendChild(bottomArea);
     contentArea.appendChild(skillContainer);
+
+    // 為速度控制按鈕與「再來一場」按鈕分別加上事件監聽
     const speedBtns = topControls.querySelectorAll(".speed-btn");
     speedBtns.forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const newSpeed = parseInt(btn.getAttribute("data-speed"), 10);
-        pva_animationInterval = newSpeed;
-        console.log("[PVA] 改變播放速度:", newSpeed);
-      });
+      // 如果有 data-speed 屬性，則代表是速度控制按鈕
+      if (btn.hasAttribute("data-speed")) {
+        btn.addEventListener("click", () => {
+          const newSpeed = parseInt(btn.getAttribute("data-speed"), 10);
+          pva_animationInterval = newSpeed;
+          console.log("[PVA] 改變播放速度:", newSpeed);
+        });
+      }
     });
+    // 為「再來一場」按鈕綁定事件（樣式與速度按鈕相同）
+    const restartButton = document.getElementById("restart-battle-btn");
+    if (restartButton) {
+      restartButton.addEventListener("click", restartPlayerVsAiBattle);
+    }
   }
 
   function connectPvaSSE(sessionId) {
@@ -380,7 +437,7 @@
           const log = data.round_battle_log || [];
           playRoundAnimation(log);
         } else if (data.type === "battle_end") {
-          addTurnBroadcastLine("【戰鬥結束】 " , "log-end");
+          addTurnBroadcastLine("【戰鬥結束】 ", "log-end");
           pva_sse.close();
           disableAllSkills();
         }
@@ -833,7 +890,7 @@
       const isDisabled = cdVal > 0;
       let cdSpan = "";
       // 只有當 info.cooldown 有設定且大於 0 且冷卻值大於 0 時，才顯示冷卻數值
-      if (info.cooldown >0) {
+      if (info.cooldown > 0) {
         cdSpan = `<span class="pva-skill-cooldown"><b>${info.cooldown}</b></span>`;
       }
       // 如果 cdSpan 有值，則組合冷卻文字；否則設定為空字串

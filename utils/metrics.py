@@ -168,7 +168,7 @@ def calculate_mpi(combine_rate_table, calculate_combined_metrics_func):
     return round(normalized_mpi, 3)
 
 
-def calculate_combined_metrics(combine_rate_table, max_iter=200, lr=0.01, tol=1e-6):
+def calculate_combined_metrics(combine_rate_table, max_iter=100, lr=0.01, tol=1e-6):
     """
     計算每個職業的 EIR, A-NAS (基於 BTL), MSI, PI20 和 WI 指標
     :param combine_rate_table: 職業之間的勝率表
@@ -223,6 +223,12 @@ def calculate_combined_metrics(combine_rate_table, max_iter=200, lr=0.01, tol=1e
     for prof in professions:
         a_nas = (theta[prof] - mean_theta) / std_theta
         a_nas_dict[prof] = round(a_nas, 3)
+        
+    overall_win_rates = {}
+    for prof, opponents in combine_rate_table.items():
+        rates = [data['win_rate'] for opp, data in opponents.items() if opp != prof]
+        overall_win_rates[prof] = sum(rates) / len(rates) if rates else 50.0
+        
 
     # 接下來計算其他指標
     for player_prof, opponents in combine_rate_table.items():
@@ -232,30 +238,43 @@ def calculate_combined_metrics(combine_rate_table, max_iter=200, lr=0.01, tol=1e
         variance = sum((rate - avg_win_rate) ** 2 for rate in win_rates) / len(win_rates) if win_rates else 0.0
         std_dev = math.sqrt(variance) if win_rates else 0.0
 
-        # 計算 EIR
-        eir = (sum(rate for rate in win_rates) / len(win_rates)) if win_rates else 0.0
 
         # 計算 MSI
         msi = 1 - (std_dev / 100.0)
 
         # 計算 PI20
         pi20 = sum(1 for rate in win_rates if abs(rate - avg_win_rate) > 20) / len(win_rates) if win_rates else 0.0
+        
+        
+        total_influence = sum(
+            ((combine_rate_table[player_prof][opp]['win_rate'] / 100.0) *
+            (overall_win_rates[opp] / 100.0))/len(professions)
+            for opp in professions if opp != player_prof
+        )
 
         # 計算 WI
-        total_influence = 0.0
-        for other_prof, opponents_data in combine_rate_table.items():
-            if other_prof == player_prof:
-                continue
-            opponent_win_rates = [data['win_rate'] for opp, data in opponents_data.items() if opp != player_prof]
-            original_avg_win_rate = sum(opponents_data[opp]['win_rate'] for opp in opponents_data) / len(opponents_data) if opponents_data else 50.0
-            new_avg_win_rate = sum(opponent_win_rates) / len(opponent_win_rates) if opponent_win_rates else original_avg_win_rate
-            total_influence += (new_avg_win_rate - original_avg_win_rate)
+        # 假設A職業為代測職業，B職業為其他職業(B=1,2,3,4,5,6,7,8,9)...
+        # total infulence = B對A之勝率 * B之總勝率
+        
+        
+        # total_influence = 0.0
+        # for other_prof, opponents_data in combine_rate_table.items():
+        #     if other_prof == player_prof:
+        #         continue
+        #     opponent_win_rates = [data['win_rate'] for opp, data in opponents_data.items() if opp != player_prof]
+        #     original_avg_win_rate = sum(opponents_data[opp]['win_rate'] for opp in opponents_data) / len(opponents_data) if opponents_data else 50.0
+        #     new_avg_win_rate = sum(opponent_win_rates) / len(opponent_win_rates) if opponent_win_rates else original_avg_win_rate
+        #     total_influence += (new_avg_win_rate - original_avg_win_rate)
+        
+        # 這邊EIR的地方 eir/ total_influence 都幫我做 標準化到[0,1]
+        # 並且最後權重一樣保持0.5 0.5
+        
         
         metrics[player_prof] = {
-            "EIR": round(round(eir, 2)*0.5 + round(total_influence, 2)*0.5,2),
+            "EIR": round(total_influence*2, 2),
             "Advanced NAS": a_nas_dict[player_prof],
             "MSI": round(msi, 2),
-            "PI20": round(pi20, 2),
+            "PI20": round(1-pi20, 2),
         }
     
     return metrics

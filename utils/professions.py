@@ -6,10 +6,10 @@ from .status_effects import (
     DamageMultiplier, DefenseMultiplier, HealMultiplier, HealthPointRecover, Paralysis,
     ImmuneDamage, ImmuneControl, BleedEffect, Track
 )
-from .skills import SkillManager, sm
+from .skills import SkillManager
 from .profession_var import * 
 from .battle_event import BattleEvent
-
+from .skills import build_skill_manager
 # others import
 import random
 from .profession_var import *
@@ -44,6 +44,7 @@ class BattleProfession:
         self.baseDef = baseDef
         self.default_passive_id = (profession_id * -1)-1
         self.PROFESSION_VAR = PROFESSION_VAR
+        self.sm = build_skill_manager()
     def get_available_skill_ids(self, cooldowns: dict):
         # get cooldowns
         ok_skills = []
@@ -104,15 +105,15 @@ class BattleProfession:
         if skill_id in self.get_available_skill_ids(user["cooldowns"]):
             # set cooldown
             local_skill_id = skill_id - self.profession_id * 4
-            user["cooldowns"][local_skill_id] = sm.get_skill_cooldown(skill_id)
-            if sm.get_skill_cooldown(skill_id) > 0:
+            user["cooldowns"][local_skill_id] = self.sm.get_skill_cooldown(skill_id)
+            if self.sm.get_skill_cooldown(skill_id) > 0:
                 env.add_event(event=BattleEvent(
-                    type="text", text=f"{self.name} 的技能「{sm.get_skill_name(skill_id)}」進入冷卻 {sm.get_skill_cooldown(skill_id)} 回合。"))
+                    type="text", text=f"{self.name} 的技能「{self.sm.get_skill_name(skill_id)}」進入冷卻 {self.sm.get_skill_cooldown(skill_id)} 回合。"))
 
             return -1
         else:
             env.add_event(event=BattleEvent(
-                type="text", text=f"{self.name} 的技能「{sm.get_skill_name(skill_id)}」冷卻中。"))
+                type="text", text=f"{self.name} 的技能「{self.sm.get_skill_name(skill_id)}」冷卻中。"))
             return -1
 
 class Paladin(BattleProfession):
@@ -121,6 +122,7 @@ class Paladin(BattleProfession):
         self.PALADIN_VAR = PROFESSION_VAR
         self.name = "聖騎士"
         self.base_hp = self.PALADIN_VAR['PALADIN_BASE_HP'][0]
+        self.max_hp = self.base_hp
         self.passive_name = "聖光"
         self.passive_desc = f"攻擊時，{int(self.PALADIN_VAR['PALADIN_PASSIVE_TRIGGER_RATE'][0]*100)}% 機率恢復最大血量的 {int(self.PALADIN_VAR['PALADIN_PASSIVE_HEAL_RATE'][0]*100)}% 的生命值，回復超出最大生命時，對敵方造成 {int(self.PALADIN_VAR['PALADIN_PASSIVE_OVERHEADLINGE_RATE'][0]*100)}% 的回復傷害"
         self.baseAtk = self.PALADIN_VAR['PALADIN_BASE_ATK'][0]
@@ -187,7 +189,7 @@ class Paladin(BattleProfession):
         
         elif skill_id == self.profession_id * 4 + 3:
             # 2回合內若受到致死傷害時，回復至25%最大血量。同時 3 回合間攻擊力提升100%，防禦力降低50%。
-            eff = Track(name = '決一死戰', duration=2, stacks=1, source=skill_id, stackable=False)
+            eff = Track(name = '決一死戰', duration=self.PALADIN_VAR['PALADIN_SKILL_3_DURATION'][0], stacks=1, source=skill_id, stackable=False)
             env.apply_status(user, eff)
             # 剩餘部分在on_attack_end中處理
                  
@@ -197,6 +199,7 @@ class Mage(BattleProfession):
         self.MAGE_VAR = PROFESSION_VAR
         self.name = "法師"
         self.base_hp = self.MAGE_VAR['MAGE_BASE_HP'][0]
+        self.max_hp = self.base_hp
         self.passive_name = "魔力充盈"
         self.passive_desc = f"攻擊造成異常狀態時，{int(self.MAGE_VAR['MAGE_PASSIVE_TRIGGER_RATE'][0]*100)}% 機率額外疊加一層異常狀態（燃燒或冰凍）。"
         self.baseAtk = self.MAGE_VAR['MAGE_BASE_ATK'][0]
@@ -234,29 +237,28 @@ class Mage(BattleProfession):
 
         elif skill_id == self.profession_id * 4 + 2:
             # 技能 2：全域爆破
-            base_dmg = self.MAGE_VAR['MAGE_SKILL_2_BASE_DAMAGE'][0] * self.baseAtk
+            base_dmg = self.MAGE_VAR['MAGE_SKILL_2_BASE_DAMAGE'][0] 
             total_layers = sum(
                 eff.stacks for effects in targets[0]["effect_manager"].active_effects.values()
                 for eff in effects if isinstance(eff, (Burn, Freeze))
             )
-            dmg = base_dmg + \
-                self.MAGE_VAR['MAGE_SKILL_2_STATUS_MULTIPLIER'][0] * total_layers
+            dmg = (base_dmg + \
+                self.MAGE_VAR['MAGE_SKILL_2_STATUS_MULTIPLIER'][0] * total_layers)*self.baseAtk
             env.deal_damage(user, targets[0], dmg, can_be_blocked=True)
             targets[0]["effect_manager"].remove_all_effects("燃燒")
             targets[0]["effect_manager"].remove_all_effects("凍結")
             
         elif skill_id == self.profession_id*4 +3:
             # 技能3 無詠唱魔法
-            base_dmg = self.MAGE_VAR['MAGE_SKILL_3_BASE_DAMAGE'][0] * self.baseAtk
+            base_dmg = self.MAGE_VAR['MAGE_SKILL_3_BASE_DAMAGE'][0] 
             total_layers = sum(
                 eff.stacks for effects in targets[0]["effect_manager"].active_effects.values()
                 for eff in effects if isinstance(eff, (Burn, Freeze))
             )
-            dmg = base_dmg + \
-                self.MAGE_VAR['MAGE_SKILL_3_STATUS_MULTIPLIER'][0] * total_layers
+            dmg = (base_dmg + \
+                self.MAGE_VAR['MAGE_SKILL_3_STATUS_MULTIPLIER'][0] * total_layers)*self.baseAtk
             env.deal_damage(user, targets[0], dmg, can_be_blocked=True)
-            targets[0]["effect_manager"].remove_all_effects("燃燒")
-            targets[0]["effect_manager"].remove_all_effects("凍結")
+
                 
 class Assassin(BattleProfession):
     def __init__(self,PROFESSION_VAR):
@@ -264,6 +266,7 @@ class Assassin(BattleProfession):
         self.ASSASSIN_VAR = PROFESSION_VAR
         self.name = "刺客"
         self.base_hp = self.ASSASSIN_VAR['ASSASSIN_BASE_HP'][0]
+        self.max_hp = self.base_hp
         self.passive_name = "刺殺"
         self.passive_desc = f"攻擊時額外造成敵方當前 {int(self.ASSASSIN_VAR['ASSASSIN_PASSIVE_BONUS_DAMAGE_RATE'][0] * 100)}% 生命值的傷害，並且 {int(self.ASSASSIN_VAR['ASSASSIN_PASSIVE_TRIGGER_RATE'][0] * 100)}% 機率對敵方造成中毒狀態。"
         self.baseAtk = self.ASSASSIN_VAR['ASSASSIN_BASE_ATK'][0]
@@ -301,7 +304,7 @@ class Assassin(BattleProfession):
             if total_layers > 0:
                 env.add_event(event=BattleEvent(type="text", text=f"引爆了中毒效果！"))
                 dmg = self.ASSASSIN_VAR['ASSASSIN_SKILL_1_DAMAGE_PER_LAYER'][0] * total_layers
-                dmg = self.passive(targets, dmg, env)
+                dmg = self.passive(targets, dmg, env) * self.baseAtk
                 heal = self.ASSASSIN_VAR['ASSASSIN_SKILL_1_HEAL_PER_LAYER'][0] * total_layers
                 env.deal_damage(user, target, dmg, can_be_blocked=True)
                 env.deal_healing(user, heal)
@@ -350,6 +353,7 @@ class Archer(BattleProfession):
         self.ARCHER_VAR = PROFESSION_VAR
         self.name = "弓箭手"
         self.base_hp = self.ARCHER_VAR['ARCHER_BASE_HP'][0]
+        self.max_hp = self.base_hp
         self.passive_name = "鷹眼"
         self.passive_desc = f"攻擊時 {int(self.ARCHER_VAR['ARCHER_PASSIVE_BASE_TRIGGER_RATE'][0] * 100)}% 機率造成 2 倍傷害；敵方防禦基值越高時，額外增加觸發機率。"
         self.baseAtk = self.ARCHER_VAR['ARCHER_BASE_ATK'][0]
@@ -422,8 +426,13 @@ class Archer(BattleProfession):
             heal_amount = self.ARCHER_VAR['ARCHER_SKILL_2_HEAL'][0]
             env.deal_healing(user, heal_amount)
         elif skill_id == self.profession_id * 4 + 3:
-            dmg = self.ARCHER_VAR['ARCHER_SKILL_3_DAMAGE'][0] * self.baseAtk / 5
-            for i in range(5):
+            # self def
+            totaldef = self.baseDef * user["defend_multiplier"]
+            mul = 1
+            if totaldef < 1:
+                mul = 1/totaldef
+            dmg = self.ARCHER_VAR['ARCHER_SKILL_3_DAMAGE'][0] * self.baseAtk * mul / 3
+            for i in range(3):
                 env.deal_damage(user, targets[0], dmg, can_be_blocked=True, ignore_defense=self.ARCHER_VAR['ARCHER_SKILL_3_IGN_DEFEND'][0])
 
 class Berserker(BattleProfession):
@@ -432,6 +441,7 @@ class Berserker(BattleProfession):
         self.BERSERKER_VAR = PROFESSION_VAR
         self.name = "狂戰士"
         self.base_hp = self.BERSERKER_VAR['BERSERKER_BASE_HP'][0]
+        self.max_hp = self.base_hp
         self.passive_name = "狂暴"
         self.passive_desc = f"若自身血量低於 {int(self.BERSERKER_VAR['BERSERKER_PASSIVE_EXTRA_DAMAGE_THRESHOLD'][0] * 100)}%，攻擊增加失去生命值的 {int(self.BERSERKER_VAR['BERSERKER_PASSIVE_EXTRA_DAMAGE_RATE'][0] * 100)}% 的傷害。"
         self.baseAtk = self.BERSERKER_VAR['BERSERKER_BASE_ATK'][0]
@@ -505,6 +515,7 @@ class DragonGod(BattleProfession):
         self.DRAGONGOD_VAR = PROFESSION_VAR
         self.name = "龍神"
         self.base_hp = self.DRAGONGOD_VAR['DRAGONGOD_BASE_HP'][0]
+        self.max_hp = self.base_hp
         self.passive_name = "龍血"
         self.passive_desc = f"每回合疊加一個龍神狀態，龍神狀態每層增加 {int((self.DRAGONGOD_VAR['DRAGONGOD_PASSIVE_ATK_MULTIPLIER'][0] - 1) * 100)}% 攻擊力、增加 {int((self.DRAGONGOD_VAR['DRAGONGOD_PASSIVE_DEF_MULTIPLIER'][0] - 1) * 100)}% 防禦力。"
         self.baseAtk = self.DRAGONGOD_VAR['DRAGONGOD_BASE_ATK'][0]
@@ -609,6 +620,7 @@ class BloodGod(BattleProfession):
         self.BLOODGOD_VAR = PROFESSION_VAR
         self.name = "血神"
         self.base_hp = self.BLOODGOD_VAR['BLOODGOD_BASE_HP'][0]
+        self.max_hp = self.base_hp
         self.passive_name = "血脈"
         self.passive_desc = f"每回合會累積所受傷害至血脈裡面，所受傷害累積越多會降低血脈的強度。每受到最大血量的 {int(self.BLOODGOD_VAR['BLOODGOD_PASSIVE_DAMAGE_THRESHOLD'][0] * 100)}% 傷害，則自身攻擊力、防禦力、治癒力降低 {int((1 - self.BLOODGOD_VAR['BLOODGOD_PASSIVE_MULTIPLIER_REDUCTION'][0]) * 100)}%。"
         self.baseAtk = self.BLOODGOD_VAR['BLOODGOD_BASE_ATK'][0]
@@ -749,6 +761,7 @@ class SteadfastWarrior(BattleProfession):
         self.STEADFASTWARRIOR_VAR = PROFESSION_VAR
         self.name = "剛毅武士"
         self.base_hp = self.STEADFASTWARRIOR_VAR['STEADFASTWARRIOR_BASE_HP'][0]
+        self.max_hp = self.base_hp
         self.passive_name = "堅韌壁壘"
         self.passive_desc = f"每回合開始時恢復已損生命值的 {int(self.STEADFASTWARRIOR_VAR['STEADFASTWARRIOR_PASSIVE_HEAL_PERCENT'][0] * 100)}%。"
         self.baseAtk = self.STEADFASTWARRIOR_VAR['STEADFASTWARRIOR_BASE_ATK'][0]
@@ -830,6 +843,7 @@ class Devour(BattleProfession):
         self.DEVOUR_VAR = PROFESSION_VAR
         self.name = "鯨吞"
         self.base_hp = self.DEVOUR_VAR['DEVOUR_BASE_HP'][0]
+        self.max_hp = self.base_hp
         self.passive_name = "巨鯨"
         self.passive_desc = f"攻擊時會消耗 {int(self.DEVOUR_VAR['DEVOUR_PASSIVE_SELF_DAMAGE_PERCENT'][0] * 100)}% 當前生命值。"
         self.baseAtk = self.DEVOUR_VAR['DEVOUR_BASE_ATK'][0]
@@ -882,7 +896,9 @@ class Devour(BattleProfession):
         elif skill_id == self.profession_id * 4 + 3:
             para = Paralysis(duration=self.DEVOUR_VAR['DEVOUR_SKILL_3_PARALYSIS_DURATION'][0])
             tr = Track(name = "觸電反應", duration = self.DEVOUR_VAR['DEVOUR_SKILL_3_MUST_SUCCESS_DURATAION'][0], source = skill_id, stacks= 1,max_stack= 1,stackable = False)
+            imm = ImmuneDamage(duration = self.DEVOUR_VAR['DEVOUR_SKILL_3_PARALYSIS_DURATION'][0],stackable=False)
             env.apply_status(user, para)
+            env.apply_status(user, imm)
             env.apply_status(user, tr)
 
 class Ranger(BattleProfession):
@@ -891,30 +907,37 @@ class Ranger(BattleProfession):
         self.RANGER_VAR = PROFESSION_VAR
         self.name = "荒原遊俠"
         self.base_hp = self.RANGER_VAR['RANGER_BASE_HP'][0]
+        self.max_hp = self.base_hp
         self.passive_name = "冷箭"
         self.passive_desc = f"冷箭：受到攻擊時，{int(self.RANGER_VAR['RANGER_PASSIVE_TRIGGER_RATE'][0] * 100)}% 機率反擊對敵方造成 {self.RANGER_VAR['RANGER_PASSIVE_DAMAGE'][0]} 點傷害。"
         self.baseAtk = self.RANGER_VAR['RANGER_BASE_ATK'][0]
         self.baseDef = self.RANGER_VAR['RANGER_BASE_DEF'][0]
-
+        self.ref_1 = False
+        self.ref_2 = False
     def passive(self, user, targets, env):
         pass
 
     def damage_taken(self, user, target, env, dmg):
         super().damage_taken(user, target, env, dmg)
         # 被動觸發反擊
-        if random.random() < self.RANGER_VAR['RANGER_PASSIVE_TRIGGER_RATE'][0]:
-            env.add_event(event=BattleEvent(
-                type="text", text=f"{self.name} 的被動技能「冷箭」觸發！"))
+        if random.random() < self.RANGER_VAR['RANGER_PASSIVE_TRIGGER_RATE'][0] and self.ref_1 == False:
+            env.add_event(event=BattleEvent(type="text", text=f"{self.name} 的被動技能「冷箭」觸發！"))
+            self.ref_1 = True
             env.deal_damage(user, target, self.RANGER_VAR['RANGER_PASSIVE_DAMAGE'][0], can_be_blocked=True)
 
         # 埋伏觸發反擊
-        if user["effect_manager"].has_effect("埋伏") and random.random() < self.RANGER_VAR['RANGER_SKILL_1_AMBUSH_TRIGGER_RATE'][0]:
-            env.add_event(event=BattleEvent(
-                type="text", text=f"{self.name} 埋伏成功，向敵人發動反擊！"))
+        if user["effect_manager"].has_effect("埋伏") and random.random() < self.RANGER_VAR['RANGER_SKILL_1_AMBUSH_TRIGGER_RATE'][0] and self.ref_2 == False:
+            env.add_event(event=BattleEvent(type="text", text=f"{self.name} 埋伏成功，向敵人發動反擊！"))
+            self.ref_2 = True
             env.deal_damage(user, target, dmg * self.RANGER_VAR['RANGER_SKILL_1_AMBUSH_DAMAGE_MULTIPLIER'][0], can_be_blocked=True)
 
     def on_turn_end(self, user, target, env, id):
         super().on_turn_end(user, target, env, id)
+        # 在回合後重製
+        # 否則如果是使用技能瞬間重製會產生問題如下
+        # 1   荒原遊俠技能，同時重製 -> 反擊|下一回合 (這邊如果敵人先攻擊的話，那麼會無法反擊)
+        self.ref_1 = False
+        self.ref_2 = False
         if 'mines_accumulated' not in user['private_info'] and user['private_info']['mines'] == True:
             user['private_info']['mines_accumulated'] = target['accumulated_damage']
         elif user['private_info']['mines'] == True:
@@ -959,6 +982,7 @@ class Ranger(BattleProfession):
                 
     def apply_skill(self, skill_id, user, targets, env):
         super().apply_skill(skill_id, user, targets, env)
+
         if 'mines' not in user['private_info']:
             user['private_info']['mines'] = False
             user['private_info']['cur_hp'] = 0
@@ -1022,10 +1046,13 @@ class ElementalMage(BattleProfession):
         self.ELEMENTALMAGE_VAR = PROFESSION_VAR
         self.name = "元素法師"
         self.base_hp = self.ELEMENTALMAGE_VAR['ELEMENTALMAGE_BASE_HP'][0]
+        self.max_hp = self.base_hp
         self.passive_name = "元素反應"
         self.passive_desc = f"使用不同元素的技能會使技能強化，元素強化只會保留前 2 次使用的元素屬性。消耗元素強化可使使用技能增強，當元素強化有兩個不同屬性的效果時才套用雙屬性強化。"
         self.baseAtk = self.ELEMENTALMAGE_VAR['ELEMENTALMAGE_BASE_ATK'][0]
         self.baseDef = self.ELEMENTALMAGE_VAR['ELEMENTALMAGE_BASE_DEF'][0]
+        # 這邊雙法師的話會無限彈 
+        self.triggered = False
             
 
     def passive(self, user, targets, env):
@@ -1036,11 +1063,12 @@ class ElementalMage(BattleProfession):
             env.apply_status(targets[0], effect)
 
     def damage_taken(self, user, target, env, dmg):
-        if user["effect_manager"].get_effects("雷霆護甲") and random.random() < self.ELEMENTALMAGE_VAR['ELEMENTALMAGE_PASSIVE_SINGLE_PARALYSIS_TRIGGER_RATE'][0]:
-            env.add_event(event=BattleEvent(
-                type="text", text=f"{self.name} 的被動技能「雷霆護甲」觸發！"))
+        if user["effect_manager"].get_effects("雷霆護甲") and random.random() < self.ELEMENTALMAGE_VAR['ELEMENTALMAGE_PASSIVE_SINGLE_PARALYSIS_TRIGGER_RATE'][0] and self.triggered==False:
+            self.triggered = True
+            env.add_event(event=BattleEvent(type="text", text=f"{self.name} 的被動技能「雷霆護甲」觸發！"))
             env.apply_status(target, Paralysis(duration=2))
-        if user["effect_manager"].has_effect("雷霆護甲．神火") :
+        if user["effect_manager"].has_effect("雷霆護甲．神火") and self.triggered==False: 
+            self.triggered = True
             env.add_event(event=BattleEvent(
                 type="text", text=f"{self.name} 的被動技能「雷霆護甲．神火」觸發！"))
             # 燃燒反擊處理
@@ -1073,8 +1101,6 @@ class ElementalMage(BattleProfession):
             private_info['passive_0'] = None
         elif private_info['passive_1'] == status:
             private_info['passive_1'] = None
-        else:
-            pass
 
     def set_tar_cool_down(self,env ,target):
 
@@ -1092,9 +1118,13 @@ class ElementalMage(BattleProfession):
                 target['cooldowns'][lsid] = skillmgr.get_skill_cooldown(t[i])
                 # only set one skill
                 break
-        
+    def on_turn_end(self, user, targets, env, id):
+        self.triggered = False
+        return super().on_turn_end(user, targets, env, id)
+    
     def apply_skill(self, skill_id, user, targets, env):
         super().apply_skill(skill_id, user, targets, env)
+        
         # 元素反應
         if 'passive_0' not in user['private_info'] or 'passive_1' not in user['private_info']:
             user['private_info']['passive_0'] = None
@@ -1317,11 +1347,11 @@ class ElementalMage(BattleProfession):
         elif user['private_info']['passive_0'] == "冰" or user['private_info']['passive_1'] == "冰":
             user['private_info']['real_statues'] = "冰"
             havestatus = True
+        else:
+            user['private_info']['real_statues'] = "無狀態"
         if havestatus == True:
             env.add_event(event=BattleEvent(type="text", text=f"{self.name} 持有 {user['private_info']['real_statues']} 元素強化。"))
         
-            
-
 
 class HuangShen(BattleProfession):
     def __init__(self,PROFESSION_VAR):
@@ -1329,6 +1359,7 @@ class HuangShen(BattleProfession):
         self.HUANGSHEN_VAR = PROFESSION_VAR
         self.name = "荒神"
         self.base_hp = self.HUANGSHEN_VAR['HUANGSHEN_BASE_HP'][0]
+        self.max_hp = self.base_hp
         self.passive_name = "枯萎之刃"
         self.passive_desc = f"隨著造成傷害次數增加，攻擊時額外進行隨機追打，每造成兩次傷害增加一次最高追打機會，追打造成敵方當前生命的 {self.HUANGSHEN_VAR['HUANGSHEN_PASSIVE_EXTRA_HIT_DAMAGE_PERCENT'][0]*100}% 血量；額外追打不會累積傷害次數。"
         self.baseAtk = self.HUANGSHEN_VAR['HUANGSHEN_BASE_ATK'][0]
@@ -1428,6 +1459,7 @@ class GodOfStar(BattleProfession):
         self.GODOFSTAR_VAR = PROFESSION_VAR
         self.name = "星神"
         self.base_hp = self.GODOFSTAR_VAR['GODOFSTAR_BASE_HP'][0]
+        self.max_hp = self.base_hp
         self.passive_name = "天啟星盤"
         self.passive_desc = f"星神在戰鬥中精通增益與減益效果的能量運用。每當場上有一層「能力值增益」或「減益」效果時，每回合會額外對敵方造成 {self.GODOFSTAR_VAR['GODOFSTAR_PASSIVE_DAMAGE_PER_EFFECT'][0]} 點傷害 並恢復 {self.GODOFSTAR_VAR['GODOFSTAR_PASSIVE_HEAL_PER_EFFECT'][0]} 點生命值。"
         self.baseAtk = self.GODOFSTAR_VAR['GODOFSTAR_BASE_ATK'][0]

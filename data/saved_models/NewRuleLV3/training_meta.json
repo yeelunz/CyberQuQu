@@ -1,0 +1,114 @@
+{
+  "model_name": "NewRuleLV3",
+  "num_iterations": 15,
+  "hyperparams": {
+    "learning_rate": 5e-05,
+    "lr_schedule": null,
+    "train_batch_size": 8000,
+    "entropy_coeff": null,
+    "entropy_coeff_schedule": [
+      [
+        0,
+        0.001
+      ],
+      [
+        200000,
+        0
+      ]
+    ],
+    "fcnet_hiddens": [
+      512,
+      256,
+      256,
+      256,
+      256,
+      128
+    ],
+    "max_seq_len": 10,
+    "gamma": 0.99,
+    "grad_clip": null,
+    "grad_clip_by": "global_norm",
+    "lambda": 1,
+    "minibatch_size": 128,
+    "clip_param": 0.3,
+    "vf_clip_param": 10,
+    "mask_model": "my_mask_model_with_emb_combined"
+  },
+  "timestamp": "2025-02-08 19:32:48",
+  "version": "0.20.1",
+  "elo_result": {
+    "平均 ELO": 1660,
+    "詳細": {
+      "聖騎士": {
+        "先攻方 ELO": 1728,
+        "後攻方 ELO": 1785,
+        "總和 ELO": 1757
+      },
+      "法師": {
+        "先攻方 ELO": 1791,
+        "後攻方 ELO": 1569,
+        "總和 ELO": 1680
+      },
+      "刺客": {
+        "先攻方 ELO": 1676,
+        "後攻方 ELO": 1763,
+        "總和 ELO": 1720
+      },
+      "弓箭手": {
+        "先攻方 ELO": 1629,
+        "後攻方 ELO": 1735,
+        "總和 ELO": 1682
+      },
+      "狂戰士": {
+        "先攻方 ELO": 1647,
+        "後攻方 ELO": 1640,
+        "總和 ELO": 1644
+      },
+      "龍神": {
+        "先攻方 ELO": 1759,
+        "後攻方 ELO": 1758,
+        "總和 ELO": 1759
+      },
+      "血神": {
+        "先攻方 ELO": 1866,
+        "後攻方 ELO": 1866,
+        "總和 ELO": 1866
+      },
+      "剛毅武士": {
+        "先攻方 ELO": 1518,
+        "後攻方 ELO": 1397,
+        "總和 ELO": 1457
+      },
+      "鯨吞": {
+        "先攻方 ELO": 1426,
+        "後攻方 ELO": 1548,
+        "總和 ELO": 1487
+      },
+      "荒原遊俠": {
+        "先攻方 ELO": 1641,
+        "後攻方 ELO": 1781,
+        "總和 ELO": 1711
+      },
+      "元素法師": {
+        "先攻方 ELO": 1527,
+        "後攻方 ELO": 1575,
+        "總和 ELO": 1551
+      },
+      "荒神": {
+        "先攻方 ELO": 1813,
+        "後攻方 ELO": 1824,
+        "總和 ELO": 1819
+      },
+      "星神": {
+        "先攻方 ELO": 1463,
+        "後攻方 ELO": 1425,
+        "總和 ELO": 1444
+      }
+    },
+    "總和先攻方ELO": 1653,
+    "總和後攻方ELO": 1667,
+    "總和ELO": 1660
+  },
+  "cost": 16.28,
+  "hidden_info": false
+}

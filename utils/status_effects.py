@@ -124,8 +124,11 @@ class DamageMultiplier(StatusEffect):
 
     def on_apply(self, target):
         super().on_apply(target)
+        # target['damage_multiplier'] *= self.multiplier  # 直接設置倍率
+        # 這邊要根據stack來設置
+        for i in range(self.stacks):
+            target['damage_multiplier'] *= self.multiplier
         
-        target['damage_multiplier'] *= self.multiplier  # 直接設置倍率
 
     def set_stack(self, stacks, target):
         # 先儲存原本的stack
@@ -203,7 +206,10 @@ class DefenseMultiplier(StatusEffect):
 
     def on_apply(self, target):
         super().on_apply(target)
-        target['defend_multiplier'] *= self.multiplier  # 直接設置倍率
+        # target['defend_multiplier'] *= self.multiplier  # 直接設置倍率
+        # 這邊要根據stack來設置
+        for i in range(self.stacks):
+            target['defend_multiplier'] *= self.multiplier
 
 
     def on_remove(self, target):
@@ -278,7 +284,10 @@ class HealMultiplier(StatusEffect):
 
     def on_apply(self, target):
         super().on_apply(target)
-        target['heal_multiplier'] *= self.multiplier  # 直接設置倍率
+        # target['heal_multiplier'] *= self.multiplier  # 直接設置倍率
+        # 這邊要根據stack來設置
+        for i in range(self.stacks):
+            target['heal_multiplier'] *= self.multiplier
 
 
     def on_remove(self, target):
@@ -286,6 +295,7 @@ class HealMultiplier(StatusEffect):
         now_stack = self.stacks
         for i in range(now_stack):
             target['heal_multiplier'] /= self.multiplier
+    
 
         super().on_remove(target)
     def update(self, target,now_stack,add_stack):

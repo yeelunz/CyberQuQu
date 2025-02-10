@@ -170,8 +170,7 @@ class Paladin(BattleProfession):
             user["is_defending"] = True
             heal_amount = self.PALADIN_VAR['PALADIN_SKILL_1_HEAL'][0]
 
-            env.deal_healing(
-                user, heal_amount, rate=self.PALADIN_VAR['PALADIN_PASSIVE_OVERHEADLINGE_RATE'][0], heal_damage=True, target=targets[0])
+            env.deal_healing(user, heal_amount, rate=self.PALADIN_VAR['PALADIN_PASSIVE_OVERHEADLINGE_RATE'][0], heal_damage=True, target=targets[0])
 
         elif skill_id == self.profession_id * 4 + 2:
             # 技能 2 => 恢復血量，第一次50, 第二次35, 第三次及以後15
@@ -344,8 +343,12 @@ class Assassin(BattleProfession):
                 for eff in effects:
                     if isinstance(eff, Poison):
                         total_duration += eff.duration
-            debuff = HealMultiplier(multiplier= self.ASSASSIN_VAR['ASSASSIN_SKILL_3_DEBUFF_MULTIPLIER'][0], duration=total_duration,stacks=total_layers,max_stack=5 ,stackable=True, source=skill_id)
-            env.apply_status(targets[0], debuff)
+            
+            debuff = HealMultiplier(multiplier= self.ASSASSIN_VAR['ASSASSIN_SKILL_3_DEBUFF_MULTIPLIER'][0], duration=total_duration,stacks=1,max_stack=5 ,stackable=True, source=skill_id)
+            # buff效果on apply 時如果給很多stack效果會出bug
+            # on apply時並沒有針對多stack的情況做處理 所以這邊直接給1stack 然後+for loop
+            for i in range(total_layers):
+                env.apply_status(targets[0], debuff)
 
 class Archer(BattleProfession):
     def __init__(self,PROFESSION_VAR):
@@ -1067,10 +1070,10 @@ class ElementalMage(BattleProfession):
             self.triggered = True
             env.add_event(event=BattleEvent(type="text", text=f"{self.name} 的被動技能「雷霆護甲」觸發！"))
             env.apply_status(target, Paralysis(duration=2))
-        if user["effect_manager"].has_effect("雷霆護甲．神火") and self.triggered==False: 
+        if user["effect_manager"].has_effect("雷霆護甲．焚滅") and self.triggered==False: 
             self.triggered = True
             env.add_event(event=BattleEvent(
-                type="text", text=f"{self.name} 的被動技能「雷霆護甲．神火」觸發！"))
+                type="text", text=f"{self.name} 的被動技能「雷霆護甲．焚滅」觸發！"))
             # 燃燒反擊處理
             # get target's burn effect
             beff = Burn(duration=3, stacks=1)
@@ -1103,6 +1106,7 @@ class ElementalMage(BattleProfession):
             private_info['passive_1'] = None
 
     def set_tar_cool_down(self,env ,target):
+        env.add_event(event=BattleEvent(type="text", text=f"{self.name} 讓敵方隨機一個技能進入冷卻！"))
 
         tar_profession_id = target['profession'].profession_id
         skillmgr = env.skill_mgr
@@ -1226,7 +1230,7 @@ class ElementalMage(BattleProfession):
         if skill_id == self.profession_id * 4 +1:
             # 雷霆護甲
             if user['private_info']['real_statues'] == "冰火" :
-                env.add_event(event=BattleEvent(type="text", text=f"{self.name} 的「雷霆護甲」強化為「雷霆護甲．神火」！"))
+                env.add_event(event=BattleEvent(type="text", text=f"{self.name} 的「雷霆護甲」強化為「雷霆護甲．焚滅」！"))
                 self.remove_from_private_info("冰", user['private_info'])
                 self.remove_from_private_info("火", user['private_info'])
                 def_buff = DefenseMultiplier(
@@ -1236,7 +1240,7 @@ class ElementalMage(BattleProfession):
                     source=skill_id
                 )
                 track = Track(
-                    name="雷霆護甲．神火",
+                    name="雷霆護甲．焚滅",
                     duration=self.ELEMENTALMAGE_VAR['ELEMENTALMAGE_SKILL_1_DURATION'][0],
                     stacks=1,
                     source=skill_id,
@@ -1302,7 +1306,7 @@ class ElementalMage(BattleProfession):
                 self.remove_from_private_info("冰", user['private_info'])
                 self.remove_from_private_info("雷", user['private_info'])
                 
-                env.add_event(event=BattleEvent(type="text", text=f"{self.name} 的「焚天」強化為「焚天．寒焰」！"))
+                env.add_event(event=BattleEvent(type="text", text=f"{self.name} 的「焚滅」強化為「焚滅．寒星」！"))
                 dmg = self.ELEMENTALMAGE_VAR['ELEMENTALMAGE_SKILL_3_DAMAGE'][0] * self.baseAtk * self.ELEMENTALMAGE_VAR['ELEMENTALMAGE_SKILL_3_BONOUS_DAMAGE_MULTIPLIER'][0]
                 env.deal_damage(user, targets[0], dmg, can_be_blocked=True)
                 env.apply_status(targets[0], Freeze(duration=3, stacks=1))
@@ -1352,7 +1356,6 @@ class ElementalMage(BattleProfession):
         if havestatus == True:
             env.add_event(event=BattleEvent(type="text", text=f"{self.name} 持有 {user['private_info']['real_statues']} 元素強化。"))
         
-
 class HuangShen(BattleProfession):
     def __init__(self,PROFESSION_VAR):
         super().__init__(profession_id=11)
@@ -1361,7 +1364,7 @@ class HuangShen(BattleProfession):
         self.base_hp = self.HUANGSHEN_VAR['HUANGSHEN_BASE_HP'][0]
         self.max_hp = self.base_hp
         self.passive_name = "枯萎之刃"
-        self.passive_desc = f"隨著造成傷害次數增加，攻擊時額外進行隨機追打，每造成兩次傷害增加一次最高追打機會，追打造成敵方當前生命的 {self.HUANGSHEN_VAR['HUANGSHEN_PASSIVE_EXTRA_HIT_DAMAGE_PERCENT'][0]*100}% 血量；額外追打不會累積傷害次數。"
+        self.passive_desc = f"隨著造成傷害次數增加，攻擊時額外進行隨機追打，每造成 2 次傷害增加 1 次最高追打機會，追打造成敵方當前生命的 {int(self.HUANGSHEN_VAR['HUANGSHEN_PASSIVE_EXTRA_HIT_DAMAGE_PERCENT'][0]*100)}% 血量；額外追打不會累積傷害次數。"
         self.baseAtk = self.HUANGSHEN_VAR['HUANGSHEN_BASE_ATK'][0]
         self.baseDef = self.HUANGSHEN_VAR['HUANGSHEN_BASE_DEF'][0]
         
@@ -1514,7 +1517,7 @@ class GodOfStar(BattleProfession):
             dmg *= self.GODOFSTAR_VAR['GODOFSTAR_SKILL_2_PASSIVE_MULTIPLIER'][0]
             heal *= self.GODOFSTAR_VAR['GODOFSTAR_SKILL_2_PASSIVE_MULTIPLIER'][0]
             env.add_event(event=BattleEvent(
-                type="text", text=f"{self.name} 的技能「虛擬創星圖」強化了天啟星盤的力量，增加了傷害和回復。"))
+                type="text", text=f"{self.name} 的技能「創星圖錄」強化了天啟星盤的力量，增加了傷害和回復。"))
             dmg += self.GODOFSTAR_VAR['GODOFSTAR_SKILL_2_DAMAGE'][0] * self.baseAtk
             env.deal_damage(user, targets[0], dmg, can_be_blocked=True)
             env.deal_healing(user, heal)
@@ -1536,11 +1539,11 @@ class GodOfStar(BattleProfession):
                         if effect.name =='攻擊力':
                             debuff = DamageMultiplier(multiplier=self.GODOFSTAR_VAR['GODOFSTAR_SKILL_0_DEBUFF_MULTIPLIER'][0], duration=self.GODOFSTAR_VAR['GODOFSTAR_SKILL_0_DEBUFF_DURATION'][0], stackable=False, source=skill_id)
                             env.apply_status(targets[0], debuff)
-                        elif effect.name == '防禦力':
+                        if effect.name == '防禦力':
                             debuff = DefenseMultiplier(multiplier=self.GODOFSTAR_VAR['GODOFSTAR_SKILL_0_DEBUFF_MULTIPLIER'][0], duration=self.GODOFSTAR_VAR['GODOFSTAR_SKILL_0_DEBUFF_DURATION'][0], stackable=False, source=skill_id)
                             env.apply_status(targets[0], debuff)
 
-                        elif effect.name == '治療力':
+                        if effect.name == '治癒力':
                             debuff = HealMultiplier(multiplier=self.GODOFSTAR_VAR['GODOFSTAR_SKILL_0_DEBUFF_MULTIPLIER'][0], duration=self.GODOFSTAR_VAR['GODOFSTAR_SKILL_0_DEBUFF_DURATION'][0], stackable=False, source=skill_id)
                             env.apply_status(targets[0], debuff)
                         
@@ -1550,13 +1553,13 @@ class GodOfStar(BattleProfession):
                     if effect.source == self.profession_id * 4 :
                         # check its name
                         if effect.name =='攻擊力':
-                            buff = DamageMultiplier(multiplier=self.GODOFSTAR_VAR['GODOFSTAR_SKILL_1_BUFF_MULTIPLIER'][0], duration=self.GODOFSTAR_VAR['GODOFSTAR_SKILL_0_DEBUFF_DURATION'][0], stackable=False, source=skill_id)
+                            buff = DamageMultiplier(multiplier=self.GODOFSTAR_VAR['GODOFSTAR_SKILL_1_BUFF_MULTIPLIER'][0], duration=self.GODOFSTAR_VAR['GODOFSTAR_SKILL_1_BUFF_DURATION'][0], stackable=False, source=skill_id)
                             env.apply_status(user, buff)
-                        elif effect.name == '防禦力':
-                            buff = DefenseMultiplier(multiplier=self.GODOFSTAR_VAR['GODOFSTAR_SKILL_1_BUFF_MULTIPLIER'][0], duration=self.GODOFSTAR_VAR['GODOFSTAR_SKILL_0_DEBUFF_DURATION'][0], stackable=False, source=skill_id)
+                        if effect.name == '防禦力':
+                            buff = DefenseMultiplier(multiplier=self.GODOFSTAR_VAR['GODOFSTAR_SKILL_1_BUFF_MULTIPLIER'][0], duration=self.GODOFSTAR_VAR['GODOFSTAR_SKILL_1_BUFF_DURATION'][0], stackable=False, source=skill_id)
                             env.apply_status(user, buff)
-                        elif effect.name == '治療力':
-                            buff = HealMultiplier(multiplier=self.GODOFSTAR_VAR['GODOFSTAR_SKILL_1_BUFF_MULTIPLIER'][0], duration=self.GODOFSTAR_VAR['GODOFSTAR_SKILL_0_DEBUFF_DURATION'][0], stackable=False, source=skill_id)
+                        if effect.name == '治癒力':
+                            buff = HealMultiplier(multiplier=self.GODOFSTAR_VAR['GODOFSTAR_SKILL_1_BUFF_MULTIPLIER'][0], duration=self.GODOFSTAR_VAR['GODOFSTAR_SKILL_1_BUFF_DURATION'][0], stackable=False, source=skill_id)
                             env.apply_status(user, buff)
             
             

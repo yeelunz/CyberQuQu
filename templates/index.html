@@ -29,7 +29,6 @@
   <div class="container">
     <!-- 左側選單列 -->
     <nav class="sidebar">
-      <!-- 移除原本的 toggle 按鈕 -->
       <ul>
         <li><a href="#" id="menu-train" data-label="訓練模型">訓練模型</a></li>
         <li><a href="#" id="menu-ai-vs-ai" data-label="AI vs AI 對戰">AI vs AI 對戰</a></li>
@@ -39,7 +38,7 @@
         <li><a href="#" id="menu-cross-battle-generate-pc" data-label="產生交叉對戰數據">產生交叉對戰數據</a></li>
         <li><a href="#" id="menu-cross-battle-result-pc" data-label="顯示交叉對戰數據">顯示交叉對戰數據</a></li>
         <li><a href="#" id="menu-info" data-label="各職業介紹">各職業介紹</a></li>
-        <!-- 暫時移除 -->
+        <!-- 暫時移除管理技能/職業變數 -->
         <!-- <li><a href="#" id="menu-manage-vars" data-label="管理技能/職業變數">管理技能/職業變數</a></li> -->
         <li><a href="#" id="menu-manage-models" data-label="管理模型">管理模型</a></li>
         <li><a href="#" id="menu-model-vs-model-generate" data-label="模型間對戰產生">模型間對戰產生</a></li>
@@ -75,7 +74,9 @@
   <script src="/static/js/dev_manage_vars.js?v=1.0"></script>
   <script src="/static/js/model_vs_model_generate.js?v=1.0"></script>
   <script src="/static/js/model_vs_model_result.js?v=1.0"></script>
+  <!-- 載入 Plotly -->
   <script src="https://cdn.plot.ly/plotly-2.24.1.min.js"></script>
+  <!-- 載入嵌入向量可視化功能 -->
   <script src="/static/js/embedding_visualization.js?v=1.0"></script>
   <script src="/static/js/player_vs_ai_battle.js?v=1.0"></script>
   <script src="/static/js/skip_round.js?v=1.0"></script>
@@ -84,54 +85,60 @@
     <div class="spinner-icon"></div>
   </div>
 
-  <!-- 初始化所有左側選單事件 -->
+  <!-- 初始化事件（直接檢查 document.readyState，避免 DOMContentLoaded 已經發生的問題） -->
   <script>
-    // 統一掛上各選單的 click 事件
     function initMenuEvents() {
-      // 綁定其他功能的事件
-      document.getElementById("menu-model-vs-model-generate").addEventListener("click", function(e) {
-        e.preventDefault();
-        mvmg_init();
-      });
-      document.getElementById("menu-model-vs-model-result").addEventListener("click", function(e) {
-        e.preventDefault();
-        mvmr_init();
-      });
-      document.getElementById("menu-manage-vars").addEventListener("click", function(e) {
-        e.preventDefault();
-        loadManageVarsPage();
-      });
-      if (typeof initVersusMenuEvents === "function") {
-        initVersusMenuEvents();
+      // 綁定其他功能的事件（如模型對戰產生、資料檢視等）
+      var menuModelVsModelGenerate = document.getElementById("menu-model-vs-model-generate");
+      if (menuModelVsModelGenerate) {
+        menuModelVsModelGenerate.addEventListener("click", function(e) {
+          e.preventDefault();
+          if (typeof mvmg_init === "function") {
+            mvmg_init();
+          }
+        });
       }
+      var menuModelVsModelResult = document.getElementById("menu-model-vs-model-result");
+      if (menuModelVsModelResult) {
+        menuModelVsModelResult.addEventListener("click", function(e) {
+          e.preventDefault();
+          if (typeof mvmr_init === "function") {
+            mvmr_init();
+          }
+        });
+      }
+      // if (typeof initVersusMenuEvents === "function") {
+      //   initVersusMenuEvents();
+      // }
       // 綁定「嵌入向量可視化」的 click 事件
-      document.getElementById("menu-embedding-visualization").addEventListener("click", function(e) {
-        e.preventDefault();
-        embedding_vis_init();
-      });
+      var menuEmbeddingVis = document.getElementById("menu-embedding-visualization");
+      if (menuEmbeddingVis) {
+        menuEmbeddingVis.addEventListener("click", function(e) {
+          e.preventDefault();
+          embedding_vis_init();
+        });
+      }
     }
-    
-    window.addEventListener("DOMContentLoaded", initMenuEvents);
+    // 若文件已經完成解析，直接執行；否則等待 DOMContentLoaded
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", initMenuEvents);
+    } else {
+      initMenuEvents();
+    }
 
-    // 左側選單收合／展開功能（現將 toggle 按鈕放在 header 中）
-    document.addEventListener("DOMContentLoaded", function(){
-      var toggleBtn = document.getElementById("toggle-sidebar");
-      var sidebar = document.querySelector(".sidebar");
-      toggleBtn.addEventListener("click", function(){
-        sidebar.classList.toggle("collapsed");
-        // 可根據需要修改按鈕文字或樣式
-        if(sidebar.classList.contains("collapsed")){
-          toggleBtn.textContent = "☰";
-        } else {
-          toggleBtn.textContent = "☰";
-        }
-      });
+    // 左側選單收合／展開功能
+    var toggleBtn = document.getElementById("toggle-sidebar");
+    var sidebar = document.querySelector(".sidebar");
+    toggleBtn.addEventListener("click", function(){
+      sidebar.classList.toggle("collapsed");
+      // 可根據需要修改按鈕文字或樣式
+      toggleBtn.textContent = "☰";
     });
   </script>
 
   <!-- 利用 AJAX 動態更新 token 與 version -->
   <script>
-    window.addEventListener('DOMContentLoaded', function() {
+    function updateTokenAndVersion() {
       // 取得 token
       fetch('/get_token')
         .then(response => {
@@ -161,7 +168,23 @@
         .catch(error => {
           console.error("取得 version 時發生錯誤：", error);
         });
-    });
+    }
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", updateTokenAndVersion);
+    } else {
+      updateTokenAndVersion();
+    }
   </script>
+  
+  <!-- 若希望網頁載入完成後自動進入嵌入向量可視化頁面，可取消下方註解 -->
+  <!--
+  <script>
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", embedding_vis_init);
+    } else {
+      embedding_vis_init();
+    }
+  </script>
+  -->
 </body>
 </html>

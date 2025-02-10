@@ -274,7 +274,7 @@ def calculate_combined_metrics(combine_rate_table, max_iter=100, lr=0.01, tol=1e
             "EIR": round(total_influence*2, 2),
             "Advanced NAS": a_nas_dict[player_prof],
             "MSI": round(msi, 2),
-            "PI20": round(1-pi20, 2),
+            "PI20": round(pi20, 2),
         }
     
     return metrics

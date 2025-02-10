@@ -1011,8 +1011,6 @@ class BattleEnv(MultiAgentEnv):
         """
         alist = self.player_team + self.enemy_team
         for m in alist:
-            if m["hp"] <= 0:
-                continue
             m["effect_manager"].tick_effects()
 
         # 重置一次性buff

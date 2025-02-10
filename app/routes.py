@@ -30,16 +30,8 @@ from utils.profession_var import (
 )
 import copy
 
-# 將所有職業的變數整理到一個全域 dict 中 (注意：此處只是在記憶體中修改，重新啟動後會回復原始設定)
-
 
 main_routes = Blueprint('main', __name__)
-
-
-
-
-# 建立全域的 manager & professions，避免每次端點都要重建
-
 
 
 @main_routes.route("/api/list_models", methods=["GET"])
@@ -619,14 +611,14 @@ eff_id_to_name = {
 
 skill_id_to_name = {
     0: "聖光斬", 1: "堅守防禦", 2: "神聖治療",
-    3: "決一死戰", 4: "火焰之球", 5: "冰霜箭", 6: "全域爆破", 7: "詠唱破棄．全域爆破", 8: "致命暗殺",
+    3: "決一死戰", 4: "火焰之球", 5: "冰霜箭", 6: "全域爆破", 7: "全域破碎", 8: "致命暗殺",
     9: "毒爆", 10: "毒刃襲擊", 11: "致命藥劑", 12: "五連矢", 13: "箭矢補充", 14: "吸血箭",
     15: "驟雨", 16: "狂暴之力", 17: "熱血", 18: "血怒之泉", 19: "嗜血本能", 20: "神龍之息", 21: "龍血之泉",
     22: "神龍燎原", 23: "預借", 24: "血刀", 25: "血脈祭儀", 26: "轉生", 27: "新生", 28: "剛毅打擊", 29: "不屈意志",
     30: "絕地反擊", 31: "破魂斬", 32: "吞裂", 33: "巨口吞世", 34: "堅硬皮膚", 35: "觸電反應",
     36: "續戰攻擊", 37: "埋伏防禦", 38: "荒原抗性", 39: "地雷", 40: "融合", 41: "雷霆護甲",
-    42: "寒星墜落", 43: "焚天", 44: "枯骨",  45: "荒原", 46: "生命逆流", 47: "風化", 48: "災厄隕星",  49: "光輝流星",
-    50: "虛擬星圖", 51: "無序聯星"
+    42: "寒星墜落", 43: "焚滅", 44: "枯骨",  45: "荒原", 46: "生命逆流", 47: "風化", 48: "災厄隕星",  49: "光輝流星",
+    50: "創星圖錄", 51: "無序聯星"
 }
 
 profession_id_to_name = {
@@ -1186,6 +1178,8 @@ def player_vs_ai_hint(session_id):
         "skill_desc": skill_info["description"],
         "probabilities": [0, 0, 0, 0]  # 假設不顯示詳細機率
     }), 200
+from utils.train_methods import cal_size
+from utils.var_update import init_global_var
 
 @main_routes.route('/get_token')
 def get_token():
@@ -1196,6 +1190,70 @@ def get_token():
 def get_version():
     version = globalVar['version']
     return str(version)
+
+@main_routes.route('/get_cost')
+def get_cost():
+    """
+    從請求中取得 iteration、train_batch_size、fcnet_hiddens 與 mask_model，
+    並使用提供的 cal_size() 計算本次訓練所需的 cost。
+    """
+    try:
+        iteration = int(request.args.get('iteration'))
+        train_batch_size = int(request.args.get('train_batch_size'))
+        fcnet_hiddens_str = request.args.get('fcnet_hiddens')
+        if not fcnet_hiddens_str:
+            return "Missing fcnet_hiddens", 400
+        # 將逗號分隔的字串轉成整數串列
+        fcnet_hiddens = [int(x) for x in fcnet_hiddens_str.split(',')]
+        mask_model = request.args.get('mask_model')
+        if not mask_model:
+            return "Missing mask_model", 400
+    except Exception as e:
+        return "Invalid parameters: " + str(e), 400
+
+    # 取得 cost_factor（若該 mask_model 未定義，預設為 1）
+    cost_factor = globalVar['cost'].get(mask_model, 1)
+    cost = round(iteration / 5 * (train_batch_size / 4000) * cal_size(fcnet_hiddens) * cost_factor, 2)
+    return str(cost)
+
+@main_routes.route('/consume_token')
+def consume_token():
+    """
+    從請求中取得參數後，依照與 /get_cost 相同的邏輯計算 cost，
+    並扣除 globalVar['token'] 的相應數值，再更新 config/gv.json。
+    """
+    try:
+        iteration = float(request.args.get('iteration'))
+        train_batch_size = float(request.args.get('train_batch_size'))
+        fcnet_hiddens_str = request.args.get('fcnet_hiddens')
+        if not fcnet_hiddens_str:
+            return "Missing fcnet_hiddens", 400
+        fcnet_hiddens = [int(x) for x in fcnet_hiddens_str.split(',')]
+        mask_model = request.args.get('mask_model')
+        if not mask_model:
+            return "Missing mask_model", 400
+    except Exception as e:
+        return "Invalid parameters: " + str(e), 400
+
+    cost_factor = globalVar['cost'].get(mask_model, 1)
+    cost = round(iteration / 5 * (train_batch_size / 4000) * cal_size(fcnet_hiddens) * cost_factor, 2)
+
+    # 扣除 token，請確保 globalVar['token'] 為數值型態
+    globalVar['token'] = int(globalVar['token'] - cost)
+
+    # 更新 config/gv.json 中的 token 資訊
+    root_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    init_path = os.path.join(root_path, 'config/gv.json')
+    with open(init_path, 'w') as f:
+        json.dump(globalVar, f)
+
+
+
+    return "OK"
+    
+    
+
+
 
 @main_routes.route('/')
 def index():
@@ -1227,7 +1285,12 @@ def next_version():
         ver_3 = 0
         ver_2 += 1
         # TODO this need to update to prof_var by using update_prof_var()
+        # TODO check version is x.tar.x exist in valid_ai
+        # not => notifiy user
+        # yes => update version
+        
         if globalVar['version_change'] == True:
+            # update_version()
             pass
         # but not implement yet
         pass

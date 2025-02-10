@@ -95,7 +95,7 @@ def build_skill_manager():
     sm.add_skill(Skill(
         6, "全域爆破", f"對敵方造成 {MAGE_VAR['MAGE_SKILL_2_BASE_DAMAGE'][0]} 點傷害，並引爆累積的狀態。每層燃燒或冰凍效果額外對敵方造成 {MAGE_VAR['MAGE_SKILL_2_STATUS_MULTIPLIER'][0]} 點傷害。", 'damage'))
     sm.add_skill(Skill(
-        7, "詠唱破棄．全域爆破", f"對敵方造成 {MAGE_VAR['MAGE_SKILL_3_BASE_DAMAGE'][0]} 點傷害。每層燃燒或冰凍效果額外對敵方造成 {MAGE_VAR['MAGE_SKILL_3_STATUS_MULTIPLIER'][0]} 點傷害，此技能攻擊順序必定最優先。", 'effect'))
+        7, "全域破碎", f"對敵方造成 {MAGE_VAR['MAGE_SKILL_3_BASE_DAMAGE'][0]} 點傷害。每層燃燒或冰凍效果額外對敵方造成 {MAGE_VAR['MAGE_SKILL_3_STATUS_MULTIPLIER'][0]} 點傷害，此技能攻擊順序必定最優先。", 'effect'))
 
 
 
@@ -341,7 +341,7 @@ def build_skill_manager():
         41, "雷霆護甲",
         f"為自身疊加雷元素。\n"
         f"持續 {ELEMENTALMAGE_VAR['ELEMENTALMAGE_SKILL_1_DURATION'][0]} 回合，效果存在時受到攻擊有 {int(ELEMENTALMAGE_VAR['ELEMENTALMAGE_SKILL_1_ELEMENT_ADD'][0]*100)}% 機率麻痺敵方，防禦提升 {int((ELEMENTALMAGE_VAR['ELEMENTALMAGE_SKILL_1_DEFENSE_BUFF'][0] - 1) * 100)}%，持續 {ELEMENTALMAGE_VAR['ELEMENTALMAGE_SKILL_1_DURATION'][0]} 回合。\n"
-        "【冰火強化】若同時持有冰與火，則變為『雷霆護甲．神火』，"
+        "【冰火強化】若同時持有冰與火，則變為『雷霆護甲．焚滅』，"
         "受擊時使敵方附加 1 層燃燒，並立即觸發燃燒總傷害。",
         'effect'
     ))
@@ -361,8 +361,8 @@ def build_skill_manager():
         "【雷火強化】若同時持有火與雷，則變為『寒星墜落．雷霆』，"
         f"增加 {int((ELEMENTALMAGE_VAR['ELEMENTALMAGE_SKILL_2_BONOUS_DAMAGE_MULTIPLIER'][0] - 1) * 100)}% 傷害，"
         f"且有 {int(ELEMENTALMAGE_VAR['ELEMENTALMAGE_SKILL_2_PARALYSIS_TRIGGER_RATE'][0] * 100)}% 機率使敵方麻痺 2 回合，"
-        "並使敵方隨機 2招技能進入冷卻。",
-        'damage',3
+        "並使敵方隨機 2 招技能進入冷卻。",
+        'damage',4
     ))
 
     # 技能 43：焚天
@@ -374,12 +374,12 @@ def build_skill_manager():
     #  • 並使敵方同時附加1層冰凍及1層燃燒，
     #  • 另外使敵方隨機1個技能進入冷卻。
     sm.add_skill(Skill(
-        43, "焚天",
+        43, "焚滅",
         f"為自身疊加火元素，對敵方造成 {ELEMENTALMAGE_VAR['ELEMENTALMAGE_SKILL_3_DAMAGE'][0]} 點傷害，"
         "並使敵方附加1層燃燒，立即觸發燃燒總傷害。\n"
-        "【冰雷強化】若同時持有冰與雷，則變為『焚天．寒焰』，"
+        "【冰雷強化】若同時持有冰與雷，則變為『焚天．寒星』，"
         f"增加 {int((ELEMENTALMAGE_VAR['ELEMENTALMAGE_SKILL_3_BONOUS_DAMAGE_MULTIPLIER'][0] - 1) * 100)}% 傷害，"
-        "並使敵方同時附加1層冰凍及1層燃燒，且使敵方隨機1技能進入冷卻。",
+        "並使敵方同時附加1層冰凍及1層燃燒，且使敵方隨機 1 招技能進入冷卻。",
         'damage'
     ))
 
@@ -423,7 +423,7 @@ def build_skill_manager():
     ))
 
     sm.add_skill(Skill(
-        50, "虛擬星圖",
+        50, "創星圖錄",
         f"對敵方造成 {GODOFSTAR_VAR['GODOFSTAR_SKILL_2_DAMAGE'][0]} 點傷害，本回合天啟星盤的效果增加 {int((GODOFSTAR_VAR['GODOFSTAR_SKILL_2_PASSIVE_MULTIPLIER'][0] - 1) * 100)}%。",
         'damage'
     ))

@@ -1,4 +1,4 @@
-// trian.js
+// train.js
 
 document.addEventListener("DOMContentLoaded", function () {
   const menuTrain = document.getElementById("menu-train");
@@ -468,105 +468,154 @@ document.addEventListener("DOMContentLoaded", function () {
     const startTrainBtn = document.getElementById("startTrainBtn");
     const stopTrainBtn = document.getElementById("stopTrainBtn");
 
-    // 顯示初始化狀態（包含 spinner 與動畫文字）
-    initializingStatus.style.display = "flex";
-    initializedInfo.style.display = "none";
-    startTrainBtn.disabled = true;
-    stopTrainBtn.disabled = false;
-
-    const hyperparamsJson = encodeURIComponent(JSON.stringify(hyperparams));
-    const url = `/api/train_sse?model_name=${modelName}&iteration=${iteration}&hyperparams_json=${hyperparamsJson}`;
-    currentSource = new EventSource(url);
-    let currentIteration = 0;
-
-    currentSource.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      console.log("SSE 收到資料:", data);
-      switch (data.type) {
-        case "initialized":
-          initializingStatus.style.display = "none";
-          initializedInfo.style.display = "block";
-          // 使用反引號建立正確的 HTML 字串，並產生訓練中狀態（避免重複 id 問題）
-          initializedInfo.innerHTML = `
-            <span style="color: green;">${data.message}</span><br>
-            <div style="display:flex; align-items:center;">
-              <span class="spinner" style="margin-right:10px;"></span>
-              <span id="training-status-text" style="color: black;">模型訓練中，請稍候 </span>
-            </div>
-          `;
-          startTrainingAnimation();
-          break;
-        case "iteration":
-          currentIteration = data.iteration;
-          const progress = (currentIteration / iteration) * 100;
-          progressBar.style.width = progress + "%";
-          const iterationBlock = document.createElement("div");
-          iterationBlock.classList.add("iteration-block");
-          const iterationHeader = document.createElement("div");
-          iterationHeader.classList.add("iteration-header");
-          iterationHeader.textContent = `Iteration ${data.iteration} (點擊展開/收合)`;
-          const iterationDetails = document.createElement("div");
-          iterationDetails.classList.add("iteration-details");
-          iterationDetails.style.display = "none";
-          iterationDetails.appendChild(generateInfoTable(data));
-          iterationHeader.addEventListener("click", () => {
-            if (iterationDetails.style.display === "none") {
-              iterationDetails.style.display = "block";
-              iterationHeader.classList.add("active");
-            } else {
-              iterationDetails.style.display = "none";
-              iterationHeader.classList.remove("active");
+    // ──────────────────────────────────────────────
+    // 【Token 與 Cost 檢查流程】
+    // 1. 取得目前 token（/get_token）
+    // 2. 將 iteration、batchSize、fcnetHiddens 與 mask_model 作為 query string 傳送至 /get_cost
+    // 3. 若 token 不足則 alert 並中止；若足夠則確認是否訓練
+    // 4. 若使用者確認，則呼叫 /consume_token 進行扣 token 並呼叫 updateTokenAndVersion()
+    // ──────────────────────────────────────────────
+    fetch('/get_token')
+      .then(response => response.text())
+      .then(tokenStr => {
+        const currentToken = parseFloat(tokenStr);
+        const costUrl = `/get_cost?iteration=${iteration}&train_batch_size=${batchSize}` +
+                        `&fcnet_hiddens=${fcnetHiddens.join(',')}&mask_model=${hyperparams.mask_model}`;
+        return fetch(costUrl)
+          .then(response => response.text())
+          .then(costStr => {
+            const requiredCost = parseFloat(costStr);
+            if (currentToken < requiredCost) {
+              alert("計算資源不足，需要 " + requiredCost + " 資源才能夠訓練");
+              throw new Error("Insufficient token");
             }
+            if (!confirm("本次消耗 " + requiredCost + " cost，確定訓練？")) {
+              throw new Error("User cancelled training");
+            }
+            return requiredCost;
           });
-          iterationBlock.appendChild(iterationHeader);
-          iterationBlock.appendChild(iterationDetails);
-          resultsContainer.appendChild(iterationBlock);
-          break;
-        case "done":
-          currentSource.close();
-          currentSource = null;
-          progressBar.style.width = "100%";
-          stopTrainingAnimation();
-          // 模型訓練完成時訊息變綠
-          initializedInfo.style.color = "green";
-          if (initializedInfo.style.display === "none") {
-            initializedInfo.style.display = "block";
-          }
-          initializedInfo.innerHTML = `<span style="color: green;">${
-            data.message || "algo = config.build() 完成"
-          }</span>`;
-          showModal(data.message || "訓練完成！");
-          startTrainBtn.disabled = false;
-          stopTrainBtn.disabled = true;
-          window.onbeforeunload = null;
-          enableMenu();
-          break;
-        case "stopped":
-          currentSource.close();
-          currentSource = null;
-          stopTrainingAnimation();
-          showModal(data.message || "訓練已被終止。");
-          startTrainBtn.disabled = false;
-          stopTrainBtn.disabled = true;
-          window.onbeforeunload = null;
-          enableMenu();
-          break;
-        default:
-          console.warn("未知的 SSE 資料類型:", data);
-      }
-    };
+      })
+      .then(requiredCost => {
+        const consumeUrl = `/consume_token?iteration=${iteration}&train_batch_size=${batchSize}` +
+                           `&fcnet_hiddens=${fcnetHiddens.join(',')}&mask_model=${hyperparams.mask_model}`;
+        return fetch(consumeUrl)
+          .then(response => response.text())
+          .then(() => {
+            updateTokenAndVersion();
+            return requiredCost;
+          });
+      })
+      .then(() => {
+        // token 檢查與扣除完成後，開始原有的訓練流程
+        initializingStatus.style.display = "flex";
+        initializedInfo.style.display = "none";
+        startTrainBtn.disabled = true;
+        stopTrainBtn.disabled = false;
 
-    currentSource.onerror = (err) => {
-      console.error("SSE 發生錯誤或連線中斷:", err);
-      currentSource.close();
-      currentSource = null;
-      stopTrainingAnimation();
-      showModal("訓練過程中發生錯誤或連線中斷。");
-      startTrainBtn.disabled = false;
-      stopTrainBtn.disabled = true;
-      window.onbeforeunload = null;
-      enableMenu();
-    };
+        const hyperparamsJson = encodeURIComponent(JSON.stringify(hyperparams));
+        const url = `/api/train_sse?model_name=${modelName}&iteration=${iteration}&hyperparams_json=${hyperparamsJson}`;
+        currentSource = new EventSource(url);
+        let currentIteration = 0;
+
+        currentSource.onmessage = (event) => {
+          const data = JSON.parse(event.data);
+          console.log("SSE 收到資料:", data);
+          switch (data.type) {
+            case "initialized":
+              initializingStatus.style.display = "none";
+              initializedInfo.style.display = "block";
+              // 使用反引號建立正確的 HTML 字串，並產生訓練中狀態（避免重複 id 問題）
+              initializedInfo.innerHTML = `
+                <span style="color: green;">${data.message}</span><br>
+                <div style="display:flex; align-items:center;">
+                  <span class="spinner" style="margin-right:10px;"></span>
+                  <span id="training-status-text" style="color: black;">模型訓練中，請稍候 </span>
+                </div>
+              `;
+              startTrainingAnimation();
+              break;
+            case "iteration":
+              currentIteration = data.iteration;
+              const progress = (currentIteration / iteration) * 100;
+              progressBar.style.width = progress + "%";
+              const iterationBlock = document.createElement("div");
+              iterationBlock.classList.add("iteration-block");
+              const iterationHeader = document.createElement("div");
+              iterationHeader.classList.add("iteration-header");
+              iterationHeader.textContent = `Iteration ${data.iteration} (點擊展開/收合)`;
+              const iterationDetails = document.createElement("div");
+              iterationDetails.classList.add("iteration-details");
+              iterationDetails.style.display = "none";
+              iterationDetails.appendChild(generateInfoTable(data));
+              iterationHeader.addEventListener("click", () => {
+                if (iterationDetails.style.display === "none") {
+                  iterationDetails.style.display = "block";
+                  iterationHeader.classList.add("active");
+                } else {
+                  iterationDetails.style.display = "none";
+                  iterationHeader.classList.remove("active");
+                }
+              });
+              iterationBlock.appendChild(iterationHeader);
+              iterationBlock.appendChild(iterationDetails);
+              resultsContainer.appendChild(iterationBlock);
+              break;
+            case "done":
+              currentSource.close();
+              currentSource = null;
+              progressBar.style.width = "100%";
+              stopTrainingAnimation();
+              // 模型訓練完成時訊息變綠
+              initializedInfo.style.color = "green";
+              if (initializedInfo.style.display === "none") {
+                initializedInfo.style.display = "block";
+              }
+              initializedInfo.innerHTML = `<span style="color: green;">${
+                data.message || "algo = config.build() 完成"
+              }</span>`;
+              showModal(data.message || "訓練完成！");
+              startTrainBtn.disabled = false;
+              stopTrainBtn.disabled = true;
+              window.onbeforeunload = null;
+              enableMenu();
+              break;
+            case "stopped":
+              currentSource.close();
+              currentSource = null;
+              stopTrainingAnimation();
+              showModal(data.message || "訓練已被終止。");
+              startTrainBtn.disabled = false;
+              stopTrainBtn.disabled = true;
+              window.onbeforeunload = null;
+              enableMenu();
+              break;
+            default:
+              console.warn("未知的 SSE 資料類型:", data);
+          }
+        };
+
+        currentSource.onerror = (err) => {
+          console.error("SSE 發生錯誤或連線中斷:", err);
+          currentSource.close();
+          currentSource = null;
+          stopTrainingAnimation();
+          showModal("訓練過程中發生錯誤或連線中斷。");
+          startTrainBtn.disabled = false;
+          stopTrainBtn.disabled = true;
+          window.onbeforeunload = null;
+          enableMenu();
+        };
+      })
+      .catch((error) => {
+        console.error("Training aborted: ", error);
+        // 若檢查或扣除 token 時發生錯誤，還原 UI 狀態
+        const startTrainBtn = document.getElementById("startTrainBtn");
+        const stopTrainBtn = document.getElementById("stopTrainBtn");
+        startTrainBtn.disabled = false;
+        stopTrainBtn.disabled = true;
+        enableMenu();
+        window.onbeforeunload = null;
+      });
   }
 
   function stopTraining() {

@@ -359,29 +359,40 @@ def version_test_random_vs_random_sse_ai(professions, skill_mgr, num_battles=100
                 rounds = 0  # 計算單場回合數
                 while not done:
                     rounds += 1
-
-                    p_act_pack = trainer.compute_single_action(
-                        obs['player'], state=state_1, policy_id="shared_policy")
-                    p_act = p_act_pack[0]
-                    state_1 = p_act_pack[1]
-                    # if p act in mask is 0, then choose random action
-                    e_act_pack = trainer.compute_single_action(
-                        obs['enemy'], state=state_2, policy_id="shared_policy")
-                    e_act = e_act_pack[0]
-                    state_2 = e_act_pack[1]
+                    if battle_num % 2 == 0:
+                        p_act_pack = trainer.compute_single_action(
+                            obs['player'], state=state_1, policy_id="shared_policy")
+                        p_act = p_act_pack[0]
+                        state_1 = p_act_pack[1]
+                        # if p act in mask is 0, then choose random action
+                        e_act_pack = trainer.compute_single_action(
+                            obs['enemy'], state=state_2, policy_id="shared_policy")
+                        e_act = e_act_pack[0]
+                        state_2 = e_act_pack[1]
+                    else:
+                        e_act_pack = trainer.compute_single_action(
+                            obs['enemy'], state=state_1, policy_id="shared_policy")
+                        e_act = e_act_pack[0]
+                        state_1 = e_act_pack[1]
+                        # if p act in mask is 0, then choose random action
+                        p_act_pack = trainer.compute_single_action(
+                            obs['player'], state=state_2, policy_id="shared_policy")
+                        p_act = p_act_pack[0]
+                        state_2 = p_act_pack[1]
 
                     # 技能使用次數紀錄
                     # 注意：p.name 與 op.name 的使用順序要看哪邊是 "player"/"enemy"
                     # 這邊的版本_test_random_vs_random 以 p 為 "player"，op 為 "enemy"（或反之）
                     # 因此依此更新
-                    if battle_num % 2 == 1:
-                        # 先攻 p = enemy
-                        skillusedFreq[op.name][e_act] += 1
-                        skillusedFreq[p.name][p_act] += 1
-                    else:
+                    if battle_num % 2 == 0:
                         # 先攻 p = player
                         skillusedFreq[p.name][p_act] += 1
                         skillusedFreq[op.name][e_act] += 1
+                        
+                    else:
+                        # 先攻 p = enemy
+                        skillusedFreq[op.name][e_act] += 1
+                        skillusedFreq[p.name][p_act] += 1
 
                     obs, rew, done_dict, tru, info = env.step({
                         "player": p_act,
@@ -433,16 +444,13 @@ def version_test_random_vs_random_sse_ai(professions, skill_mgr, num_battles=100
 
     # 產生 combine_rate_table (此處若仍需做後續指標計算，可與原程式相同)
     combine_rate_table = copy.deepcopy(win_rate_table)
-    # (可加上你原先 calculate_combined_metrics, EHI, ESI, MPI 計算)
     metrics = calculate_combined_metrics(combine_rate_table)
     ehi = calculate_ehi(combine_rate_table)
     esi = calculate_esi(combine_rate_table, calculate_combined_metrics)
     mpi = calculate_mpi(combine_rate_table, calculate_combined_metrics)
 
-    # ============ 新增：平均回合數 ================
     avg_rounds = total_rounds / total_matches if total_matches > 0 else 0
 
-    # ============ 新增：職業平均勝率(顯示在 Profession Evaluation) =========
     # 每個職業對所有對手的 wins, losses 統計
     profession_avg_win_rate = {}
     for player_prof, vs_dict in results.items():
@@ -474,8 +482,9 @@ def version_test_random_vs_random_sse_ai(professions, skill_mgr, num_battles=100
         "total_battles": int(num_battles*len(professions)*(len(professions)-1))
     }
     from .global_var import globalVar as gv
-    r = Gdata(res, gv['version'], "cross_validation_ai",
-              model=model_path_1)  # 這裡是你的自訂函數，用來儲存結果
+    name = time.strftime("%Y_%m_%d_%H_%M_%S", time.localtime())
+    r = Gdata(res, gv['version'], "cross_validation_ai",name=name,
+              model=model_path_1)  # 這裡是你的自訂函s數，用來儲存結果
     r.save()
     # 最後整包結束再 yield 一次
     yield {

@@ -196,7 +196,7 @@ def build_skill_manager():
     sm.add_skill(Skill(
         25, "血脈祭儀",
         f"血脈的累積傷害降低敵方流血層數的 {BLOODGOD_VAR['BLOODGOD_SKILL_1_BLEED_REDUCTION_MULTIPLIER'][0]} 倍；恢復流血層數的 {BLOODGOD_VAR['BLOODGOD_SKILL_1_HEAL_MULTIPLIER'][0]} 倍生命值，並使流血層數翻倍。",
-        'effect'
+        'effect',4
     ))
 
     sm.add_skill(Skill(

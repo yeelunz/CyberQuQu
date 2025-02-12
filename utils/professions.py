@@ -434,9 +434,11 @@ class Archer(BattleProfession):
             mul = 1
             if totaldef < 1:
                 mul = 1/totaldef
+                
             dmg = self.ARCHER_VAR['ARCHER_SKILL_3_DAMAGE'][0] * self.baseAtk * mul / 3
             for i in range(3):
-                env.deal_damage(user, targets[0], dmg, can_be_blocked=True, ignore_defense=self.ARCHER_VAR['ARCHER_SKILL_3_IGN_DEFEND'][0])
+                ndmg = self.passive(env, dmg, targets)
+                env.deal_damage(user, targets[0], ndmg, can_be_blocked=True, ignore_defense=self.ARCHER_VAR['ARCHER_SKILL_3_IGN_DEFEND'][0])
 
 class Berserker(BattleProfession):
     def __init__(self,PROFESSION_VAR):
@@ -776,10 +778,10 @@ class SteadfastWarrior(BattleProfession):
             type="text", text=f"{self.name} 的被動技能「堅韌壁壘」觸發。"))
         env.deal_healing(user, heal)
 
-    def on_turn_end(self, user, targets, env, id):
+    def on_turn_end(self, user, target, env, id):
         if id == self.profession_id * 4 + 2:
             if user["last_attacker"]:
-                dmg = user["last_damage_taken"] * self.STEADFASTWARRIOR_VAR['STEADFASTWARRIOR_SKILL_2_DAMAGE_MULTIPLIER'][0]
+                dmg = user["accumulated_damage"] * self.STEADFASTWARRIOR_VAR['STEADFASTWARRIOR_SKILL_2_DAMAGE_MULTIPLIER'][0]
                 env.deal_damage(user, user["last_attacker"], dmg, can_be_blocked=True)
             else:
                 env.add_event(event=BattleEvent(

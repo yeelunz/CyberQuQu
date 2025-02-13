@@ -18,14 +18,6 @@ from .model_struct import MaskedLSTMNetwork, MaskedLSTMNetworkWithEmb, MaskedLST
 from ray.rllib.models import ModelCatalog
 
 
-# get
-
-
-
-
-
-
-
 stop_training_flag = threading.Event()
 ModelCatalog.register_custom_model("my_mask_model", MaskedLSTMNetwork)
 ModelCatalog.register_custom_model("my_mask_model_v2", MaskedLSTMNetworkV2)

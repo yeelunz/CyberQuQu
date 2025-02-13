@@ -9,8 +9,8 @@
 建議使用 [Conda](https://docs.conda.io/en/latest/) 管理專案環境，請依照下列步驟操作：
 
 ```bash
-# 建立並啟動新的 Conda 環境（Python 版本 3.10.5）
-conda create --name CyberQuQu python=3.10.5
+# 建立並啟動新的 Conda 環境（Python 版本 3.12.0）
+conda create --name CyberQuQu python=3.12.0
 conda activate CyberQuQu
 
 # 進入專案資料夾並安裝必要套件
